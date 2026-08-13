@@ -17,6 +17,9 @@ class Order {
     required this.date,
     required this.total,
     required this.trackStep,
+    this.paymentMethod = '',
+    this.pickup = '',
+    this.address = '',
   });
 
   final String shop;
@@ -27,6 +30,15 @@ class Order {
   final Color statusBg;
   final String date;
   final String total;
+
+  /// How the order was paid, e.g. "Mobile money · M-Pesa" or "Card · Visa •••• 4412".
+  final String paymentMethod;
+
+  /// Pickup day/time summary, e.g. "Thu 13, 6 – 8 PM".
+  final String pickup;
+
+  /// Pickup address line.
+  final String address;
 
   /// Index into kTrackSteps the order has reached, or kOrderPlacedStep if
   /// it's been submitted but not yet picked up.
@@ -42,6 +54,9 @@ class Order {
     date: date,
     total: total,
     trackStep: trackStep ?? this.trackStep,
+    paymentMethod: paymentMethod,
+    pickup: pickup,
+    address: address,
   );
 }
 

@@ -90,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Material(
+                   Material(
                               color: Colors.white.withValues(alpha: 0.12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -127,8 +127,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-            ),
-            Padding(
+                   ),
+                  const SizedBox(height: 12),
+                  Material(
+                    color: AppColors.tealMuted,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => context.push('/register'),
+                      child: Container(
+                        width: double.infinity,
+                        height: 52,
+                        alignment: Alignment.center,
+                        child: Text('Register as a new client', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                      ),
+                    ),
+                  ),
+                  Padding(
               padding: const EdgeInsets.fromLTRB(24, 26, 24, 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

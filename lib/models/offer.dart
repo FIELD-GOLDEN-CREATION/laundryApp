@@ -5,6 +5,7 @@ class Offer {
     required this.tag,
     required this.title,
     required this.sub,
+    this.imageUrl = '',
   });
 
   final String slotId;
@@ -12,4 +13,7 @@ class Offer {
   final String tag;
   final String title;
   final String sub;
+
+  /// Offer photo URL; empty means "no photo yet".
+  final String imageUrl;
 }

@@ -11,11 +11,27 @@ import '../../theme/text_styles.dart';
 import '../home/widgets/shop_card.dart';
 import '../../widgets/round_back_button.dart';
 
-class SearchScreen extends ConsumerWidget {
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 550), () {
+      if (mounted) setState(() => _loading = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final search = ref.watch(searchProvider);
     final notifier = ref.read(searchProvider.notifier);
     final shops = filteredShops(kShops, search);
@@ -84,7 +100,9 @@ class SearchScreen extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: shops.isEmpty
+              child: _loading
+                  ? const _ExploreLoading()
+                  : shops.isEmpty
                   ? Center(
                       child: Text(
                         'No shops match these filters',
@@ -114,6 +132,34 @@ class SearchScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExploreLoading extends StatelessWidget {
+  const _ExploreLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 54,
+            height: 54,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const CircularProgressIndicator(strokeWidth: 3, color: AppColors.teal, backgroundColor: AppColors.tealMuted),
+                const Icon(Icons.location_searching_rounded, size: 22, color: AppColors.amber),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text('Finding nearby vendors…', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted)),
+        ],
       ),
     );
   }

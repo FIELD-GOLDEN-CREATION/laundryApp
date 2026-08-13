@@ -42,6 +42,24 @@ List<Shop> filteredShops(List<Shop> shops, SearchState search) {
   }
 
   switch (search.filter) {
+    case 'Within 5 km':
+      result = result.where((shop) => shop.distanceKm <= 5).toList();
+      result.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    case 'Within 10 km':
+      result = result.where((shop) => shop.distanceKm <= 10).toList();
+      result.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    case 'Within 20 km':
+      result = result.where((shop) => shop.distanceKm <= 20).toList();
+      result.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    case 'Within 25 km':
+      result = result.where((shop) => shop.distanceKm <= 25).toList();
+      result.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    case 'Within 30 km':
+      result = result.where((shop) => shop.distanceKm <= 30).toList();
+      result.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    case 'Fast turnaround':
+      result = result.where((shop) => shop.is24h).toList();
+      result.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
     case 'Top rated':
       result.sort((a, b) => b.ratingValue.compareTo(a.ratingValue));
     case 'Under TZS 13,000':

@@ -11,6 +11,7 @@ import '../../screens/admin/admin_reports_screen.dart';
 import '../../screens/admin/admin_settings_screen.dart';
 import '../../screens/admin/admin_vendor_screen.dart';
 import '../../screens/cart/cart_screen.dart';
+import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_screen.dart';
 import '../../data/mock_data.dart';
 import '../../models/shop.dart';
@@ -22,6 +23,8 @@ import '../../screens/driver/driver_queue_screen.dart';
 import '../../screens/driver/driver_wallet_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/login/login_screen.dart';
+import '../../screens/login/register_screen.dart';
+import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/orders/orders_screen.dart';
 import '../../screens/profile/profile_screen.dart';
@@ -37,6 +40,7 @@ import '../../screens/vendor/vendor_order_detail_screen.dart';
 import '../../screens/vendor/vendor_orders_screen.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/bottom_tab_bar.dart';
+import '../../widgets/announcement_banner.dart';
 
 /// Root navigation graph.
 ///
@@ -69,7 +73,7 @@ final appRouter = GoRouter(
         StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/search', builder: (_, _) => const SearchScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (_, _) => const OrdersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/chat', builder: (_, _) => const ChatScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/chat', builder: (_, _) => const ChatListScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen())]),
       ],
     ),
@@ -115,7 +119,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(path: '/track', builder: (_, state) => TrackOrderScreen(orderId: state.extra as String?)),
     GoRoute(path: '/notifs', builder: (_, _) => const NotificationsScreen()),
+    GoRoute(path: '/chat-thread', builder: (_, state) => ChatScreen(shop: state.extra as String? ?? 'Marina Fresh Laundry')),
     GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+    GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+    GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
     GoRoute(path: '/vendor/order-detail', builder: (_, _) => const VendorOrderDetailScreen()),
     GoRoute(path: '/admin/client', builder: (_, _) => const AdminClientScreen()),
     GoRoute(path: '/admin/vendor', builder: (_, _) => const AdminVendorScreen()),
@@ -131,7 +138,12 @@ class _CustomerTabShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: shell,
+      body: Column(
+        children: [
+          const AnnouncementBanner(),
+          Expanded(child: shell),
+        ],
+      ),
       bottomNavigationBar: AppBottomTabBar(
         items: kCustomerTabs,
         currentIndex: shell.currentIndex,
@@ -157,7 +169,12 @@ class _RoleTabShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: shell,
+      body: Column(
+        children: [
+          const AnnouncementBanner(),
+          Expanded(child: shell),
+        ],
+      ),
       bottomNavigationBar: AppBottomTabBar(
         items: items,
         currentIndex: shell.currentIndex,

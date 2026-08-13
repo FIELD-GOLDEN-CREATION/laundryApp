@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icons.dart';
 import '../../data/mock_data.dart';
 import '../../models/order.dart';
 import '../../state/orders_state.dart';
 import '../../state/orders_tab_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import '../../widgets/remote_image.dart';
 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
@@ -38,7 +40,11 @@ class OrdersScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             for (var i = 0; i < orders.length; i++) ...[
-              _OrderCard(order: orders[i], onTap: () => context.push('/track', extra: orders[i].id)),
+              _OrderCard(
+                order: orders[i],
+                onChat: tab == 0 ? () => context.push('/chat-thread', extra: orders[i].shop) : null,
+                onTap: () => context.push('/track', extra: orders[i].id),
+              ),
               if (i != orders.length - 1) const SizedBox(height: 12),
             ],
           ],
@@ -82,13 +88,18 @@ class _TabButton extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onTap});
+  const _OrderCard({required this.order, required this.onTap, this.onChat});
 
   final Order order;
   final VoidCallback onTap;
 
+  /// Chat entry point — only set for active orders (a customer can only chat
+  /// a vendor while an order with them is in progress).
+  final VoidCallback? onChat;
+
   @override
   Widget build(BuildContext context) {
+    final shop = shopByName(order.shop);
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
@@ -106,8 +117,9 @@ class _OrderCard extends StatelessWidget {
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  SizedBox(width: 44, height: 44, child: RemoteImage(url: shop?.imageUrl ?? '', fallback: 'Shop', circle: true)),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,9 +151,29 @@ class _OrderCard extends StatelessWidget {
                     order.date,
                     style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
                   ),
-                  Text(
-                    order.total,
-                    style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  Row(
+                    children: [
+                      Text(
+                        order.total,
+                        style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      ),
+                      if (onChat != null) ...[
+                        const SizedBox(width: 10),
+                        Material(
+                          color: AppColors.tealMuted,
+                          borderRadius: BorderRadius.circular(12),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: onChat,
+                            child: SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Center(child: AppIcon(AppIcons.chatBubble, size: 17, color: AppColors.teal)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),

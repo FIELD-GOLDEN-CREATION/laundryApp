@@ -19,7 +19,7 @@ const kCustomerTabs = [
   TabBarItem(icon: AppIcons.tabHome, label: 'Home'),
   TabBarItem(icon: AppIcons.tabSearch, label: 'Explore'),
   TabBarItem(icon: AppIcons.tabOrders, label: 'Orders', gateReason: 'Log in to see your orders.'),
-  TabBarItem(icon: AppIcons.tabChat, label: 'Chat'),
+  TabBarItem(icon: AppIcons.tabChat, label: 'Chat', gateReason: 'Log in to see your chats with shops.'),
   TabBarItem(
     icon: AppIcons.tabProfile,
     label: 'Profile',

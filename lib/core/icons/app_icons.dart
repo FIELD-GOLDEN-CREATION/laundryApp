@@ -144,4 +144,14 @@ abstract final class AppIcons {
   // Driver module
   static const foldedMap =
       '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#1a5c58" stroke-width="1.9" stroke-linejoin="round"><path d="M2 6l5-3 4 3 5-3v12l-5 3-4-3-5 3z"/></svg>';
+
+  // Address / location (Schedule pickup)
+  static const home =
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c58" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>';
+
+  static const office =
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c58" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 21V3M16 21V3M7 8h2M7 12h2M7 16h2M15 8h2M15 12h2M15 16h2"/></svg>';
+
+  static const locate =
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c58" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" fill="#1a5c58"/></svg>';
 }

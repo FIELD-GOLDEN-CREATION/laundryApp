@@ -11,8 +11,9 @@ const _kAddRoles = ['Client', 'Vendor', 'Driver'];
 /// source's `modalOpen`/`modalCopy()`). Confirm and Cancel both just close
 /// the sheet — this is a prototype with no backend to actually write to,
 /// same as the source.
-void showCrudFormModal(BuildContext context, ModalKind kind) {
+void showCrudFormModal(BuildContext context, ModalKind kind, {void Function(String name, String email, String phone, String password)? onClientCreated}) {
   final copy = kModalCopy[kind]!;
+  final controllers = [for (final _ in copy.fields) TextEditingController()];
 
   showModalBottomSheet(
     context: context,
@@ -65,7 +66,7 @@ void showCrudFormModal(BuildContext context, ModalKind kind) {
                   const SizedBox(height: 16),
                   for (var i = 0; i < copy.fields.length; i++) ...[
                     if (i != 0) const SizedBox(height: 12),
-                    _ModalField(spec: copy.fields[i]),
+                     _ModalField(spec: copy.fields[i], controller: controllers[i]),
                   ],
                   const SizedBox(height: 20),
                   Row(
@@ -79,7 +80,12 @@ void showCrudFormModal(BuildContext context, ModalKind kind) {
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                            onTap: () => Navigator.of(sheetContext).pop(),
+                             onTap: () {
+                               if (kind == ModalKind.add && addRole == 0 && onClientCreated != null) {
+                                 onClientCreated(controllers[0].text, controllers[1].text, controllers[2].text, controllers[3].text);
+                               }
+                               Navigator.of(sheetContext).pop();
+                             },
                             child: Container(
                               height: 52,
                               alignment: Alignment.center,
@@ -117,7 +123,11 @@ void showCrudFormModal(BuildContext context, ModalKind kind) {
         },
       );
     },
-  );
+  ).whenComplete(() {
+    for (final controller in controllers) {
+      controller.dispose();
+    }
+  });
 }
 
 class _RolePill extends StatelessWidget {
@@ -153,9 +163,10 @@ class _RolePill extends StatelessWidget {
 }
 
 class _ModalField extends StatelessWidget {
-  const _ModalField({required this.spec});
+  const _ModalField({required this.spec, required this.controller});
 
   final FormFieldSpec spec;
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +185,7 @@ class _ModalField extends StatelessWidget {
           ),
           alignment: Alignment.centerLeft,
           child: TextField(
+            controller: controller,
             obscureText: spec.obscure,
             style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
             decoration: InputDecoration.collapsed(
