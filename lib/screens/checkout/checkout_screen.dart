@@ -149,7 +149,11 @@ class CheckoutScreen extends ConsumerWidget {
                     label: 'Card',
                     sub: selectedCard != null ? selectedCard.label : 'Choose or link a saved card',
                     selected: checkout.payIndex == 0,
-                    leading: const RemoteImage(url: kCardPhotoUrl, fallback: 'Card', borderRadius: 10),
+                    leading: const SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: RemoteImage(url: kCardPhotoUrl, fallback: 'Card', borderRadius: 10),
+                    ),
                     onTap: () => _openCardPay(
                       context,
                       shop: 'Marina Fresh Laundry',

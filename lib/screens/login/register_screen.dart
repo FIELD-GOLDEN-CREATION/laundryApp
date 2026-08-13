@@ -7,6 +7,8 @@ import '../../state/auth_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 
+const _kRegisterWash = Color(0xFFEAF2FA);
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -47,30 +49,46 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _kRegisterWash,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 30),
-          children: [
-            Row(children: [IconButton(onPressed: () => context.pop(), icon: const AppIcon(AppIcons.backChevron, size: 9)), const SizedBox(width: 6), Text('Create account', style: AppText.serif(fontSize: 25))]),
-            const SizedBox(height: 8),
-            Text('Join Laundry and make pickup day easier.', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted)),
-            const SizedBox(height: 24),
-            _Field(label: 'FULL NAME', hint: 'e.g. Amara Reed', controller: _name),
-            const SizedBox(height: 14),
-            _Field(label: 'EMAIL', hint: 'name@mail.com', controller: _email, keyboardType: TextInputType.emailAddress),
-            const SizedBox(height: 14),
-            _Field(label: 'PHONE', hint: '+255 754 111 222', controller: _phone, keyboardType: TextInputType.phone),
-            const SizedBox(height: 14),
-            _Field(label: 'PASSWORD', hint: 'At least 6 characters', controller: _password, obscure: true),
-            if (_error.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(_error, style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.danger)),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(24, 12, 24, 30), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [IconButton(onPressed: () => context.pop(), padding: EdgeInsets.zero, alignment: Alignment.centerLeft, icon: const AppIcon(AppIcons.backChevron, size: 9)), const SizedBox(height: 16), const Icon(Icons.local_laundry_service_rounded, size: 34, color: AppColors.teal), const SizedBox(height: 12), Text('Create your account', style: AppText.serif(fontSize: 28, color: AppColors.teal)), const SizedBox(height: 5), Text('Sign up to continue your laundry journey.', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted))])),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+                decoration: const BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.vertical(top: Radius.circular(34))),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Create your client account', style: AppText.serif(fontSize: 25, color: AppColors.cream)),
+                  const SizedBox(height: 5),
+                  Text('A few details and you are ready to book.', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.68))),
+                  const SizedBox(height: 20),
+                  _Field(label: 'FULL NAME', hint: 'e.g. Amara Reed', controller: _name, lightLabel: true),
+                  const SizedBox(height: 13),
+                  _Field(label: 'EMAIL ADDRESS', hint: 'name@mail.com', controller: _email, keyboardType: TextInputType.emailAddress, lightLabel: true),
+                  const SizedBox(height: 13),
+                  _Field(label: 'MOBILE NUMBER', hint: '+255 754 111 222', controller: _phone, keyboardType: TextInputType.phone, lightLabel: true),
+                  const SizedBox(height: 13),
+                  _Field(label: 'PASSWORD', hint: 'At least 6 characters', controller: _password, obscure: true, lightLabel: true),
+                  if (_error.isNotEmpty) ...[const SizedBox(height: 12), Text(_error, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.amberLight))],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: Material(
+                      color: AppColors.cream,
+                      borderRadius: BorderRadius.circular(18),
+                      child: InkWell(borderRadius: BorderRadius.circular(18), onTap: _register, child: Center(child: Text('Sign up  →', style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.teal))),),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Center(child: Text('Client accounts only · Staff are invited by admin', textAlign: TextAlign.center, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.62)))),
+                  Center(child: TextButton(onPressed: () => context.pop(), child: Text('Already have an account?  Sign in', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.cream)))),
+                ]),
+              ),
             ],
-            const SizedBox(height: 22),
-            Material(color: AppColors.teal, borderRadius: BorderRadius.circular(18), child: InkWell(borderRadius: BorderRadius.circular(18), onTap: _register, child: Container(height: 54, alignment: Alignment.center, child: Text('Create client account', style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.cream))))),
-            const SizedBox(height: 14),
-            Center(child: Text('Client accounts only · Vendors and staff are invited by admin', textAlign: TextAlign.center, style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted))),
-          ],
+          ),
         ),
       ),
     );
@@ -78,17 +96,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 }
 
 class _Field extends StatelessWidget {
-  const _Field({required this.label, required this.hint, required this.controller, this.obscure = false, this.keyboardType});
+  const _Field({required this.label, required this.hint, required this.controller, this.obscure = false, this.keyboardType, this.lightLabel = false});
   final String label;
   final String hint;
   final TextEditingController controller;
   final bool obscure;
   final TextInputType? keyboardType;
+  final bool lightLabel;
 
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text(label, style: AppText.eyebrow()),
+    Text(label, style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: lightLabel ? AppColors.cream.withValues(alpha: 0.72) : AppColors.muted, letterSpacing: 0.5)),
     const SizedBox(height: 7),
-    Container(height: 52, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(16)), child: TextField(controller: controller, obscureText: obscure, keyboardType: keyboardType, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700), decoration: InputDecoration.collapsed(hintText: hint, hintStyle: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.muted)))),
+    Container(height: 50, padding: const EdgeInsets.symmetric(horizontal: 14), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), border: Border.all(color: Colors.white.withValues(alpha: 0.24)), borderRadius: BorderRadius.circular(14)), child: TextField(controller: controller, obscureText: obscure, keyboardType: keyboardType, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: lightLabel ? AppColors.cream : AppColors.slate), decoration: InputDecoration.collapsed(hintText: hint, hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: lightLabel ? AppColors.cream.withValues(alpha: 0.45) : AppColors.muted)))),
   ]);
 }
