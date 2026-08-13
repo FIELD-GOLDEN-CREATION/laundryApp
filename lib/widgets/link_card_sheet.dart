@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/mock_data.dart';
 import '../models/saved_card.dart';
 import '../state/saved_cards_state.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
 import 'card_brand_tag.dart';
+import 'remote_image.dart';
 
 String _digitsOnly(String s) => s.replaceAll(RegExp(r'\D'), '');
 
@@ -114,6 +116,8 @@ class _LinkCardSheetState extends State<_LinkCardSheet> {
               'Saved to your account for faster checkout',
               style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
             ),
+            const SizedBox(height: 14),
+            _CardVisual(brand: _brand),
             const SizedBox(height: 16),
             _Field(label: 'Name on card', hint: 'Amara Reed', controller: _nameCtrl),
             const SizedBox(height: 12),
@@ -197,6 +201,61 @@ class _LinkCardSheetState extends State<_LinkCardSheet> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardVisual extends StatelessWidget {
+  const _CardVisual({required this.brand});
+
+  final CardBrand brand;
+
+  @override
+  Widget build(BuildContext context) {
+    final brandText = brandLabel(brand).toUpperCase();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: 116,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const RemoteImage(url: kCardPhotoUrl, fallback: 'Card', placeholder: ColoredBox(color: Color(0xFF2C3E50))),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.05),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Text(
+                      brandText,
+                      style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.6),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '•••• •••• •••• ••••',
+                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 2),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

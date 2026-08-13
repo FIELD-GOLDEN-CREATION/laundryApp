@@ -57,23 +57,23 @@ void main() {
     addTearDown(container.dispose);
 
     container.read(chatProvider.notifier).setDraft('  Thanks!  ');
-    container.read(chatProvider.notifier).send();
+    container.read(chatProvider.notifier).send('Marina Fresh Laundry');
 
     final state = container.read(chatProvider);
     expect(state.draft, '');
-    expect(state.messages.last.text, 'Thanks!');
-    expect(state.messages.last.isMe, isTrue);
+    expect(state.messagesFor('Marina Fresh Laundry').last.text, 'Thanks!');
+    expect(state.messagesFor('Marina Fresh Laundry').last.isMe, isTrue);
   });
 
   test('ChatNotifier.send ignores an empty draft', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final before = container.read(chatProvider).messages.length;
+    final before = container.read(chatProvider).messagesFor('Marina Fresh Laundry').length;
     container.read(chatProvider.notifier).setDraft('   ');
-    container.read(chatProvider.notifier).send();
+    container.read(chatProvider.notifier).send('Marina Fresh Laundry');
 
-    expect(container.read(chatProvider).messages.length, before);
+    expect(container.read(chatProvider).messagesFor('Marina Fresh Laundry').length, before);
   });
 
   test('discountFor only applies once a promo code is entered', () {

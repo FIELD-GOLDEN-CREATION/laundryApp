@@ -4,7 +4,7 @@ import '../../../core/icons/app_icons.dart';
 import '../../../models/shop.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
-import '../../../widgets/placeholder_image.dart';
+import '../../../widgets/remote_image.dart';
 
 /// The horizontal-scroll shop card used in Home's "Nearby shops" section.
 class ShopCard extends StatelessWidget {
@@ -31,8 +31,7 @@ class ShopCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    const PlaceholderImage(label: 'Shop photo'),
-                    Positioned(
+                    RemoteImage(url: shop.imageUrl, fallback: 'Shop photo'),                    Positioned(
                       top: 10,
                       left: 10,
                       child: Container(
@@ -137,7 +136,7 @@ class ShopListTile extends StatelessWidget {
               SizedBox(
                 width: 86,
                 height: 86,
-                child: PlaceholderImage(label: 'Shop', borderRadius: 16),
+                child: RemoteImage(url: shop.imageUrl, fallback: 'Shop', borderRadius: 16),
               ),
               const SizedBox(width: 13),
               Expanded(

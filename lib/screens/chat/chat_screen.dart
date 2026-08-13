@@ -3,14 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
+import '../../data/mock_data.dart';
 import '../../models/chat_message.dart';
 import '../../state/chat_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
-import '../../widgets/placeholder_image.dart';
+import '../../widgets/remote_image.dart';
 
+/// A single conversation thread with one shop. Reachable from the Chat list
+/// (the `/chat` tab) or from an active order's chat icon.
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({super.key, required this.shop});
+
+  final String shop;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -26,14 +31,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _send() {
-    ref.read(chatProvider.notifier).send();
+    ref.read(chatProvider.notifier).send(widget.shop);
     _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    final chat = ref.watch(chatProvider);
+    final messages = ref.watch(chatProvider.select((s) => s.messagesFor(widget.shop)));
     final notifier = ref.read(chatProvider.notifier);
+    final shopImage = shopByName(widget.shop)?.imageUrl ?? '';
 
     return Scaffold(
       body: SafeArea(
@@ -52,7 +58,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () => context.go('/home'),
+                      onTap: () => context.go('/chat'),
                       child: const SizedBox(
                         width: 40,
                         height: 40,
@@ -61,14 +67,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const SizedBox(width: 40, height: 40, child: PlaceholderImage(label: 'Shop', circle: true)),
+                  SizedBox(width: 40, height: 40, child: RemoteImage(url: shopImage, fallback: 'Shop', circle: true)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Marina Fresh Laundry',
+                          widget.shop,
                           style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 2),
@@ -85,9 +91,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(18),
-                itemCount: chat.messages.length,
+                itemCount: messages.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (_, i) => _Bubble(message: chat.messages[i]),
+                itemBuilder: (_, i) => _Bubble(message: messages[i]),
               ),
             ),
             Container(

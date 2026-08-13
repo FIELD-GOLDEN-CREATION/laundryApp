@@ -2,21 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icons.dart';
 import '../../data/mock_data.dart';
 import '../../state/schedule_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import '../../utils/location.dart';
 import '../../widgets/primary_cta_bar.dart';
 import '../../widgets/radio_option_card.dart';
 import '../../widgets/round_back_button.dart';
 
-class ScheduleScreen extends ConsumerWidget {
+class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScheduleScreen> createState() => _ScheduleScreenState();
+}
+
+class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
+  bool _locating = false;
+
+  Future<void> _locateMe() async {
+    if (_locating) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _locating = true);
+    try {
+      final point = await locateUser();
+      ref.read(scheduleProvider.notifier).setCurrentLocation(point.label);
+    } on LocationException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not get your location.')),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final schedule = ref.watch(scheduleProvider);
     final notifier = ref.read(scheduleProvider.notifier);
+
+    final mapLabel = schedule.isCurrentLocation
+        ? schedule.currentLocation
+        : kAddresses[schedule.addrIndex].line;
 
     return Scaffold(
       body: SafeArea(
@@ -32,6 +63,8 @@ class ScheduleScreen extends ConsumerWidget {
                   Text('Schedule pickup', style: AppText.serif(fontSize: 24)),
                 ],
               ),
+              const SizedBox(height: 18),
+              _MapPreview(label: mapLabel, locating: _locating),
               _SectionLabel('Pickup address'),
               Column(
                 children: [
@@ -40,10 +73,19 @@ class ScheduleScreen extends ConsumerWidget {
                       label: kAddresses[i].label,
                       sub: kAddresses[i].line,
                       selected: schedule.addrIndex == i,
+                      leading: _AddressIcon(icon: i == 0 ? AppIcons.home : AppIcons.office),
                       onTap: () => notifier.pickAddress(i),
                     ),
                     if (i != kAddresses.length - 1) const SizedBox(height: 10),
                   ],
+                  const SizedBox(height: 10),
+                  RadioOptionCard(
+                    label: 'Locate me',
+                    sub: schedule.isCurrentLocation ? schedule.currentLocation : 'Use my current location (GPS)',
+                    selected: schedule.isCurrentLocation,
+                    leading: _AddressIcon(icon: AppIcons.locate, bg: AppColors.amberLight, fg: AppColors.amber),
+                    onTap: () => _locateMe(),
+                  ),
                 ],
               ),
               _SectionLabel('Pickup day'),
@@ -118,6 +160,107 @@ class ScheduleScreen extends ConsumerWidget {
   }
 }
 
+/// A stylised map preview of the pickup area — a fixed-height, properly
+/// sized tile with a location pin and the selected address, so the location
+/// reads visually instead of as a bare list row.
+class _MapPreview extends StatelessWidget {
+  const _MapPreview({required this.label, required this.locating});
+
+  final String label;
+  final bool locating;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 150,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(color: AppColors.tealMuted),
+            CustomPaint(painter: _MapGridPainter()),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, AppColors.teal.withValues(alpha: 0.08)],
+                ),
+              ),
+            ),
+            Center(
+              child: locating
+                  ? const SizedBox(width: 34, height: 34, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.teal))
+                  : const _MapPin(),
+            ),
+            Positioned(
+              left: 14,
+              bottom: 14,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  locating ? 'Finding your location…' : label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: const AppIcon(AppIcons.locationPin, size: 20, color: AppColors.cream),
+    );
+  }
+}
+
+class _MapGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..strokeWidth = 1;
+    const gap = 36.0;
+    for (var x = 0.0; x < size.width; x += gap) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (var y = 0.0; y < size.height; y += gap) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+    // A couple of "roads".
+    final road = Paint()
+      ..color = Colors.white.withValues(alpha: 0.85)
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(0, size.height * 0.62), Offset(size.width, size.height * 0.34), road);
+    canvas.drawLine(Offset(size.width * 0.22, 0), Offset(size.width * 0.42, size.height), road);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;
@@ -127,6 +270,25 @@ class _SectionLabel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 11),
       child: Text(text.toUpperCase(), style: AppText.eyebrow()),
+    );
+  }
+}
+
+class _AddressIcon extends StatelessWidget {
+  const _AddressIcon({required this.icon, this.bg = AppColors.tealMuted, this.fg = AppColors.teal});
+
+  final String icon;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(13)),
+      alignment: Alignment.center,
+      child: AppIcon(icon, size: 19, color: fg),
     );
   }
 }

@@ -12,12 +12,17 @@ class RadioOptionCard extends StatelessWidget {
     required this.sub,
     required this.selected,
     required this.onTap,
+    this.leading,
   });
 
   final String label;
   final String sub;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Optional widget (e.g. a card thumbnail or mobile-money logo) rendered
+  /// before the radio dot, right after it — absent in the base design.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,7 @@ class RadioOptionCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 22,
@@ -56,6 +61,10 @@ class RadioOptionCard extends StatelessWidget {
                     : null,
               ),
               const SizedBox(width: 12),
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

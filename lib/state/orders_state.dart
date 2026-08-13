@@ -15,7 +15,14 @@ class OrdersNotifier extends Notifier<List<Order>> {
 
   /// Inserts a new order at the top of Active, at kOrderPlacedStep (i.e.
   /// submitted but not yet picked up).
-  Order placeOrder({required String shop, required String items, required String total}) {
+  Order placeOrder({
+    required String shop,
+    required String items,
+    required String total,
+    String paymentMethod = '',
+    String pickup = '',
+    String address = '',
+  }) {
     _placedCount++;
     final placed = orderStatusForStep(kOrderPlacedStep);
     final order = Order(
@@ -28,6 +35,9 @@ class OrdersNotifier extends Notifier<List<Order>> {
       date: 'Just now',
       total: total,
       trackStep: kOrderPlacedStep,
+      paymentMethod: paymentMethod,
+      pickup: pickup,
+      address: address,
     );
     state = [order, ...state];
     return order;
