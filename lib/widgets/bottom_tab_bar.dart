@@ -19,13 +19,80 @@ const kCustomerTabs = [
   TabBarItem(icon: AppIcons.tabHome, label: 'Home'),
   TabBarItem(icon: AppIcons.tabSearch, label: 'Explore'),
   TabBarItem(icon: AppIcons.tabOrders, label: 'Orders', gateReason: 'Log in to see your orders.'),
-  TabBarItem(icon: AppIcons.tabChat, label: 'Chat', gateReason: 'Log in to see your chats with shops.'),
   TabBarItem(
     icon: AppIcons.tabProfile,
     label: 'Profile',
     gateReason: 'Log in to see your profile, addresses and saved shops.',
   ),
 ];
+
+/// Customer navigation styled as a floating dark capsule with rounded ends.
+/// Chat intentionally is not a tab; customers enter it from an active order.
+class FloatingCustomerNavBar extends StatelessWidget {
+  const FloatingCustomerNavBar({super.key, required this.currentIndex, required this.onTap});
+
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 92,
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 18),
+      color: AppColors.cream,
+      child: Material(
+        color: AppColors.slate,
+        borderRadius: BorderRadius.circular(28),
+        elevation: 12,
+        shadowColor: Colors.black.withValues(alpha: 0.22),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: Row(
+            children: [
+              for (var i = 0; i < kCustomerTabs.length; i++)
+                Expanded(
+                  child: _FloatingTabButton(
+                    item: kCustomerTabs[i],
+                    active: i == currentIndex,
+                    onTap: () => onTap(i),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingTabButton extends StatelessWidget {
+  const _FloatingTabButton({required this.item, required this.active, required this.onTap});
+
+  final TabBarItem item;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        decoration: BoxDecoration(color: active ? Colors.white.withValues(alpha: 0.16) : Colors.transparent, borderRadius: BorderRadius.circular(22)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AppIcon(item.icon, size: 19, color: active ? AppColors.cream : AppColors.tabInactive),
+            const SizedBox(height: 4),
+            Text(item.label, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w800, color: active ? AppColors.cream : AppColors.tabInactive)),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 const kVendorTabs = [
   TabBarItem(icon: AppIcons.tabDash, label: 'Dashboard'),
