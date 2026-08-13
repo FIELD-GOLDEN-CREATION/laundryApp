@@ -69,24 +69,29 @@ class CheckoutScreen extends ConsumerWidget {
                   Text('Checkout', style: AppText.serif(fontSize: 24)),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              const _CheckoutProgress(),
+              const SizedBox(height: 18),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(22)),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.teal, Color(0xFF124944)]),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: AppColors.teal.withValues(alpha: 0.2), blurRadius: 18, offset: const Offset(0, 8))],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'PICKUP',
-                      style: AppText.sans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.9,
-                        color: AppColors.cream.withValues(alpha: 0.62),
-                      ),
+                    Row(
+                      children: [
+                        Container(width: 34, height: 34, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)), child: const Icon(Icons.local_laundry_service_rounded, size: 18, color: AppColors.cream)),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text('PICKUP DETAILS', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.9, color: AppColors.cream.withValues(alpha: 0.68)))),
+                        Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: AppColors.mint.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(99)), child: Text('READY', style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppColors.mint, letterSpacing: 0.5))),
+                      ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
                     Text(
                       pickupSummary,
                       style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cream),
@@ -130,7 +135,13 @@ class CheckoutScreen extends ConsumerWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 24, bottom: 11),
-                child: Text('PAYMENT', style: AppText.eyebrow()),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('PAYMENT METHOD', style: AppText.eyebrow()),
+                    Row(children: [const Icon(Icons.lock_outline_rounded, size: 13, color: AppColors.teal), const SizedBox(width: 4), Text('Secure checkout', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal))]),
+                  ],
+                ),
               ),
               Column(
                 children: [
@@ -279,6 +290,42 @@ class CheckoutScreen extends ConsumerWidget {
           context.go('/order-confirmation', extra: order.id);
         },
       ),
+    );
+  }
+}
+
+class _CheckoutProgress extends StatelessWidget {
+  const _CheckoutProgress();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _ProgressStep(number: '1', label: 'Schedule', active: false),
+        Expanded(child: Container(height: 2, color: AppColors.teal)),
+        _ProgressStep(number: '2', label: 'Payment', active: true),
+        Expanded(child: Container(height: 2, color: AppColors.creamDark)),
+        _ProgressStep(number: '3', label: 'Confirm', active: false),
+      ],
+    );
+  }
+}
+
+class _ProgressStep extends StatelessWidget {
+  const _ProgressStep({required this.number, required this.label, required this.active});
+
+  final String number;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(width: 26, height: 26, alignment: Alignment.center, decoration: BoxDecoration(color: active ? AppColors.teal : AppColors.creamDark, shape: BoxShape.circle), child: Text(number, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: active ? AppColors.cream : AppColors.muted))),
+        const SizedBox(height: 4),
+        Text(label, style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: active ? AppColors.teal : AppColors.muted)),
+      ],
     );
   }
 }

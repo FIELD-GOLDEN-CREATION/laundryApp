@@ -163,7 +163,12 @@ class _RoleTabShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: shell,
+      body: Column(
+        children: [
+          const AnnouncementBanner(),
+          Expanded(child: shell),
+        ],
+      ),
       bottomNavigationBar: AppBottomTabBar(
         items: items,
         currentIndex: shell.currentIndex,
