@@ -14,7 +14,6 @@ import '../../screens/cart/cart_screen.dart';
 import '../../screens/chat/chat_screen.dart';
 import '../../data/mock_data.dart';
 import '../../models/shop.dart';
-import '../../models/user_role.dart';
 import '../../screens/checkout/checkout_screen.dart';
 import '../../screens/checkout/order_confirmation_screen.dart';
 import '../../screens/driver/driver_dash_screen.dart';
@@ -125,23 +124,17 @@ class _CustomerTabShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isGuest = ref.watch(authProvider.select((s) => s.role == UserRole.guest));
     return Scaffold(
       body: shell,
-      // Guests only get Home (reached via the shell's `/home` branch, plus
-      // Search when they use the search bar there) — no tab bar to jump to
-      // Orders/Chat/Profile, which are gated destinations anyway.
-      bottomNavigationBar: isGuest
-          ? null
-          : AppBottomTabBar(
-              items: kCustomerTabs,
-              currentIndex: shell.currentIndex,
-              onTap: (i) {
-                final reason = kCustomerTabs[i].gateReason;
-                if (reason != null && gateGuest(ref, context, reason)) return;
-                shell.goBranch(i, initialLocation: i == shell.currentIndex);
-              },
-            ),
+      bottomNavigationBar: AppBottomTabBar(
+        items: kCustomerTabs,
+        currentIndex: shell.currentIndex,
+        onTap: (i) {
+          final reason = kCustomerTabs[i].gateReason;
+          if (reason != null && gateGuest(ref, context, reason)) return;
+          shell.goBranch(i, initialLocation: i == shell.currentIndex);
+        },
+      ),
     );
   }
 }

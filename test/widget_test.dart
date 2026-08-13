@@ -10,11 +10,15 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: LaundryApp()));
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Guests boot straight onto Home but see no tab bar and no pickup
-    // address (both gated on login), so assert on content that is visible
-    // to a guest: the search placeholder plus Home-only section headers.
+    // Guests boot straight onto Home and see the customer tab bar, but no
+    // pickup address (which remains gated on login).
     expect(find.text('Search services or shops'), findsOneWidget);
     expect(find.text('Just for you'), findsOneWidget);
     expect(find.text('Nearby shops'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Orders'), findsOneWidget);
+    expect(find.text('Chat'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
   });
 }
