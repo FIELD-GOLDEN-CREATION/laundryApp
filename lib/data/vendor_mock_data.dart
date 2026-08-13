@@ -1,0 +1,208 @@
+import '../models/addon_toggle.dart';
+import '../models/alert_item.dart';
+import '../models/day_option.dart';
+import '../models/machine_status.dart';
+import '../models/menu_price_row.dart';
+import '../models/payout_record.dart';
+import '../models/review_item.dart';
+import '../models/track_step_def.dart';
+import '../models/turnaround_option.dart';
+import '../models/vendor_order.dart';
+import '../theme/colors.dart';
+
+/// Static seed data for the Vendor module — same 1:1 port-of-the-JS-mock
+/// approach as data/mock_data.dart, split into its own file since the
+/// combined customer+vendor+admin dataset would otherwise make one file
+/// unwieldy.
+
+const kWeekBarFractions = [.38, .52, .44, .68, .60, .82, 1.0];
+
+const kVendorAlerts = [
+  AlertItem(
+    title: '#LD-2486 · express, 6h left',
+    sub: 'Wedding dress · dry clean only',
+    tag: 'Urgent',
+    accentColor: AppColors.amber,
+    tagBg: AppColors.amberLight,
+  ),
+  AlertItem(
+    title: '#LD-2479 · pickup overdue',
+    sub: 'Driver has not collected · 40 min late',
+    tag: 'Late',
+    accentColor: AppColors.amber,
+    tagBg: AppColors.amberLight,
+  ),
+];
+
+const kMachines = [
+  MachineStatus(name: 'Washer 1 – 12 kg', state: 'Rinse · 14 min', pct: 0.72, color: AppColors.teal),
+  MachineStatus(name: 'Washer 2 – 12 kg', state: 'Spin · 4 min', pct: 0.90, color: AppColors.teal),
+  MachineStatus(name: 'Dryer 1 – 10 kg', state: 'Idle', pct: 0, color: AppColors.tabInactive),
+  MachineStatus(name: 'Press station', state: 'Queue of 6', pct: 0.55, color: AppColors.amber),
+];
+
+const kVendorOrdersNew = [
+  VendorOrder(
+    id: '#LD-2492',
+    customer: 'Nina Alvarez',
+    items: '6 items',
+    dist: '0.8 km',
+    priority: 'Express',
+    chips: ['Dry clean', 'Silk'],
+    when: 'Requested 4 min ago',
+    total: 'TZS 135,200',
+    stage: 'new',
+  ),
+  VendorOrder(
+    id: '#LD-2491',
+    customer: 'Owen Park',
+    items: '12 items',
+    dist: '1.4 km',
+    priority: 'Standard',
+    chips: ['Wash & fold'],
+    when: 'Requested 11 min ago',
+    total: 'TZS 99,840',
+    stage: 'new',
+  ),
+  VendorOrder(
+    id: '#LD-2490',
+    customer: 'Hana Sato',
+    items: '3 items',
+    dist: '2.1 km',
+    priority: 'Standard',
+    chips: ['Ironing', 'Same day'],
+    when: 'Requested 22 min ago',
+    total: 'TZS 37,050',
+    stage: 'new',
+  ),
+];
+
+const kVendorOrdersWip = [
+  VendorOrder(
+    id: '#LD-2481',
+    customer: 'Amara Reed',
+    items: '8 items',
+    dist: '1.2 km',
+    priority: 'Standard',
+    chips: ['Washing', 'Delicate'],
+    when: 'Washer 2 · 14 min left',
+    total: 'TZS 90,350',
+    stage: 'wip',
+  ),
+  VendorOrder(
+    id: '#LD-2486',
+    customer: 'Luis Ferrer',
+    items: '1 dress',
+    dist: '0.5 km',
+    priority: 'Express',
+    chips: ['Dry clean', '6h left'],
+    when: 'Press queue',
+    total: 'TZS 119,600',
+    stage: 'wip',
+  ),
+];
+
+const kVendorOrdersReady = [
+  VendorOrder(
+    id: '#LD-2478',
+    customer: 'Grace Bello',
+    items: '9 items',
+    dist: '1.9 km',
+    priority: 'Standard',
+    chips: ['Ready', 'Awaiting driver'],
+    when: 'Packed 12:40 PM',
+    total: 'TZS 106,860',
+    stage: 'ready',
+  ),
+  VendorOrder(
+    id: '#LD-2475',
+    customer: 'Ivan Petrov',
+    items: '4 items',
+    dist: '3.0 km',
+    priority: 'Standard',
+    chips: ['Ready'],
+    when: 'Packed 11:05 AM',
+    total: 'TZS 58,500',
+    stage: 'ready',
+  ),
+];
+
+const kGarmentLabels = ['Shirts ×4', 'Trousers ×2', 'Dress ×1', 'Linen ×1'];
+
+const kDamageLabels = [
+  'Fading on collar (shirt 2)',
+  'Loose seam on trousers',
+  'Bleach mark on linen',
+  'Missing button',
+];
+const kDefaultDamageChecked = [true, false, false, false];
+
+const kProcessingSteps = [
+  TrackStepDef(title: 'Received', time: '9:12 AM'),
+  TrackStepDef(title: 'Sorted & tagged', time: '10:40 AM'),
+  TrackStepDef(title: 'Washing', time: '2:15 PM'),
+  TrackStepDef(title: 'Drying & pressing', time: '4:05 PM'),
+  TrackStepDef(title: 'Ready for delivery', time: '—'),
+];
+
+const kCategoryLabels = ['Wash & fold', 'Ironing', 'Dry cleaning', 'Carpets & rugs', 'Shoe care'];
+const kDefaultCategoriesOn = [true, true, true, false, true];
+
+const kMenuPriceRows = [
+  MenuPriceRow(key: 'wash', name: 'Wash & fold', unit: 'per piece'),
+  MenuPriceRow(key: 'iron', name: 'Ironing', unit: 'per piece'),
+  MenuPriceRow(key: 'dry', name: 'Dry cleaning', unit: 'per piece'),
+  MenuPriceRow(key: 'carpet', name: 'Carpet cleaning', unit: 'per m²'),
+];
+const kDefaultVendorPrices = {'wash': 9100.0, 'iron': 5200.0, 'dry': 24700.0, 'carpet': 62400.0};
+
+const kTurnaroundOptions = [
+  TurnaroundOption(label: '6h', sub: 'Express +40%'),
+  TurnaroundOption(label: '24h', sub: 'Standard'),
+  TurnaroundOption(label: '48h', sub: 'Economy −10%'),
+];
+
+const kAddonToggles = [
+  AddonToggle(label: 'Delicate fabric treatment', price: '+TZS 10,400'),
+  AddonToggle(label: 'Stain removal (deep)', price: '+TZS 16,900'),
+  AddonToggle(label: 'Eco detergent', price: '+TZS 3,900 · upsell'),
+  AddonToggle(label: 'Fabric softener & scent', price: '+TZS 5,200'),
+];
+const kDefaultAddonsOn = [true, false, true, true];
+
+const kReturnDays = [
+  DayOption(dow: 'Thu', num: '13'),
+  DayOption(dow: 'Fri', num: '14'),
+  DayOption(dow: 'Sat', num: '15'),
+  DayOption(dow: 'Sun', num: '16'),
+  DayOption(dow: 'Mon', num: '17'),
+];
+
+const kMonthBars = [
+  ('Mar', .48),
+  ('Apr', .62),
+  ('May', .55),
+  ('Jun', .74),
+  ('Jul', .88),
+  ('Aug', 1.0),
+];
+
+const kPayouts = [
+  PayoutRecord(date: '7 Aug 2026', ref: 'Bank transfer · •••• 8821', amount: 'TZS 7,644,260'),
+  PayoutRecord(date: '31 Jul 2026', ref: 'Bank transfer · •••• 8821', amount: 'TZS 8,809,970'),
+  PayoutRecord(date: '24 Jul 2026', ref: 'Bank transfer · •••• 8821', amount: 'TZS 7,051,200'),
+];
+
+const kReviews = [
+  ReviewItem(
+    name: 'Amara R.',
+    stars: '★★★★★',
+    text: 'They flagged a stain before washing and sent a photo. That is service.',
+  ),
+  ReviewItem(
+    name: 'Tomas L.',
+    stars: '★★★★☆',
+    text: 'Fast turnaround, though the express order arrived an hour late.',
+  ),
+  ReviewItem(name: 'Priya N.', stars: '★★★★★', text: 'Eco detergent option is worth the extra dollar fifty.'),
+];
