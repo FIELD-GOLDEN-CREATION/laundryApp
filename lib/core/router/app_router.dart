@@ -58,7 +58,13 @@ import '../../widgets/announcement_banner.dart';
 /// routes (siblings of the shells, not nested in a branch) so pushing them
 /// covers the bottom tab bar entirely — matching the source's
 /// `showTabs:false` for those screens.
+/// Exposed so code outside the widget tree built by the router (e.g. the
+/// startup update checker) can still find a valid BuildContext to show
+/// dialogs against.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/home',
   routes: [
     StatefulShellRoute.indexedStack(
