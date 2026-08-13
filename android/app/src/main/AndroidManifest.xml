@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required at runtime (not just debug) so the release build can reach
+         the GitHub Releases API and open the browser to download an update. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="laundry_app"
         android:name="${applicationName}"
