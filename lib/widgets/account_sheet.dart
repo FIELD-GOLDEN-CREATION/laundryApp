@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/icons/app_icons.dart';
 import '../models/user_role.dart';
 import '../state/auth_state.dart';
+import '../state/vendor_profile_state.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
 
@@ -15,6 +17,7 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
   final auth = ref.read(authProvider);
   final isAdmin = auth.role == UserRole.admin;
   final isDriver = auth.role == UserRole.driver;
+  final isVendor = auth.role == UserRole.vendor;
 
   showModalBottomSheet(
     context: context,
@@ -59,7 +62,9 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAdmin ? 'Site Administrator' : (isDriver ? 'Kofi Asante' : 'Marina Fresh Laundry'),
+                        isAdmin
+                            ? 'Site Administrator'
+                            : (isDriver ? 'Kofi Asante' : ref.read(vendorProfileProvider).shopTitle),
                         style: AppText.serif(fontSize: 20),
                       ),
                       const SizedBox(height: 2),
@@ -96,6 +101,41 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
               ),
             ),
             const SizedBox(height: 10),
+            if (isVendor) ...[
+              SizedBox(
+                width: double.infinity,
+                child: Material(
+                  color: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      context.push('/vendor/settings');
+                    },
+                    child: Container(
+                      height: 52,
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const AppIcon(AppIcons.tabSettings, size: 16, color: AppColors.teal),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Settings',
+                            style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             SizedBox(
               width: double.infinity,
               child: Material(

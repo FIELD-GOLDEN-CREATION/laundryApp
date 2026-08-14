@@ -8,11 +8,13 @@ import '../../models/menu_item.dart';
 import '../../models/shop.dart';
 import '../../state/cart_state.dart';
 import '../../state/profile_state.dart';
+import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/primary_cta_bar.dart';
 import '../../widgets/remote_image.dart';
 import '../../widgets/round_back_button.dart';
+import '../../widgets/shop_photo_slideshow.dart';
 
 /// (background, foreground) pairs cycled across a shop's feature badges.
 const _kBadgeColors = [
@@ -31,6 +33,18 @@ class ShopDetailScreen extends ConsumerWidget {
     final qty = ref.watch(cartProvider);
     final fav = ref.watch(profileProvider.select((s) => s.fav));
 
+    // The vendor's own listing (`kShops.first`) mirrors whatever was last
+    // saved on the Vendor Settings screen, so an edit there is immediately
+    // visible here — the customer-facing half of that "trace".
+    final isVendorShop = shop.slotId == kShops.first.slotId;
+    final vendorProfile = ref.watch(vendorProfileProvider);
+    final displayName = isVendorShop ? vendorProfile.shopTitle : shop.name;
+    final displayDescription = isVendorShop ? vendorProfile.bio : shop.description;
+    final displayHours = isVendorShop
+        ? (vendorProfile.isOpen ? 'Open till ${vendorProfile.closeTime}' : 'Closed now')
+        : shop.hours;
+    final displayHoursColor = isVendorShop && !vendorProfile.isOpen ? AppColors.danger : AppColors.teal;
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -41,7 +55,10 @@ class ShopDetailScreen extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  RemoteImage(url: shop.imageUrl, fallback: 'Shop storefront photo'),
+                  if (isVendorShop && vendorProfile.shopPhotoLabels.isNotEmpty)
+                    ShopPhotoSlideshow(labels: vendorProfile.shopPhotoLabels)
+                  else
+                    RemoteImage(url: shop.imageUrl, fallback: 'Shop storefront photo'),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -80,7 +97,7 @@ class ShopDetailScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(shop.name, style: AppText.serif(fontSize: 27)),
+                  Text(displayName, style: AppText.serif(fontSize: 27)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -106,11 +123,26 @@ class ShopDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 14),
                       Text(
-                        shop.hours,
-                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.teal),
+                        displayHours,
+                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: displayHoursColor),
                       ),
                     ],
                   ),
+                  if (isVendorShop) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const AppIcon(AppIcons.clock, size: 13, color: AppColors.muted),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            vendorProfile.scheduleSummary,
+                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -122,7 +154,7 @@ class ShopDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    shop.description,
+                    displayDescription,
                     style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.6),
                   ),
                   const SizedBox(height: 24),

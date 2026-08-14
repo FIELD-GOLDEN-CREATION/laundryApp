@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/vendor_mock_data.dart';
+import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/account_sheet.dart';
@@ -16,6 +17,8 @@ class VendorDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final shopTitle = ref.watch(vendorProfileProvider.select((s) => s.shopTitle));
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -23,7 +26,7 @@ class VendorDashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(onAccount: () => showAccountSheet(context, ref)),
+              _Header(shopTitle: shopTitle, onAccount: () => showAccountSheet(context, ref)),
               const SizedBox(height: 18),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 22),
@@ -108,8 +111,9 @@ class VendorDashboardScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onAccount});
+  const _Header({required this.shopTitle, required this.onAccount});
 
+  final String shopTitle;
   final VoidCallback onAccount;
 
   @override
@@ -137,14 +141,22 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('WEDNESDAY, 12 AUG', style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.6))),
-                        const SizedBox(height: 6),
-                        Text('Marina Fresh Laundry', style: AppText.serif(fontSize: 25, color: AppColors.cream)),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('WEDNESDAY, 12 AUG', style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.6))),
+                          const SizedBox(height: 6),
+                          Text(
+                            shopTitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.serif(fontSize: 25, color: AppColors.cream),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 10),
                     Material(
                       color: Colors.white.withValues(alpha: 0.12),
                       shape: RoundedRectangleBorder(
@@ -190,15 +202,18 @@ class _Header extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       BarChartRow(
-                        height: 38,
-                        gap: 6,
+                        height: 64,
+                        gap: 7,
+                        barRadius: 4,
+                        labelColor: AppColors.cream.withValues(alpha: 0.5),
                         bars: [
                           for (var i = 0; i < kWeekBarFractions.length; i++)
                             BarDatum(
                               heightFraction: kWeekBarFractions[i],
                               color: i == 6 ? AppColors.amber : Colors.white.withValues(alpha: 0.34),
+                              label: kWeekBarLabels[i],
                             ),
                         ],
                       ),

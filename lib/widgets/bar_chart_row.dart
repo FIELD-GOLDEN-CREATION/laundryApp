@@ -23,12 +23,20 @@ class BarDatum {
 /// source, differing only in whether each bar has a label underneath and
 /// whether it's a single color or a stacked two-tone segment.
 class BarChartRow extends StatelessWidget {
-  const BarChartRow({super.key, required this.bars, required this.height, this.gap = 7, this.barRadius = 5});
+  const BarChartRow({
+    super.key,
+    required this.bars,
+    required this.height,
+    this.gap = 7,
+    this.barRadius = 5,
+    this.labelColor = AppColors.tabInactive,
+  });
 
   final List<BarDatum> bars;
   final double height;
   final double gap;
   final double barRadius;
+  final Color labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +47,7 @@ class BarChartRow extends StatelessWidget {
         children: [
           for (var i = 0; i < bars.length; i++) ...[
             if (i != 0) SizedBox(width: gap),
-            Expanded(child: _Bar(datum: bars[i], radius: barRadius)),
+            Expanded(child: _Bar(datum: bars[i], radius: barRadius, labelColor: labelColor)),
           ],
         ],
       ),
@@ -48,10 +56,11 @@ class BarChartRow extends StatelessWidget {
 }
 
 class _Bar extends StatelessWidget {
-  const _Bar({required this.datum, required this.radius});
+  const _Bar({required this.datum, required this.radius, required this.labelColor});
 
   final BarDatum datum;
   final double radius;
+  final Color labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +93,7 @@ class _Bar extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             datum.label!,
-            style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.tabInactive),
+            style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: labelColor),
           ),
         ],
       ],
