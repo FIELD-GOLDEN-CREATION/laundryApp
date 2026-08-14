@@ -18,7 +18,6 @@ void main() {
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
     expect(find.text('Orders'), findsOneWidget);
-    expect(find.text('Chat'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
   });
 }

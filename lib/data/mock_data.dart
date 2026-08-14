@@ -1,7 +1,10 @@
+import 'package:flutter/widgets.dart';
+
 import '../models/address.dart';
 import '../models/chat_message.dart';
 import '../models/day_option.dart';
 import '../models/menu_item.dart';
+import '../models/mobile_money_provider.dart';
 import '../models/notification_item.dart';
 import '../models/offer.dart';
 import '../models/order.dart';
@@ -14,6 +17,17 @@ import '../utils/currency.dart';
 /// (there is no backend). This file is the single seam a future
 /// repository/API layer would replace.
 
+/// Unsplash photo URLs behind the shops/offers/payment card. Direct
+/// `images.unsplash.com` image files (not the photo *page* links), so
+/// `RemoteImage` renders the actual photos at runtime.
+const _kShopPhotoWhite = 'https://images.unsplash.com/photo-1604335398980-ededcadcc37d?w=800&q=80';
+const _kShopPhotoGrayA = 'https://images.unsplash.com/photo-1620912738725-1e5f0e49e97d?w=800&q=80';
+const _kShopPhotoGrayB = 'https://images.unsplash.com/photo-1610305401607-8745a10c75dd?w=800&q=80';
+const _kShopPhotoDryer = 'https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=800&q=80';
+
+/// Card-network photo used to illustrate the payment-card flows.
+const kCardPhotoUrl = 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&q=80';
+
 const kOffers = [
   Offer(
     slotId: 'ld-offer-1',
@@ -21,6 +35,7 @@ const kOffers = [
     tag: 'Limited time',
     title: '40% off your first wash',
     sub: 'All services · T&C apply',
+    imageUrl: _kShopPhotoWhite,
   ),
   Offer(
     slotId: 'ld-offer-2',
@@ -28,6 +43,7 @@ const kOffers = [
     tag: 'Bundle',
     title: 'Free ironing over TZS 78,000',
     sub: 'Wash & fold only',
+    imageUrl: _kShopPhotoGrayA,
   ),
 ];
 
@@ -53,6 +69,7 @@ const kShops = [
     distanceKm: 1.2,
     is24h: true,
     isOpenNow: true,
+    imageUrl: _kShopPhotoWhite,
   ),
   Shop(
     slotId: 'ld-p2',
@@ -75,6 +92,7 @@ const kShops = [
     distanceKm: 2.0,
     is24h: false,
     isOpenNow: true,
+    imageUrl: _kShopPhotoGrayA,
   ),
   Shop(
     slotId: 'ld-p3',
@@ -97,6 +115,7 @@ const kShops = [
     distanceKm: 2.8,
     is24h: false,
     isOpenNow: true,
+    imageUrl: _kShopPhotoDryer,
   ),
   Shop(
     slotId: 'ld-p4',
@@ -119,6 +138,7 @@ const kShops = [
     distanceKm: 4.5,
     is24h: false,
     isOpenNow: false,
+    imageUrl: _kShopPhotoGrayB,
   ),
   Shop(
     slotId: 'ld-p5',
@@ -141,10 +161,38 @@ const kShops = [
     distanceKm: 3.6,
     is24h: true,
     isOpenNow: true,
+    imageUrl: _kShopPhotoWhite,
   ),
 ];
 
-const kFilterOptions = ['Nearby', 'Top rated', 'Under TZS 13,000', '24h', 'Open now'];
+/// Returns the seeded shop whose [name] matches, if any.
+Shop? shopByName(String name) {
+  for (final s in kShops) {
+    if (s.name == name) return s;
+  }
+  return null;
+}
+
+/// Returns the mobile-money operator whose [name] matches, if any.
+MobileMoneyProvider? mobileProviderByName(String name) {
+  for (final p in kMobileMoneyProviders) {
+    if (p.name == name) return p;
+  }
+  return null;
+}
+
+/// Explore filters use each vendor's calculated distance from the customer's
+/// current pickup location (`Shop.distanceKm`).
+const kFilterOptions = [
+  'Within 5 km',
+  'Within 10 km',
+  'Within 20 km',
+  'Within 25 km',
+  'Within 30 km',
+  'Fast turnaround',
+  'Open now',
+  'Top rated',
+];
 
 const kMenuItems = [
   MenuItem(key: 'shirt', name: 'Shirts & tops', unit: 'Wash & fold, per piece', initial: 'S', price: 9100),
@@ -171,8 +219,25 @@ const kDays = [
 const kTimeSlots = ['8 – 10 AM', '10 – 12 PM', '2 – 4 PM', '6 – 8 PM'];
 
 /// Tanzania mobile money operators offered at Checkout's "Mobile Money"
-/// payment option.
-const kMobileMoneyProviders = ['Mixx By Yas', 'M-Pesa', 'Airtel Money', 'HaloPesa'];
+/// payment option — each with its network's signature color, wordmark and
+/// operator prefixes so the picker auto-detects the network from the number.
+const kMobileMoneyProviders = [
+  MobileMoneyProvider(name: 'Mixx By Yas', brand: Color(0xFF6A1B9A), mark: 'Mixx', prefixes: ['066', '077']),
+  MobileMoneyProvider(name: 'M-Pesa', brand: Color(0xFF00A651), mark: 'M-PESA', prefixes: ['071', '074', '075', '076']),
+  MobileMoneyProvider(name: 'Airtel Money', brand: Color(0xFFED1C24), mark: 'airtel', prefixes: ['068', '069', '078', '079']),
+  MobileMoneyProvider(name: 'HaloPesa', brand: Color(0xFFE6007E), mark: 'HaloPesa', prefixes: ['061', '062']),
+];
+
+/// Detects the operator from a Tanzanian number's leading digits (the first
+/// three, e.g. '075' → M-Pesa), or null while there aren't enough digits yet.
+MobileMoneyProvider? detectMobileProvider(String number) {
+  final digits = number.replaceAll(RegExp(r'\D'), '');
+  if (digits.length < 3) return null;
+  for (final p in kMobileMoneyProviders) {
+    if (p.prefixes.any((prefix) => digits.startsWith(prefix))) return p;
+  }
+  return null;
+}
 
 const kTrackSteps = [
   TrackStepDef(title: 'Picked up', time: 'Wed, 9:12 AM'),

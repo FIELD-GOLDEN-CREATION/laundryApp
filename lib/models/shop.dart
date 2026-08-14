@@ -22,6 +22,7 @@ class Shop {
     required this.distanceKm,
     required this.is24h,
     required this.isOpenNow,
+    this.imageUrl = '',
   });
 
   final String slotId;
@@ -65,4 +66,8 @@ class Shop {
 
   /// Whether this vendor is open right now, backs the "Open now" filter.
   final bool isOpenNow;
+
+  /// Storefront photo URL. Empty means "no photo yet" — the UI renders a
+  /// styled placeholder via RemoteImage's fallback.
+  final String imageUrl;
 }

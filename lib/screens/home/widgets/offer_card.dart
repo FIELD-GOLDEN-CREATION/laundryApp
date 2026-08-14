@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../models/offer.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../widgets/remote_image.dart';
 
 class OfferCard extends StatelessWidget {
   const OfferCard({super.key, required this.offer, required this.onClaim});
@@ -25,10 +26,10 @@ class OfferCard extends StatelessWidget {
         children: [
           // Unlike the shop/map placeholders, most of this card stays
           // visible under the gradient (it's meant to read as a photo
-          // filling the whole tile), so a text-labelled placeholder would
-          // show through — a plain decorative fill stands in for the photo
-          // instead.
+          // filling the whole tile). A transparent placeholder keeps the
+          // teal fill below showing through whenever there's no real photo.
           Container(color: const Color(0xFF2A7D78)),
+          RemoteImage(url: offer.imageUrl, fallback: offer.slotHint, placeholder: const SizedBox.shrink()),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(

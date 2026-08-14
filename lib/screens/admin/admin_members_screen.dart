@@ -6,6 +6,7 @@ import '../../data/admin_mock_data.dart';
 import '../../models/member_row.dart';
 import '../../models/modal_copy.dart';
 import '../../state/admin_members_state.dart';
+import '../../state/auth_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/placeholder_image.dart';
@@ -55,7 +56,14 @@ class AdminMembersScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(14),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
-                      onTap: () => showCrudFormModal(context, ModalKind.add),
+                       onTap: () => showCrudFormModal(
+                         context,
+                         ModalKind.add,
+                         onClientCreated: (name, email, phone, password) {
+                           final error = ref.read(authProvider.notifier).registerClient(name: name, email: email, phone: phone, password: password);
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Client account created.')));
+                         },
+                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
                         child: Row(

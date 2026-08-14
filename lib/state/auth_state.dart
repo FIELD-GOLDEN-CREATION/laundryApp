@@ -15,15 +15,15 @@ class AuthState {
 /// Ports the source's `role`/`authEmail` fields + `doLogin`/`doLogout`.
 /// In-memory only, no persistence — same as the source (no backend).
 class AuthNotifier extends Notifier<AuthState> {
-  @override
-  AuthState build() => const AuthState();
-
-  static const _accounts = {
+  final _accounts = <String, (String, UserRole)>{
     'admin@gmail.com': ('admin04', UserRole.admin),
     'vendor@gmail.com': ('vendor04', UserRole.vendor),
     'user@gmail.com': ('user04', UserRole.customer),
     'driver@gmail.com': ('driver04', UserRole.driver),
   };
+
+  @override
+  AuthState build() => const AuthState();
 
   /// Returns null on success, or an error message to show on the form.
   String? login(String email, String password) {
@@ -34,6 +34,19 @@ class AuthNotifier extends Notifier<AuthState> {
       return null;
     }
     return 'That email and password combination is not recognised.';
+  }
+
+  /// Creates a customer account. Registration is intentionally customer-only;
+  /// vendor, driver and admin accounts remain platform-managed.
+  String? registerClient({required String name, required String email, required String phone, required String password}) {
+    final e = email.trim().toLowerCase();
+    if (name.trim().isEmpty || phone.trim().isEmpty) return 'Complete all account details.';
+    if (!RegExp(r'^\S+@\S+\.\S+$').hasMatch(e)) return 'Enter a valid email address.';
+    if (password.length < 6) return 'Password must be at least 6 characters.';
+    if (_accounts.containsKey(e)) return 'An account with this email already exists.';
+    _accounts[e] = (password, UserRole.customer);
+    state = AuthState(role: UserRole.customer, authEmail: e);
+    return null;
   }
 
   void logout() => state = const AuthState();

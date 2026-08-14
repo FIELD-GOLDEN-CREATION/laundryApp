@@ -10,8 +10,8 @@ import '../../state/cart_state.dart';
 import '../../state/profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
-import '../../widgets/placeholder_image.dart';
 import '../../widgets/primary_cta_bar.dart';
+import '../../widgets/remote_image.dart';
 import '../../widgets/round_back_button.dart';
 
 /// (background, foreground) pairs cycled across a shop's feature badges.
@@ -41,7 +41,7 @@ class ShopDetailScreen extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  const PlaceholderImage(label: 'Shop storefront photo'),
+                  RemoteImage(url: shop.imageUrl, fallback: 'Shop storefront photo'),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
