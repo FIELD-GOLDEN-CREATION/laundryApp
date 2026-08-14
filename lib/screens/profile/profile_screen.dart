@@ -13,6 +13,7 @@ import '../../theme/text_styles.dart';
 import '../../widgets/card_brand_tag.dart';
 import '../../widgets/link_card_sheet.dart';
 import '../../widgets/placeholder_image.dart';
+import '../../widgets/profile_action_tile.dart';
 import '../../widgets/toggle_switch.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -48,7 +49,7 @@ class ProfileScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: _ProfileActionTile(
+                        child: ProfileActionTile(
                           icon: Icons.notifications_none_rounded,
                           label: 'Notification',
                           onTap: () => context.push('/notifs'),
@@ -56,7 +57,7 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: _ProfileActionTile(
+                        child: ProfileActionTile(
                           icon: Icons.local_offer_outlined,
                           label: 'Voucher',
                           onTap: () => ScaffoldMessenger.of(context).showSnackBar(
@@ -66,7 +67,7 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: _ProfileActionTile(
+                        child: ProfileActionTile(
                           icon: Icons.history_rounded,
                           label: 'History',
                           onTap: () => context.go('/orders'),
@@ -232,28 +233,6 @@ class _HeroIcon extends StatelessWidget {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.white.withValues(alpha: 0.18))),
     clipBehavior: Clip.antiAlias,
     child: InkWell(onTap: onTap, child: SizedBox(width: 42, height: 42, child: Center(child: AppIcon(icon, size: 18, color: AppColors.cream)))),
-  );
-}
-
-class _ProfileActionTile extends StatelessWidget {
-  const _ProfileActionTile({required this.icon, required this.label, required this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white.withValues(alpha: 0.08),
-    borderRadius: BorderRadius.circular(15),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(15),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        child: Column(children: [Icon(icon, size: 19, color: AppColors.cream), const SizedBox(height: 6), Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.cream))]),
-      ),
-    ),
   );
 }
 
