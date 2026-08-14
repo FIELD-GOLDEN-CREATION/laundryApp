@@ -73,7 +73,6 @@ final appRouter = GoRouter(
         StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/search', builder: (_, _) => const SearchScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (_, _) => const OrdersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/chat', builder: (_, _) => const ChatListScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen())]),
       ],
     ),
@@ -120,6 +119,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/track', builder: (_, state) => TrackOrderScreen(orderId: state.extra as String?)),
     GoRoute(path: '/notifs', builder: (_, _) => const NotificationsScreen()),
     GoRoute(path: '/chat-thread', builder: (_, state) => ChatScreen(shop: state.extra as String? ?? 'Marina Fresh Laundry')),
+    GoRoute(path: '/chat', builder: (_, _) => const ChatListScreen()),
     GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
     GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
@@ -144,8 +144,7 @@ class _CustomerTabShell extends ConsumerWidget {
           Expanded(child: shell),
         ],
       ),
-      bottomNavigationBar: AppBottomTabBar(
-        items: kCustomerTabs,
+      bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: shell.currentIndex,
         onTap: (i) {
           final reason = kCustomerTabs[i].gateReason;
