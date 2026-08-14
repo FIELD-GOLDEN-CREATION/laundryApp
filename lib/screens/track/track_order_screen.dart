@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
 import '../../data/mock_data.dart';
+import '../chat/chat_screen.dart';
 import '../../models/order.dart';
 import '../../models/track_step_def.dart';
 import '../../state/orders_state.dart';
@@ -161,7 +162,7 @@ class TrackOrderScreen extends ConsumerWidget {
                               // The source wires this to goChat, which is
                               // also a tab-switch (this.tab('chat')), not a
                               // push.
-                              onTap: () => context.go('/chat'),
+                               onTap: () => showChatPanel(context, order!.shop),
                             ),
                             const SizedBox(width: 8),
                             _RoundIconButton(icon: AppIcons.phone, bg: AppColors.teal, iconColor: AppColors.cream, onTap: () {}),

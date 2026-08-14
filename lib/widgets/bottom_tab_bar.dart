@@ -114,6 +114,7 @@ const kDriverTabs = [
   TabBarItem(icon: AppIcons.tabDash, label: 'Shift'),
   TabBarItem(icon: AppIcons.tabOrders, label: 'Queue'),
   TabBarItem(icon: AppIcons.tabReports, label: 'Wallet'),
+  TabBarItem(icon: AppIcons.bell, label: 'Alerts'),
   TabBarItem(icon: AppIcons.tabProfile, label: 'Profile'),
 ];
 
@@ -131,23 +132,15 @@ class AppBottomTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 82,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.creamDark)),
-      ),
-      padding: const EdgeInsets.only(top: 12),
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++)
-            Expanded(
-              child: _TabButton(
-                item: items[i],
-                active: i == currentIndex,
-                onTap: () => onTap(i),
-              ),
-            ),
-        ],
+      height: 96,
+      color: AppColors.cream,
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 18),
+      child: Material(
+        color: AppColors.slate,
+        borderRadius: BorderRadius.circular(28),
+        elevation: 10,
+        shadowColor: Colors.black.withValues(alpha: 0.2),
+        child: Row(children: [for (var i = 0; i < items.length; i++) Expanded(child: _TabButton(item: items[i], active: i == currentIndex, onTap: () => onTap(i)))]),
       ),
     );
   }
@@ -162,29 +155,13 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.teal : AppColors.tabInactive;
     return InkWell(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 34,
-            height: 30,
-            decoration: BoxDecoration(
-              color: active ? AppColors.tealMuted : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: AppIcon(item.icon, size: 19, color: color),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            item.label,
-            style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: color),
-          ),
-        ],
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        AnimatedContainer(duration: const Duration(milliseconds: 220), width: active ? 48 : 34, height: active ? 48 : 34, decoration: BoxDecoration(color: active ? Colors.white : Colors.transparent, shape: BoxShape.circle), alignment: Alignment.center, child: AppIcon(item.icon, size: 19, color: active ? AppColors.teal : AppColors.tabInactive)),
+        const SizedBox(height: 3),
+        Text(item.label, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w800, color: active ? AppColors.cream : AppColors.tabInactive)),
+      ]),
     );
   }
 }

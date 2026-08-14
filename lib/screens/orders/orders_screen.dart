@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
 import '../../data/mock_data.dart';
+import '../chat/chat_screen.dart';
 import '../../models/order.dart';
 import '../../state/orders_state.dart';
 import '../../state/orders_tab_state.dart';
@@ -42,7 +43,7 @@ class OrdersScreen extends ConsumerWidget {
             for (var i = 0; i < orders.length; i++) ...[
               _OrderCard(
                 order: orders[i],
-                onChat: tab == 0 ? () => context.push('/chat-thread', extra: orders[i].shop) : null,
+                onChat: tab == 0 ? () => showChatPanel(context, orders[i].shop) : null,
                 onTap: () => context.push('/track', extra: orders[i].id),
               ),
               if (i != orders.length - 1) const SizedBox(height: 12),
