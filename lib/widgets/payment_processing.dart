@@ -21,7 +21,7 @@ class PaymentProcessing extends StatefulWidget {
   State<PaymentProcessing> createState() => _PaymentProcessingState();
 }
 
-class _PaymentProcessingState extends State<PaymentProcessing> with SingleTickerProviderStateMixin {
+class _PaymentProcessingState extends State<PaymentProcessing> with TickerProviderStateMixin {
   late final AnimationController _arc = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
   late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
   late final AnimationController _dots = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
