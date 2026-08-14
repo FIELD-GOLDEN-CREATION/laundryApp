@@ -40,7 +40,7 @@ class CartScreen extends ConsumerWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(clientLabel('Your basket', 'Kikapu chako', language), style: AppText.serif(fontSize: 24, color: AppColors.clientText(context))),
-                    Text('${fulfillment.shop}', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
+                    Text(fulfillment.shop, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
                   ]),
                 ),
                 Container(

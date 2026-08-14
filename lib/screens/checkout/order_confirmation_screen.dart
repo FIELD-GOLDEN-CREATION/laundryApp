@@ -48,13 +48,13 @@ class OrderConfirmationScreen extends ConsumerWidget {
                     ? clientLabel('Your laundry is scheduled.', 'Nguo zako zimepangwa.', language)
                     : isSelf
                         ? clientLabel(
-                            'Promise order: bring ${order!.items} to ${order!.shop} on ${order!.pickup.isEmpty ? 'your chosen day' : order!.pickup} and pay at the counter.',
-                            'Oda ya ahadi: peleka ${order!.items} kwenye ${order!.shop} siku ya ${order!.pickup.isEmpty ? 'uliyochagua' : order!.pickup} na ulipe kauntani.',
+                            'Promise order: bring ${order.items} to ${order.shop} on ${order.pickup.isEmpty ? 'your chosen day' : order.pickup} and pay at the counter.',
+                            'Oda ya ahadi: peleka ${order.items} kwenye ${order.shop} siku ya ${order.pickup.isEmpty ? 'uliyochagua' : order.pickup} na ulipe kauntani.',
                             language,
                           )
                         : clientLabel(
-                            'Our driver will pick up ${order!.items} from ${order!.shop} on ${order!.pickup.isEmpty ? 'your chosen day' : order!.pickup}.',
-                            'Dereva wetu atachukua ${order!.items} kutoka ${order!.shop} siku ya ${order!.pickup.isEmpty ? 'uliyochagua' : order!.pickup}.',
+                            'Our driver will pick up ${order.items} from ${order.shop} on ${order.pickup.isEmpty ? 'your chosen day' : order.pickup}.',
+                            'Dereva wetu atachukua ${order.items} kutoka ${order.shop} siku ya ${order.pickup.isEmpty ? 'uliyochagua' : order.pickup}.',
                             language,
                           ),
                 style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.45),
