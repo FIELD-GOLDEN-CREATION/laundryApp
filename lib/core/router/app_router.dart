@@ -25,11 +25,13 @@ import '../../screens/login/register_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/orders/orders_screen.dart';
+import '../../screens/orders/order_detail_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/profile_settings_screen.dart';
 import '../../screens/profile/edit_profile_screen.dart';
 import '../../screens/schedule/schedule_screen.dart';
 import '../../screens/search/search_screen.dart';
+import '../../screens/service/service_vendors_screen.dart';
 import '../../screens/shop_detail/shop_detail_screen.dart';
 import '../../screens/track/track_order_screen.dart';
 import '../../screens/vendor/vendor_catalog_screen.dart';
@@ -110,6 +112,7 @@ final appRouter = GoRouter(
       path: '/detail',
       builder: (_, state) => ShopDetailScreen(shop: (state.extra as Shop?) ?? kShops.first),
     ),
+    GoRoute(path: '/service-vendors', builder: (_, state) => ServiceVendorsScreen(service: (state.extra as String?) ?? 'Ironing')),
     GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
     GoRoute(path: '/schedule', builder: (_, _) => const ScheduleScreen()),
     GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
@@ -118,6 +121,7 @@ final appRouter = GoRouter(
       builder: (_, state) => OrderConfirmationScreen(orderId: state.extra as String?),
     ),
     GoRoute(path: '/track', builder: (_, state) => TrackOrderScreen(orderId: state.extra as String?)),
+    GoRoute(path: '/order-detail', builder: (_, state) => OrderDetailScreen(orderId: state.extra as String?)),
     GoRoute(path: '/notifs', builder: (_, _) => const NotificationsScreen()),
     GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),

@@ -35,7 +35,7 @@ class _ActiveOrderBannerState extends State<ActiveOrderBanner> with SingleTicker
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
       child: Material(
-        color: Colors.white,
+         color: AppColors.clientSurface(context),
         borderRadius: BorderRadius.circular(20),
         elevation: 10,
         shadowColor: AppColors.teal.withValues(alpha: 0.1),
@@ -89,12 +89,12 @@ class _ActiveOrderBannerState extends State<ActiveOrderBanner> with SingleTicker
                     children: [
                       Text(
                         widget.title,
-                        style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800),
+                         style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         widget.subtitle,
-                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                         style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                       ),
                     ],
                   ),

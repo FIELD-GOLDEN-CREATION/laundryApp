@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/icons/app_icons.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
+import '../state/client_preferences_state.dart';
 
 class TabBarItem {
   const TabBarItem({required this.icon, required this.label, this.gateReason});
@@ -28,18 +30,20 @@ const kCustomerTabs = [
 
 /// Customer navigation styled as a floating dark capsule with rounded ends.
 /// Chat intentionally is not a tab; customers enter it from an active order.
-class FloatingCustomerNavBar extends StatelessWidget {
+class FloatingCustomerNavBar extends ConsumerWidget {
   const FloatingCustomerNavBar({super.key, required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final language = ref.watch(clientPreferencesProvider).language;
+    final dark = ref.watch(clientPreferencesProvider).dark;
     return Container(
       height: 92,
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 18),
-      color: AppColors.cream,
+      color: dark ? const Color(0xFF080D12) : AppColors.cream,
       child: Material(
         color: AppColors.slate,
         borderRadius: BorderRadius.circular(28),
@@ -52,7 +56,7 @@ class FloatingCustomerNavBar extends StatelessWidget {
               for (var i = 0; i < kCustomerTabs.length; i++)
                 Expanded(
                   child: _FloatingTabButton(
-                    item: kCustomerTabs[i],
+                     item: TabBarItem(icon: kCustomerTabs[i].icon, label: clientLabel(kCustomerTabs[i].label, ['Nyumbani', 'Tafuta', 'Oda', 'Wasifu'][i], language), gateReason: kCustomerTabs[i].gateReason),
                     active: i == currentIndex,
                     onTap: () => onTap(i),
                   ),

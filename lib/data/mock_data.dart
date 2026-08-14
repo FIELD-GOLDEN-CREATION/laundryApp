@@ -8,6 +8,7 @@ import '../models/mobile_money_provider.dart';
 import '../models/notification_item.dart';
 import '../models/offer.dart';
 import '../models/order.dart';
+import '../models/order_line.dart';
 import '../models/shop.dart';
 import '../models/track_step_def.dart';
 import '../theme/colors.dart';
@@ -246,6 +247,13 @@ const kTrackSteps = [
   TrackStepDef(title: 'Out for delivery', time: 'Thu, 6:00 PM (est.)'),
 ];
 
+const kSelfTrackSteps = [
+  TrackStepDef(title: 'Dropped at shop', time: 'Promise arrival window'),
+  TrackStepDef(title: 'Sorted & counted', time: 'On arrival'),
+  TrackStepDef(title: 'Washing in progress', time: 'After drop-off'),
+  TrackStepDef(title: 'Ready for collection', time: 'Thu, 6:00 PM (est.)'),
+];
+
 const kActiveOrders = [
   Order(
     shop: 'Marina Fresh Laundry',
@@ -349,20 +357,25 @@ const kPreferenceLabels = ['Push notifications', 'Eco detergent by default', 'Co
 const kDefaultPrefsOn = [true, true, false];
 
 /// Cart math — pure functions ported from the source's `sub()`/`count()`.
-double cartSubtotal(Map<String, int> qty) {
+double cartSubtotal(Map<String, int> qty, [List<MenuItem> extra = const []]) {
   var total = 0.0;
-  for (final item in kMenuItems) {
+  for (final item in [...kMenuItems, ...extra]) {
     total += item.price * (qty[item.key] ?? 0);
   }
   return total;
 }
 
-int cartItemCount(Map<String, int> qty) {
+int cartItemCount(Map<String, int> qty, [List<MenuItem> extra = const []]) {
   var total = 0;
-  for (final item in kMenuItems) {
+  for (final item in [...kMenuItems, ...extra]) {
     total += qty[item.key] ?? 0;
   }
   return total;
 }
+
+List<OrderLine> cartLines(Map<String, int> qty, List<MenuItem> extra) => [
+  for (final item in [...kMenuItems, ...extra])
+    if ((qty[item.key] ?? 0) > 0) OrderLine(name: item.name, qty: qty[item.key]!, unitPrice: item.price),
+];
 
 String formatMoney(double n) => formatTzs(n);

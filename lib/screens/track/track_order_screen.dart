@@ -8,6 +8,7 @@ import '../chat/chat_screen.dart';
 import '../../models/order.dart';
 import '../../models/track_step_def.dart';
 import '../../state/orders_state.dart';
+import '../../state/client_preferences_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/placeholder_image.dart';
@@ -46,8 +47,12 @@ class TrackOrderScreen extends ConsumerWidget {
       }
     }
     order ??= activeOrders.isNotEmpty ? activeOrders.first : kCompletedOrders.first;
+    final language = ref.watch(clientPreferencesProvider).language;
     final step = order.trackStep;
     final awaitingPickup = step == kOrderPlacedStep;
+    final isSelf = order.fulfillment == 'self';
+    final steps = isSelf ? kSelfTrackSteps : kTrackSteps;
+    final driverName = order.driver.isNotEmpty ? order.driver : 'Daniel O.';
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -81,9 +86,9 @@ class TrackOrderScreen extends ConsumerWidget {
               offset: const Offset(0, -28),
               child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.cream,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                decoration: BoxDecoration(
+                  color: AppColors.clientSurfaceRaised(context),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 padding: const EdgeInsets.all(22),
                 child: Column(
@@ -94,7 +99,7 @@ class TrackOrderScreen extends ConsumerWidget {
                       textBaseline: TextBaseline.alphabetic,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Order ${order.id}', style: AppText.serif(fontSize: 23)),
+                        Text('${clientLabel('Order', 'Oda', language)} ${order.id}', style: AppText.serif(fontSize: 23, color: AppColors.clientText(context))),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                           decoration: BoxDecoration(
@@ -102,7 +107,7 @@ class TrackOrderScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            orderStatusForStep(step).label,
+                            isSelf ? selfOrderStatusForStep(step).label : orderStatusForStep(step).label,
                             style: AppText.sans(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
@@ -115,23 +120,25 @@ class TrackOrderScreen extends ConsumerWidget {
                     const SizedBox(height: 20),
                     Column(
                       children: [
-                        for (var i = 0; i < kTrackSteps.length; i++)
+                        for (var i = 0; i < steps.length; i++)
                           _StepTile(
-                            step: kTrackSteps[i],
+                            step: steps[i],
                             done: i <= step,
-                            isLast: i == kTrackSteps.length - 1,
+                            isLast: i == steps.length - 1,
                             lineActive: i < step,
                           ),
                       ],
                     ),
                     if (awaitingPickup)
-                      const _AwaitingPickupCard()
+                      isSelf ? _SelfDropOffCard(shop: order.shop, language: language) : const _AwaitingPickupCard()
+                    else if (isSelf)
+                      _SelfDropOffCard(shop: order.shop, language: language)
                     else
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: AppColors.creamDark),
+                          color: AppColors.clientSurface(context),
+                          border: Border.all(color: AppColors.clientBorder(context)),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -146,11 +153,11 @@ class TrackOrderScreen extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Daniel O.', style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800)),
+                                  Text(driverName, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Your pickup driver · 4.9 ★',
-                                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                    clientLabel('Your pickup driver · 4.9 ★', 'Dereva wako wa kuchukua · 4.9 ★', language),
+                                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                                   ),
                                 ],
                               ),
@@ -180,13 +187,13 @@ class TrackOrderScreen extends ConsumerWidget {
                             width: double.infinity,
                             padding: const EdgeInsets.all(13),
                             decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.creamDark, width: 1.5),
+                              border: Border.all(color: AppColors.clientBorder(context), width: 1.5),
                               borderRadius: BorderRadius.circular(18),
                             ),
                             child: Center(
                               child: Text(
-                                'Demo: advance status',
-                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.muted),
+                                clientLabel('Demo: advance status', 'Demo: songesha hali', language),
+                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context)),
                               ),
                             ),
                           ),
@@ -214,8 +221,8 @@ class _AwaitingPickupCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
+        color: AppColors.clientSurface(context),
+        border: Border.all(color: AppColors.clientBorder(context)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -232,11 +239,55 @@ class _AwaitingPickupCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Waiting for pickup', style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800)),
+                Text('Waiting for pickup', style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                 const SizedBox(height: 2),
                 Text(
                   "A driver will be assigned once your order is picked up.",
-                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelfDropOffCard extends StatelessWidget {
+  const _SelfDropOffCard({required this.shop, required this.language});
+
+  final String shop;
+  final String language;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: AppColors.clientSurface(context),
+        border: Border.all(color: AppColors.clientBorder(context)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: const Icon(Icons.storefront_outlined, size: 20, color: AppColors.teal),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(clientLabel('Drop off at shop', 'Peleka kwenye duka', language), style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+                const SizedBox(height: 2),
+                Text(
+                  shop,
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 ),
               ],
             ),
@@ -268,8 +319,8 @@ class _StepTile extends StatelessWidget {
                 height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: done ? AppColors.teal : Colors.white,
-                  border: Border.all(color: done ? AppColors.teal : const Color(0xFFD7D2C6), width: 2),
+                  color: done ? AppColors.teal : AppColors.clientSurface(context),
+                  border: Border.all(color: done ? AppColors.teal : AppColors.clientBorder(context), width: 2),
                 ),
                 alignment: Alignment.center,
                 child: Container(
@@ -277,7 +328,7 @@ class _StepTile extends StatelessWidget {
                   height: 7,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: done ? AppColors.cream : const Color(0xFFD7D2C6),
+                    color: done ? AppColors.cream : AppColors.clientBorder(context),
                   ),
                 ),
               ),
@@ -285,7 +336,7 @@ class _StepTile extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: lineActive ? AppColors.teal : AppColors.creamDark,
+                    color: lineActive ? AppColors.teal : AppColors.clientBorder(context),
                   ),
                 ),
             ],
@@ -302,13 +353,13 @@ class _StepTile extends StatelessWidget {
                     style: AppText.sans(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,
-                      color: done ? AppColors.slate : AppColors.muted,
+                      color: done ? AppColors.clientText(context) : AppColors.clientSecondaryText(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     step.time,
-                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                   ),
                 ],
               ),

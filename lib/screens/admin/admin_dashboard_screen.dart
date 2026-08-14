@@ -31,8 +31,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(22, 22, 22, 11),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('LIVE OPERATIONS', style: AppText.eyebrow()),
+                   children: [
+                     Expanded(child: Text('LIVE OPERATIONS', style: AppText.eyebrow())),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(999)),
@@ -184,14 +184,16 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                     Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
                         Text('COMMAND CENTER · 12 AUG', style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.6))),
                         const SizedBox(height: 6),
                         Text('Platform overview', style: AppText.serif(fontSize: 25, color: AppColors.cream)),
-                      ],
-                    ),
+                         ],
+                       ),
+                     ),
                     Material(
                       color: Colors.white.withValues(alpha: 0.22),
                       shape: RoundedRectangleBorder(
@@ -236,14 +238,14 @@ class _Header extends StatelessWidget {
                               style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.62)),
                             ),
                             const SizedBox(height: 5),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(card.value, style: AppText.serif(fontSize: 26, color: AppColors.cream)),
-                                const SizedBox(width: 7),
-                                Text(card.delta, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: card.deltaFg)),
-                              ],
+                               Row(
+                                 crossAxisAlignment: CrossAxisAlignment.baseline,
+                                 textBaseline: TextBaseline.alphabetic,
+                                 children: [
+                                 Flexible(child: Text(card.value, overflow: TextOverflow.ellipsis, style: AppText.serif(fontSize: 24, color: AppColors.cream))),
+                                 const SizedBox(width: 7),
+                                 Flexible(child: Text(card.delta, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: card.deltaFg))),
+                               ],
                             ),
                           ],
                         ),

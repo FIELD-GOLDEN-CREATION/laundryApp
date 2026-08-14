@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/mock_data.dart';
 import '../models/order.dart';
+import '../models/order_line.dart';
 
 /// Active orders, mutable so Checkout can insert a freshly placed order at
 /// the top and Track can advance its step on its own — independent of the
@@ -22,6 +23,10 @@ class OrdersNotifier extends Notifier<List<Order>> {
     String paymentMethod = '',
     String pickup = '',
     String address = '',
+    List<OrderLine> lines = const [],
+    String fulfillment = 'delivery',
+    String driver = '',
+    int deliveryFeeTzs = 0,
   }) {
     _placedCount++;
     final placed = orderStatusForStep(kOrderPlacedStep);
@@ -38,6 +43,10 @@ class OrdersNotifier extends Notifier<List<Order>> {
       paymentMethod: paymentMethod,
       pickup: pickup,
       address: address,
+      lines: lines,
+      fulfillment: fulfillment,
+      driver: driver,
+      deliveryFeeTzs: deliveryFeeTzs,
     );
     state = [order, ...state];
     return order;
@@ -55,7 +64,7 @@ class OrdersNotifier extends Notifier<List<Order>> {
 
   Order _withNextStep(Order o) {
     final next = o.trackStep >= 3 ? kOrderPlacedStep : o.trackStep + 1;
-    final status = orderStatusForStep(next);
+    final status = o.fulfillment == 'self' ? selfOrderStatusForStep(next) : orderStatusForStep(next);
     return o.copyWith(trackStep: next, status: status.label, statusFg: status.fg, statusBg: status.bg);
   }
 }

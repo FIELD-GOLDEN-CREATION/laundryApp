@@ -6,6 +6,7 @@ import '../../core/icons/app_icons.dart';
 import '../../data/mock_data.dart';
 import '../../models/user_role.dart';
 import '../../state/auth_state.dart';
+import '../../state/client_preferences_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/section_header.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isGuest = ref.watch(authProvider.select((s) => s.role == UserRole.guest));
+    final language = ref.watch(clientPreferencesProvider).language;
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -28,7 +30,8 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Header(
-                isGuest: isGuest,
+                 isGuest: isGuest,
+                 language: language,
                 onProfile: () {
                   // Ports the source's `goProfile:()=>gate('profile', reason)`
                   // — always gated, unlike the tab bar's Profile tab which
@@ -46,11 +49,11 @@ class HomeScreen extends ConsumerWidget {
               // Guests have no orders yet, so there's nothing to track.
               if (!isGuest)
                 ActiveOrderBanner(
-                  title: 'Order #LD-2481 is being washed',
-                  subtitle: 'Back at your door by Thu, 6:00 PM',
+                   title: clientLabel('Order #LD-2481 is being washed', 'Oda #LD-2481 inafuliwa', language),
+                   subtitle: clientLabel('Back at your door by Thu, 6:00 PM', 'Itarudi mlangoni Alhamisi, saa 12:00 jioni', language),
                   onTap: () => context.push('/track'),
                 ),
-              SectionHeader(title: 'Just for you', onSeeAll: () => context.push('/search')),
+               SectionHeader(title: clientLabel('Just for you', 'Kwa ajili yako', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 190,
                 child: ListView.separated(
@@ -74,9 +77,9 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SectionHeader(title: 'Services'),
-              ServiceGrid(onTap: () => context.push('/detail')),
-              SectionHeader(title: 'Nearby shops', onSeeAll: () => context.push('/search')),
+               SectionHeader(title: clientLabel('Services', 'Huduma', language)),
+              ServiceGrid(onTap: (item) => context.push('/service-vendors', extra: item.label)),
+               SectionHeader(title: clientLabel('Nearby shops', 'Maduka yaliyo karibu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 250,
                 child: ListView.separated(
@@ -111,9 +114,10 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.isGuest, required this.onProfile, required this.onNotifs, required this.onSearch});
+  const _Header({required this.isGuest, required this.language, required this.onProfile, required this.onNotifs, required this.onSearch});
 
   final bool isGuest;
+  final String language;
   final VoidCallback onProfile;
   final VoidCallback onNotifs;
   final VoidCallback onSearch;
@@ -165,7 +169,7 @@ class _Header extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'PICKUP LOCATION',
+                               clientLabel('PICKUP LOCATION', 'MAHALI PA KUCHUKUA', language),
                               style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.6)),
                             ),
                             const SizedBox(height: 6),
@@ -204,7 +208,7 @@ class _Header extends StatelessWidget {
                             const AppIcon(AppIcons.search, size: 17),
                             const SizedBox(width: 10),
                             Text(
-                              'Search services or shops',
+                                   clientLabel('Search services or shops', 'Tafuta huduma au maduka', language),
                               style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w600, color: AppColors.muted),
                             ),
                           ],

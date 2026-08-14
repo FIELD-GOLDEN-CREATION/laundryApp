@@ -26,8 +26,8 @@ class RadioOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = selected ? AppColors.tealMuted : Colors.white;
-    final border = selected ? AppColors.teal : AppColors.creamDark;
+    final bg = selected ? (AppColors.isClientDark(context) ? const Color(0xFF193B3B) : AppColors.tealMuted) : AppColors.clientSurface(context);
+    final border = selected ? AppColors.teal : AppColors.clientBorder(context);
 
     return Material(
       color: bg,
@@ -69,11 +69,11 @@ class RadioOptionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                    Text(label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                     const SizedBox(height: 3),
                     Text(
                       sub,
-                      style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                       style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                   ],
                 ),

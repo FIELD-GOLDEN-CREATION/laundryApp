@@ -18,7 +18,7 @@ class ShopCard extends StatelessWidget {
     return SizedBox(
       width: 208,
       child: Material(
-        color: Colors.white,
+         color: AppColors.clientSurface(context),
         borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -65,14 +65,14 @@ class ShopCard extends StatelessWidget {
                       shop.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800),
+                       style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       shop.meta,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                       style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -119,15 +119,15 @@ class ShopListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+       color: AppColors.clientSurface(context),
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.creamDark),
+             decoration: BoxDecoration(
+             border: Border.all(color: AppColors.clientBorder(context)),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -148,7 +148,7 @@ class ShopListTile extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(shop.name, style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800)),
+                    child: Text(shop.name, style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                         ),
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -166,7 +166,7 @@ class ShopListTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       shop.meta,
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                       style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                     const SizedBox(height: 9),
                     Wrap(
@@ -187,12 +187,12 @@ class ShopListTile extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.cream,
+                             color: AppColors.clientSurfaceRaised(context),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             shop.price,
-                            style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.muted),
+                             style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context)),
                           ),
                         ),
                       ],

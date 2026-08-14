@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// Design tokens ported 1:1 from the Claude Design source
 /// (design-source/Laundry Customer App.dc.html).
@@ -23,4 +23,11 @@ abstract final class AppColors {
   static const success = Color(0xFF1F8A5F);
   static const successLight = Color(0xFFE6F4EC);
   static const rust = Color(0xFFB64A35);
+
+  static bool isClientDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+  static Color clientSurface(BuildContext context) => isClientDark(context) ? const Color(0xFF111A22) : Colors.white;
+  static Color clientSurfaceRaised(BuildContext context) => isClientDark(context) ? const Color(0xFF182631) : Colors.white;
+  static Color clientText(BuildContext context) => isClientDark(context) ? const Color(0xFFF5F0E8) : slate;
+  static Color clientSecondaryText(BuildContext context) => isClientDark(context) ? const Color(0xFFAAB8C2) : muted;
+  static Color clientBorder(BuildContext context) => isClientDark(context) ? const Color(0xFF2A3B47) : creamDark;
 }
