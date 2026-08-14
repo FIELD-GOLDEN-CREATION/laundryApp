@@ -143,7 +143,7 @@ class CartScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(22, 30, 22, 16),
                 child: Row(children: [
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
                       lines.isEmpty ? clientLabel('Browse services', 'Vinjari huduma', language) : clientLabel('Proceed to schedule', 'Endelea kwenye ratiba', language),
                       style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.cream),
