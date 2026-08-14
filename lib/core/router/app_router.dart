@@ -11,8 +11,6 @@ import '../../screens/admin/admin_reports_screen.dart';
 import '../../screens/admin/admin_settings_screen.dart';
 import '../../screens/admin/admin_vendor_screen.dart';
 import '../../screens/cart/cart_screen.dart';
-import '../../screens/chat/chat_list_screen.dart';
-import '../../screens/chat/chat_screen.dart';
 import '../../data/mock_data.dart';
 import '../../models/shop.dart';
 import '../../screens/checkout/checkout_screen.dart';
@@ -28,6 +26,8 @@ import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/orders/orders_screen.dart';
 import '../../screens/profile/profile_screen.dart';
+import '../../screens/profile/profile_settings_screen.dart';
+import '../../screens/profile/edit_profile_screen.dart';
 import '../../screens/schedule/schedule_screen.dart';
 import '../../screens/search/search_screen.dart';
 import '../../screens/shop_detail/shop_detail_screen.dart';
@@ -102,6 +102,7 @@ final appRouter = GoRouter(
         StatefulShellBranch(routes: [GoRoute(path: '/driver/dash', builder: (_, _) => const DriverDashScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/driver/queue', builder: (_, _) => const DriverQueueScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/driver/wallet', builder: (_, _) => const DriverWalletScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/driver/alerts', builder: (_, _) => const NotificationsScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/driver/profile', builder: (_, _) => const DriverProfileScreen())]),
       ],
     ),
@@ -118,11 +119,13 @@ final appRouter = GoRouter(
     ),
     GoRoute(path: '/track', builder: (_, state) => TrackOrderScreen(orderId: state.extra as String?)),
     GoRoute(path: '/notifs', builder: (_, _) => const NotificationsScreen()),
-    GoRoute(path: '/chat-thread', builder: (_, state) => ChatScreen(shop: state.extra as String? ?? 'Marina Fresh Laundry')),
-    GoRoute(path: '/chat', builder: (_, _) => const ChatListScreen()),
     GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
     GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
+    GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
+    GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
+    GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
+    GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
     GoRoute(path: '/vendor/order-detail', builder: (_, _) => const VendorOrderDetailScreen()),
     GoRoute(path: '/admin/client', builder: (_, _) => const AdminClientScreen()),
     GoRoute(path: '/admin/vendor', builder: (_, _) => const AdminVendorScreen()),

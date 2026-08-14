@@ -22,11 +22,12 @@ const kSysCards = [
 
 const kLiveDrivers = '19';
 
-const kMapPins = [
-  MapPin(initial: 'D', label: 'Daniel · #2481', bg: AppColors.teal, left: 0.26, top: 0.30),
-  MapPin(initial: 'M', label: 'Marina Fresh', bg: AppColors.amber, left: 0.62, top: 0.24),
-  MapPin(initial: 'K', label: 'Kofi · #2490', bg: AppColors.teal, left: 0.38, top: 0.68),
-  MapPin(initial: 'B', label: 'Bright & Fold', bg: AppColors.amber, left: 0.76, top: 0.74),
+const kDriverMapPins = [
+  MapPin(initial: 'D', label: 'Daniel · #2481', bg: AppColors.teal, left: 0.22, top: 0.28),
+  MapPin(initial: 'K', label: 'Kofi · #2490', bg: AppColors.teal, left: 0.70, top: 0.22),
+  MapPin(initial: 'I', label: 'Ivan · #2475', bg: AppColors.teal, left: 0.34, top: 0.70),
+  MapPin(initial: 'N', label: 'Nadia · #2501', bg: AppColors.teal, left: 0.78, top: 0.66),
+  MapPin(initial: 'G', label: 'Grace · #2467', bg: AppColors.teal, left: 0.52, top: 0.46),
 ];
 
 const kAdminAlerts = [

@@ -12,8 +12,10 @@ import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/card_brand_tag.dart';
 import '../../widgets/link_card_sheet.dart';
-import '../../widgets/placeholder_image.dart';
+import '../../widgets/remote_image.dart';
 import '../../widgets/toggle_switch.dart';
+
+const _kProfileImage = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=85';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -35,45 +37,46 @@ class ProfileScreen extends ConsumerWidget {
                 color: AppColors.slate,
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
               ),
-              child: Column(
-                children: [
+               child: Stack(
+                 children: [
+                   Positioned.fill(
+                     child: Opacity(
+                       opacity: 0.13,
+                       child: RemoteImage(url: _kProfileImage, fallback: profile.photoLabel, fit: BoxFit.cover),
+                     ),
+                   ),
+                   Positioned.fill(child: Container(color: AppColors.slate.withValues(alpha: 0.84))),
+                   Column(
+                     children: [
                   Row(children: [Expanded(child: Text('Profile', style: AppText.serif(fontSize: 24, color: AppColors.cream))), _HeroIcon(icon: AppIcons.bell, onTap: () => context.push('/notifs'))]),
                   const SizedBox(height: 18),
-                  const SizedBox(width: 82, height: 82, child: PlaceholderImage(label: 'You', circle: true)),
+                   SizedBox(width: 82, height: 82, child: RemoteImage(url: _kProfileImage, fallback: profile.photoLabel, circle: true, borderRadius: 41)),
                   const SizedBox(height: 11),
-                  Text('Amara Reed', style: AppText.serif(fontSize: 23, color: AppColors.cream)),
+                   Text(profile.name, style: AppText.serif(fontSize: 23, color: AppColors.cream)),
                   const SizedBox(height: 3),
                   Text('amara.reed@mail.com', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.66))),
                   const SizedBox(height: 20),
                   Row(
                     children: [
                       Expanded(
-                        child: _ProfileActionTile(
+                        child: ProfileActionTile(
                           icon: Icons.notifications_none_rounded,
                           label: 'Notification',
                           onTap: () => context.push('/notifs'),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _ProfileActionTile(
-                          icon: Icons.local_offer_outlined,
-                          label: 'Voucher',
-                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Your next voucher will appear here.')),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
+                       Expanded(
                         child: _ProfileActionTile(
                           icon: Icons.history_rounded,
                           label: 'History',
                           onTap: () => context.go('/orders'),
                         ),
                       ),
-                    ],
-                  ),
+                     ],
+                   ),
+                 ],
+               ),
                 ],
               ),
             ),
@@ -82,10 +85,9 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
-                  _ProfileMenuRow(icon: Icons.person_outline_rounded, label: 'Edit Profile', onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile editing is coming soon.')))),
-                  _ProfileMenuRow(icon: Icons.location_on_outlined, label: 'Address Management', onTap: () {}),
+                   _ProfileMenuRow(icon: Icons.person_outline_rounded, label: 'Edit Profile', onTap: () => context.push('/profile/edit')),
                   _ProfileMenuRow(icon: Icons.headset_mic_outlined, label: 'Help & Support', onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Support chat is available from an active order.')))),
-                  _ProfileMenuRow(icon: Icons.settings_outlined, label: 'Settings', onTap: () {}),
+                   _ProfileMenuRow(icon: Icons.settings_outlined, label: 'Settings', onTap: () => context.push('/profile/settings')),
                 ],
               ),
             ),
@@ -232,28 +234,6 @@ class _HeroIcon extends StatelessWidget {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.white.withValues(alpha: 0.18))),
     clipBehavior: Clip.antiAlias,
     child: InkWell(onTap: onTap, child: SizedBox(width: 42, height: 42, child: Center(child: AppIcon(icon, size: 18, color: AppColors.cream)))),
-  );
-}
-
-class _ProfileActionTile extends StatelessWidget {
-  const _ProfileActionTile({required this.icon, required this.label, required this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white.withValues(alpha: 0.08),
-    borderRadius: BorderRadius.circular(15),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(15),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        child: Column(children: [Icon(icon, size: 19, color: AppColors.cream), const SizedBox(height: 6), Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.cream))]),
-      ),
-    ),
   );
 }
 

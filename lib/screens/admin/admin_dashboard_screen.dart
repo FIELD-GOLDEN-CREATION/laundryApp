@@ -10,7 +10,7 @@ import '../../theme/text_styles.dart';
 import '../../widgets/account_sheet.dart';
 import '../../widgets/alert_card.dart';
 import '../../widgets/bar_chart_row.dart';
-import '../../widgets/placeholder_image.dart';
+import '../../widgets/map_grid_painter.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
@@ -57,8 +57,17 @@ class AdminDashboardScreen extends ConsumerWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      const PlaceholderImage(label: 'City map screenshot'),
-                      for (final pin in kMapPins)
+                      CustomPaint(painter: MapGridPainter()),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, AppColors.teal.withValues(alpha: 0.08)],
+                          ),
+                        ),
+                      ),
+                      for (final pin in kDriverMapPins)
                         Positioned(
                           left: 0,
                           top: 0,
@@ -168,20 +177,9 @@ class _Header extends StatelessWidget {
       child: Container(
         color: AppColors.teal,
         padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: -60,
-              top: -70,
-              child: Container(
-                width: 210,
-                height: 210,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -254,8 +252,6 @@ class _Header extends StatelessWidget {
                 ),
               ],
             ),
-          ],
-        ),
       ),
     );
   }
