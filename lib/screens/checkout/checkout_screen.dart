@@ -12,7 +12,9 @@ import '../../models/saved_card.dart';
 import '../../state/auth_state.dart';
 import '../../state/cart_state.dart';
 import '../../state/checkout_state.dart';
-import '../../state/orders_state.dart';
+import '../../state/client_preferences_state.dart';
+import '../../state/fulfillment_state.dart';
+import '../../state/place_order_helper.dart';
 import '../../state/saved_cards_state.dart';
 import '../../state/schedule_state.dart';
 import '../../theme/colors.dart';
@@ -38,13 +40,18 @@ class CheckoutScreen extends ConsumerWidget {
     final checkout = ref.watch(checkoutProvider);
     final checkoutNotifier = ref.read(checkoutProvider.notifier);
     final savedCards = ref.watch(savedCardsProvider);
+    final fulfillment = ref.watch(fulfillmentProvider);
+    final language = ref.watch(clientPreferencesProvider).language;
+    final extra = fulfillment.extraItems.values.toList();
     final selectedCard = savedCards
         .cast<SavedCard?>()
         .firstWhere((c) => c?.id == checkout.selectedCardId, orElse: () => null);
 
-    final subtotal = cartSubtotal(qty);
+    final subtotal = cartSubtotal(qty, extra);
     final discount = discountFor(checkout.promo);
-    final total = (subtotal - discount).clamp(0, double.infinity);
+    final deliveryFee = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
+    final total = (subtotal - discount).clamp(0, double.infinity) + deliveryFee;
+    final itemsCount = cartItemCount(qty, extra);
     final address = schedule.isCurrentLocation
         ? Address(label: 'Current location', line: schedule.currentLocation.isEmpty ? 'Current location' : schedule.currentLocation)
         : kAddresses[schedule.addrIndex];
@@ -66,7 +73,7 @@ class CheckoutScreen extends ConsumerWidget {
                 children: [
                   RoundBackButton(onPressed: () => context.pop()),
                   const SizedBox(width: 12),
-                  Text('Checkout', style: AppText.serif(fontSize: 24)),
+                   Text(clientLabel('Checkout', 'Kulipa', language), style: AppText.serif(fontSize: 24, color: AppColors.clientText(context))),
                 ],
               ),
               const SizedBox(height: 16),
@@ -87,7 +94,7 @@ class CheckoutScreen extends ConsumerWidget {
                       children: [
                         Container(width: 34, height: 34, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)), child: const Icon(Icons.local_laundry_service_rounded, size: 18, color: AppColors.cream)),
                         const SizedBox(width: 10),
-                        Expanded(child: Text('PICKUP DETAILS', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.9, color: AppColors.cream.withValues(alpha: 0.68)))),
+                        Expanded(child: Text(fulfillment.isDelivery ? clientLabel('PICKUP DETAILS', 'MZIGO UTAKACHUKULIWA', language) : clientLabel('DROP-OFF DETAILS', 'UNIPEO KELEE DUKANI', language), style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.9, color: AppColors.cream.withValues(alpha: 0.68)))),
                         Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: AppColors.mint.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(99)), child: Text('READY', style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppColors.mint, letterSpacing: 0.5))),
                       ],
                     ),
@@ -105,6 +112,19 @@ class CheckoutScreen extends ConsumerWidget {
                         color: AppColors.cream.withValues(alpha: 0.72),
                       ),
                     ),
+                    if (fulfillment.isDelivery && fulfillment.driver.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        const Icon(Icons.person_pin_circle_outlined, size: 15, color: AppColors.mint),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${clientLabel('Driver', 'Dereva', language)}: ${fulfillment.driver} · ${formatMoney(deliveryFee.toDouble())}',
+                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.cream.withValues(alpha: 0.8)),
+                          ),
+                        ),
+                      ]),
+                    ],
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Divider(height: 1, color: AppColors.cream.withValues(alpha: 0.18)),
@@ -113,7 +133,7 @@ class CheckoutScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '${cartItemCount(qty)} items · Marina Fresh',
+                          '$itemsCount ${clientLabel('items', 'vitu', language)} · ${fulfillment.shop}',
                           style: AppText.sans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -121,7 +141,9 @@ class CheckoutScreen extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          'Delivered Thu, 6 PM',
+                          fulfillment.isDelivery
+                              ? clientLabel('Delivered by driver', 'Unapokea kwa dereva', language)
+                              : clientLabel('You drop off at shop', 'Unapeleka dukani', language),
                           style: AppText.sans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -138,16 +160,16 @@ class CheckoutScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('PAYMENT METHOD', style: AppText.eyebrow()),
-                    Row(children: [const Icon(Icons.lock_outline_rounded, size: 13, color: AppColors.teal), const SizedBox(width: 4), Text('Secure checkout', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal))]),
+                    Text(clientLabel('PAYMENT METHOD', 'NJIA YA MALIPO', language), style: AppText.eyebrow()),
+                    Row(children: [const Icon(Icons.lock_outline_rounded, size: 13, color: AppColors.teal), const SizedBox(width: 4), Text(clientLabel('Secure checkout', 'Malipo salama', language), style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal))]),
                   ],
                 ),
               ),
               Column(
                 children: [
                   RadioOptionCard(
-                    label: 'Card',
-                    sub: selectedCard != null ? selectedCard.label : 'Choose or link a saved card',
+                    label: clientLabel('Card', 'Kadi', language),
+                    sub: selectedCard != null ? selectedCard.label : clientLabel('Choose or link a saved card', 'Chagua au ongeza kadi', language),
                     selected: checkout.payIndex == 0,
                     leading: const SizedBox(
                       width: 44,
@@ -156,8 +178,6 @@ class CheckoutScreen extends ConsumerWidget {
                     ),
                     onTap: () => _openCardPay(
                       context,
-                      shop: 'Marina Fresh Laundry',
-                      items: '${cartItemCount(qty)} items',
                       total: formatMoney(total.toDouble()),
                       pickup: pickupSummary,
                       address: address.line,
@@ -165,18 +185,16 @@ class CheckoutScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   RadioOptionCard(
-                    label: 'Mobile Money',
+                    label: clientLabel('Mobile Money', 'Lipa kwa simu', language),
                     sub: checkout.selectedMobileProvider != null
                         ? '${checkout.selectedMobileProvider} · ${checkout.mobileMoneyPhone}'
-                        : 'Choose a provider',
+                        : clientLabel('Choose a provider', 'Chagua mtoa huduma', language),
                     selected: checkout.payIndex == 1,
                     leading: checkout.selectedMobileProvider != null
                         ? MobileMoneyLogo(provider: mobileProviderByName(checkout.selectedMobileProvider!)!)
                         : null,
                     onTap: () => _openMobileMoneyPicker(
                       context,
-                      shop: 'Marina Fresh Laundry',
-                      items: '${cartItemCount(qty)} items',
                       total: formatMoney(total.toDouble()),
                       pickup: pickupSummary,
                       address: address.line,
@@ -184,8 +202,8 @@ class CheckoutScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   RadioOptionCard(
-                    label: 'Cash on delivery',
-                    sub: 'Pay the driver',
+                    label: fulfillment.isDelivery ? clientLabel('Cash on delivery', 'Lipa kwa cash', language) : clientLabel('Cash at shop', 'Lipa dukani', language),
+                    sub: fulfillment.isDelivery ? clientLabel('Pay the driver', 'Mlipe dereva', language) : clientLabel('Pay at the shop counter', 'Lipa kaunta ya duka', language),
                     selected: checkout.payIndex == 2,
                     onTap: () => checkoutNotifier.pickPayment(2),
                   ),
@@ -199,8 +217,8 @@ class CheckoutScreen extends ConsumerWidget {
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppColors.amber, style: BorderStyle.solid),
+                         color: AppColors.clientSurface(context),
+                         border: Border.all(color: AppColors.amber, style: BorderStyle.solid),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       alignment: Alignment.centerLeft,
@@ -238,27 +256,34 @@ class CheckoutScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: AppColors.creamDark),
+                   color: AppColors.clientSurface(context),
+                   border: Border.all(color: AppColors.clientBorder(context)),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   children: [
-                    _Line(label: 'Subtotal', value: formatMoney(subtotal)),
+                    _Line(label: clientLabel('Subtotal', 'Jumla ndogo', language), value: formatMoney(subtotal)),
                     const SizedBox(height: 9),
                     _Line(
-                      label: 'Discount',
+                      label: clientLabel('Discount', 'Punguzo', language),
                       value: discount > 0 ? '−${formatMoney(discount)}' : '—',
                       valueColor: AppColors.amber,
                     ),
                     const SizedBox(height: 9),
-                    const _Line(label: 'Pickup & delivery', value: 'Free', valueColor: AppColors.teal),
-                    const Padding(
+                    if (fulfillment.isDelivery)
+                      _Line(
+                        label: clientLabel('Pickup & delivery', 'Kuchukua na usafirishaji', language),
+                        value: deliveryFee > 0 ? formatMoney(deliveryFee.toDouble()) : '—',
+                        valueColor: AppColors.teal,
+                      )
+                    else
+                      _Line(label: clientLabel('Self drop-off', 'Unapeleka mwenyewe', language), value: clientLabel('Free', 'Bure', language), valueColor: AppColors.teal),
+                    Padding(
                       padding: EdgeInsets.symmetric(vertical: 13),
-                      child: Divider(height: 1, color: AppColors.creamDark),
+                      child: Divider(height: 1, color: AppColors.clientBorder(context)),
                     ),
                     _Line(
-                      label: 'Total',
+                      label: clientLabel('Total', 'Jumla', language),
                       value: formatMoney(total.toDouble()),
                       bold: true,
                       valueColor: AppColors.teal,
@@ -274,20 +299,17 @@ class CheckoutScreen extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: PrimaryCtaBar(
-        label: 'Place order',
+        label: clientLabel('Place order', 'Weka oda', language),
         hint: formatMoney(total.toDouble()),
         onPressed: () {
           if (gateGuest(ref, context, 'Log in to place your order — guests can browse everything else.')) return;
-          final order = ref
-              .read(ordersProvider.notifier)
-              .placeOrder(
-                shop: 'Marina Fresh Laundry',
-                items: '${cartItemCount(qty)} items',
-                total: formatMoney(total.toDouble()),
-                paymentMethod: _paymentLabel(checkout, selectedCard),
-                pickup: pickupSummary,
-                address: address.line,
-              );
+          final order = placeCurrentOrder(
+            ref,
+            paymentMethod: _paymentLabel(checkout, selectedCard, fulfillment.isDelivery),
+            pickup: pickupSummary,
+            address: address.line,
+            total: formatMoney(total.toDouble()),
+          );
           // Full location replace (not push) so the back gesture from the
           // confirmation screen can't land back in a placed order's
           // checkout.
@@ -336,7 +358,7 @@ class _ProgressStep extends StatelessWidget {
 
 /// The human-readable payment line shown on the order confirmation, derived
 /// from the chosen payment category and any selection within it.
-String _paymentLabel(CheckoutState checkout, SavedCard? selectedCard) {
+String _paymentLabel(CheckoutState checkout, SavedCard? selectedCard, [bool isDelivery = true]) {
   switch (checkout.payIndex) {
     case 0:
       return selectedCard != null ? 'Card · ${selectedCard.label}' : 'Card';
@@ -344,7 +366,7 @@ String _paymentLabel(CheckoutState checkout, SavedCard? selectedCard) {
       final p = checkout.selectedMobileProvider;
       return p != null ? 'Mobile money · $p' : 'Mobile money';
     default:
-      return 'Cash on delivery';
+      return isDelivery ? 'Cash on delivery' : 'Cash at shop';
   }
 }
 
@@ -393,8 +415,6 @@ Widget _sheetHandle() => Center(
 
 void _openCardPay(
   BuildContext context, {
-  required String shop,
-  required String items,
   required String total,
   required String pickup,
   required String address,
@@ -403,17 +423,15 @@ void _openCardPay(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (_) => _CardSheet(shop: shop, items: items, total: total, pickup: pickup, address: address),
+    builder: (_) => _CardSheet(total: total, pickup: pickup, address: address),
   );
 }
 
 String _cardDigits(String s) => s.replaceAll(RegExp(r'\D'), '');
 
 class _CardSheet extends ConsumerStatefulWidget {
-  const _CardSheet({required this.shop, required this.items, required this.total, required this.pickup, required this.address});
+  const _CardSheet({required this.total, required this.pickup, required this.address});
 
-  final String shop;
-  final String items;
   final String total;
   final String pickup;
   final String address;
@@ -498,13 +516,12 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
-    final order = ref.read(ordersProvider.notifier).placeOrder(
-      shop: widget.shop,
-      items: widget.items,
-      total: widget.total,
+    final order = placeCurrentOrder(
+      ref,
       paymentMethod: paymentMethod,
       pickup: widget.pickup,
       address: widget.address,
+      total: widget.total,
     );
     navigator.pop();
     router.go('/order-confirmation', extra: order.id);
@@ -515,9 +532,9 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: AppColors.clientSurfaceRaised(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
@@ -691,8 +708,8 @@ class _CardField extends StatelessWidget {
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.creamDark),
+            color: AppColors.clientSurface(context),
+            border: Border.all(color: AppColors.clientBorder(context)),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -703,7 +720,7 @@ class _CardField extends StatelessWidget {
                   obscureText: obscure,
                   keyboardType: keyboardType,
                   onChanged: onChanged,
-                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
                   decoration: InputDecoration.collapsed(
                     hintText: hint,
                     hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.muted),
@@ -721,8 +738,6 @@ class _CardField extends StatelessWidget {
 
 void _openMobileMoneyPicker(
   BuildContext context, {
-  required String shop,
-  required String items,
   required String total,
   required String pickup,
   required String address,
@@ -731,17 +746,15 @@ void _openMobileMoneyPicker(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (_) => _MobileMoneySheet(shop: shop, items: items, total: total, pickup: pickup, address: address),
+    builder: (_) => _MobileMoneySheet(total: total, pickup: pickup, address: address),
   );
 }
 
 enum _PayPhase { input, processing, approved }
 
 class _MobileMoneySheet extends ConsumerStatefulWidget {
-  const _MobileMoneySheet({required this.shop, required this.items, required this.total, required this.pickup, required this.address});
+  const _MobileMoneySheet({required this.total, required this.pickup, required this.address});
 
-  final String shop;
-  final String items;
   final String total;
   final String pickup;
   final String address;
@@ -796,13 +809,12 @@ class _MobileMoneySheetState extends ConsumerState<_MobileMoneySheet> {
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
-    final order = ref.read(ordersProvider.notifier).placeOrder(
-      shop: widget.shop,
-      items: widget.items,
-      total: widget.total,
+final order = placeCurrentOrder(
+      ref,
       paymentMethod: 'Mobile money · ${provider.name}',
       pickup: widget.pickup,
       address: widget.address,
+      total: widget.total,
     );
     navigator.pop();
     router.go('/order-confirmation', extra: order.id);
@@ -814,9 +826,9 @@ class _MobileMoneySheetState extends ConsumerState<_MobileMoneySheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
-        decoration: const BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: AppColors.clientSurfaceRaised(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 260),
@@ -853,8 +865,8 @@ class _MobileMoneySheetState extends ConsumerState<_MobileMoneySheet> {
             height: 54,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.creamDark),
+              color: AppColors.clientSurface(context),
+              border: Border.all(color: AppColors.clientBorder(context)),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -866,7 +878,7 @@ class _MobileMoneySheetState extends ConsumerState<_MobileMoneySheet> {
                     controller: _phoneCtrl,
                     keyboardType: TextInputType.phone,
                     onChanged: _onPhoneChanged,
-                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
                     decoration: InputDecoration.collapsed(
                       hintText: '0754 111 222',
                       hintStyle: AppText.sans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.muted),

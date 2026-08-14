@@ -94,8 +94,8 @@ class OfferCard extends StatelessWidget {
                             onTap: onClaim,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                              child: Text(
-                                'Claim',
+                                 child: Text(
+                                 'Claim',
                                 style: AppText.sans(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w800,

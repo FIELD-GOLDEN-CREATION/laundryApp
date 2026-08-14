@@ -8,6 +8,7 @@ import '../chat/chat_screen.dart';
 import '../../models/order.dart';
 import '../../state/orders_state.dart';
 import '../../state/orders_tab_state.dart';
+import '../../state/client_preferences_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/remote_image.dart';
@@ -21,21 +22,22 @@ class OrdersScreen extends ConsumerWidget {
     final notifier = ref.read(ordersTabProvider.notifier);
     final activeOrders = ref.watch(ordersProvider);
     final orders = tab == 0 ? activeOrders : kCompletedOrders;
+    final language = ref.watch(clientPreferencesProvider).language;
 
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
           children: [
-            Text('Your orders', style: AppText.serif(fontSize: 28)),
+             Text(clientLabel('Your orders', 'Oda zako', language), style: AppText.serif(fontSize: 28, color: AppColors.clientText(context))),
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: AppColors.creamDark, borderRadius: BorderRadius.circular(999)),
+               decoration: BoxDecoration(color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.creamDark, borderRadius: BorderRadius.circular(999)),
               child: Row(
                 children: [
-                  Expanded(child: _TabButton(label: 'Active', active: tab == 0, onTap: () => notifier.pick(0))),
-                  Expanded(child: _TabButton(label: 'Completed', active: tab == 1, onTap: () => notifier.pick(1))),
+                   Expanded(child: _TabButton(label: clientLabel('Active', 'Inayoendelea', language), active: tab == 0, onTap: () => notifier.pick(0))),
+                   Expanded(child: _TabButton(label: clientLabel('Completed', 'Imekamilika', language), active: tab == 1, onTap: () => notifier.pick(1))),
                 ],
               ),
             ),
@@ -44,7 +46,7 @@ class OrdersScreen extends ConsumerWidget {
               _OrderCard(
                 order: orders[i],
                 onChat: tab == 0 ? () => showChatPanel(context, orders[i].shop) : null,
-                onTap: () => context.push('/track', extra: orders[i].id),
+                         onTap: () => context.push('/order-detail', extra: orders[i].id),
               ),
               if (i != orders.length - 1) const SizedBox(height: 12),
             ],
@@ -65,7 +67,7 @@ class _TabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? Colors.white : Colors.transparent,
+      color: active ? AppColors.clientSurfaceRaised(context) : Colors.transparent,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
@@ -102,7 +104,7 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final shop = shopByName(order.shop);
     return Material(
-      color: Colors.white,
+       color: AppColors.clientSurface(context),
       borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -110,7 +112,7 @@ class _OrderCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.creamDark),
+             border: Border.all(color: AppColors.clientBorder(context)),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Column(
@@ -125,11 +127,11 @@ class _OrderCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(order.shop, style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800)),
+                        Text(order.shop, style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                         const SizedBox(height: 3),
                         Text(
                           '${order.id} · ${order.items}',
-                          style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                           style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                         ),
                       ],
                     ),
@@ -150,7 +152,7 @@ class _OrderCard extends StatelessWidget {
                 children: [
                   Text(
                     order.date,
-                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                     style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
                   ),
                   Row(
                     children: [

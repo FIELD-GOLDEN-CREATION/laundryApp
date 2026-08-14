@@ -92,13 +92,16 @@ class _LinkCardSheetState extends State<_LinkCardSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
-        decoration: const BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+            decoration: const BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -203,6 +206,8 @@ class _LinkCardSheetState extends State<_LinkCardSheet> {
               ],
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

@@ -8,12 +8,14 @@ import '../../models/saved_card.dart';
 import '../../state/auth_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/saved_cards_state.dart';
+import '../../state/client_preferences_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/card_brand_tag.dart';
 import '../../widgets/link_card_sheet.dart';
 import '../../widgets/profile_action_tile.dart';
 import '../../widgets/remote_image.dart';
+import '../../widgets/profile_action_tile.dart';
 import '../../widgets/toggle_switch.dart';
 
 const _kProfileImage = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=85';
@@ -26,6 +28,7 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider);
     final notifier = ref.read(profileProvider.notifier);
     final savedCards = ref.watch(savedCardsProvider);
+    final language = ref.watch(clientPreferencesProvider).language;
 
     return Scaffold(
       body: SafeArea(
@@ -49,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
                    Positioned.fill(child: Container(color: AppColors.slate.withValues(alpha: 0.84))),
                    Column(
                      children: [
-                  Row(children: [Expanded(child: Text('Profile', style: AppText.serif(fontSize: 24, color: AppColors.cream))), _HeroIcon(icon: AppIcons.bell, onTap: () => context.push('/notifs'))]),
+                   Row(children: [Expanded(child: Text(clientLabel('Profile', 'Wasifu', language), style: AppText.serif(fontSize: 24, color: AppColors.cream))), _HeroIcon(icon: AppIcons.bell, onTap: () => context.push('/notifs'))]),
                   const SizedBox(height: 18),
                    SizedBox(width: 82, height: 82, child: RemoteImage(url: _kProfileImage, fallback: profile.photoLabel, circle: true, borderRadius: 41)),
                   const SizedBox(height: 11),
@@ -62,7 +65,7 @@ class ProfileScreen extends ConsumerWidget {
                       Expanded(
                         child: ProfileActionTile(
                           icon: Icons.notifications_none_rounded,
-                          label: 'Notification',
+                           label: clientLabel('Notification', 'Arifa', language),
                           onTap: () => context.push('/notifs'),
                         ),
                       ),
@@ -70,7 +73,7 @@ class ProfileScreen extends ConsumerWidget {
                        Expanded(
                         child: ProfileActionTile(
                           icon: Icons.history_rounded,
-                          label: 'History',
+                           label: clientLabel('History', 'Historia', language),
                           onTap: () => context.go('/orders'),
                         ),
                       ),
@@ -86,14 +89,14 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
-                   _ProfileMenuRow(icon: Icons.person_outline_rounded, label: 'Edit Profile', onTap: () => context.push('/profile/edit')),
-                  _ProfileMenuRow(icon: Icons.headset_mic_outlined, label: 'Help & Support', onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Support chat is available from an active order.')))),
-                   _ProfileMenuRow(icon: Icons.settings_outlined, label: 'Settings', onTap: () => context.push('/profile/settings')),
+                   _ProfileMenuRow(icon: Icons.person_outline_rounded, label: clientLabel('Edit Profile', 'Hariri wasifu', language), onTap: () => context.push('/profile/edit')),
+                  _ProfileMenuRow(icon: Icons.headset_mic_outlined, label: clientLabel('Help & Support', 'Msaada', language), onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(clientLabel('Support chat is available from an active order.', 'Mazungumzo ya msaada yanapatikana kwenye oda inayoendelea.', language))))),
+                   _ProfileMenuRow(icon: Icons.settings_outlined, label: clientLabel('Settings', 'Mipangilio', language), onTap: () => context.push('/profile/settings')),
                 ],
               ),
             ),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 22), child: Text('ACCOUNT DETAILS', style: AppText.eyebrow())),
-            _SectionLabel('Saved addresses'),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 22), child: Text(clientLabel('ACCOUNT DETAILS', 'TAARIFA ZA AKAUNTI', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)))),
+            _SectionLabel(clientLabel('Saved addresses', 'Anwani zilizohifadhiwa', language)),
             Column(
               children: [
                 for (var i = 0; i < profile.addresses.length; i++) ...[
@@ -106,18 +109,18 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ],
             ),
-            _SectionLabel('Saved cards'),
+            _SectionLabel(clientLabel('Saved cards', 'Kadi zilizohifadhiwa', language)),
             if (savedCards.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: AppColors.creamDark),
+                   color: AppColors.clientSurface(context),
+                   border: Border.all(color: AppColors.clientBorder(context)),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Text(
-                  'No cards linked yet.',
-                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                   clientLabel('No cards linked yet.', 'Hakuna kadi iliyounganishwa.', language),
+                   style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 ),
               )
             else
@@ -155,11 +158,11 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            _SectionLabel('Preferences'),
+             _SectionLabel(clientLabel('Preferences', 'Mapendeleo', language)),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
+                 color: AppColors.clientSurface(context),
+                 border: Border.all(color: AppColors.clientBorder(context)),
                 borderRadius: BorderRadius.circular(20),
               ),
               clipBehavior: Clip.antiAlias,
@@ -171,7 +174,7 @@ class ProfileScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                            color: i == kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.cream,
+                             color: i == kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.clientBorder(context),
                           ),
                         ),
                       ),
@@ -179,8 +182,8 @@ class ProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              kPreferenceLabels[i],
-                              style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700),
+                               clientLabel(kPreferenceLabels[i], ['Arifa za oda', 'Ofa na matangazo', 'Vidokezo vya utunzaji'][i], language),
+                               style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
                             ),
                           ),
                           ToggleSwitch(on: profile.prefsOn[i], onTap: () => notifier.togglePref(i)),
@@ -209,7 +212,7 @@ class ProfileScreen extends ConsumerWidget {
                     height: 52,
                     alignment: Alignment.center,
                     child: Text(
-                      'Log out',
+                       clientLabel('Log out', 'Toka', language),
                       style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.amber),
                     ),
                   ),
@@ -248,14 +251,14 @@ class _ProfileMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 1),
-    decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: AppColors.cream))),
+     decoration: BoxDecoration(color: AppColors.clientSurface(context), border: Border(bottom: BorderSide(color: AppColors.clientBorder(context)))),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-          child: Row(children: [Icon(icon, size: 20, color: AppColors.teal), const SizedBox(width: 13), Expanded(child: Text(label, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700))), const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.muted)]),
+           child: Row(children: [Icon(icon, size: 20, color: AppColors.teal), const SizedBox(width: 13), Expanded(child: Text(label, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientText(context)))), Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.clientSecondaryText(context))]),
         ),
       ),
     ),
@@ -270,7 +273,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 26, bottom: 11),
-      child: Text(text.toUpperCase(), style: AppText.eyebrow()),
+       child: Text(text.toUpperCase(), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
     );
   }
 }
@@ -321,8 +324,8 @@ class _AddressRowState extends State<_AddressRow> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
+         color: AppColors.clientSurface(context),
+         border: Border.all(color: AppColors.clientBorder(context)),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -342,11 +345,11 @@ class _AddressRowState extends State<_AddressRow> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                     Text(widget.label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                     const SizedBox(height: 2),
                     Text(
                       widget.line,
-                      style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                       style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                   ],
                 ),
@@ -451,8 +454,8 @@ class _SavedCardRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
+                 color: AppColors.clientSurface(context),
+                 border: Border.all(color: AppColors.clientBorder(context)),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(

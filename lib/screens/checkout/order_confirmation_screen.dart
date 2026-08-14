@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/order.dart';
+import '../../state/client_preferences_state.dart';
 import '../../state/orders_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
@@ -27,8 +28,11 @@ class OrderConfirmationScreen extends ConsumerWidget {
       }
     }
     order ??= orders.isNotEmpty ? orders.first : null;
+    final language = ref.watch(clientPreferencesProvider).language;
+    final isSelf = order?.fulfillment == 'self';
 
     return Scaffold(
+      backgroundColor: AppColors.isClientDark(context) ? const Color(0xFF0A1117) : AppColors.cream,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(28, 20, 28, 20),
@@ -37,21 +41,33 @@ class OrderConfirmationScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               const _SuccessBadge(),
               const SizedBox(height: 22),
-              Text('Order confirmed!', style: AppText.serif(fontSize: 26), textAlign: TextAlign.center),
+              Text(clientLabel('Order confirmed!', 'Oda imethibitishwa!', language), style: AppText.serif(fontSize: 26, color: AppColors.clientText(context)), textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
                 order == null
-                    ? 'Your laundry is scheduled for pickup.'
-                    : '${order.items} from ${order.shop} is scheduled for pickup.',
-                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.4),
+                    ? clientLabel('Your laundry is scheduled.', 'Nguo zako zimepangwa.', language)
+                    : isSelf
+                        ? clientLabel(
+                            'Promise order: bring ${order.items} to ${order.shop} on ${order.pickup.isEmpty ? 'your chosen day' : order.pickup} and pay at the counter.',
+                            'Oda ya ahadi: peleka ${order.items} kwenye ${order.shop} siku ya ${order.pickup.isEmpty ? 'uliyochagua' : order.pickup} na ulipe kauntani.',
+                            language,
+                          )
+                        : clientLabel(
+                            'Our driver will pick up ${order.items} from ${order.shop} on ${order.pickup.isEmpty ? 'your chosen day' : order.pickup}.',
+                            'Dereva wetu atachukua ${order.items} kutoka ${order.shop} siku ya ${order.pickup.isEmpty ? 'uliyochagua' : order.pickup}.',
+                            language,
+                          ),
+                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.45),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              if (order != null) _ReceiptCard(order: order),
+              if (order != null) _ReceiptCard(order: order, isSelf: isSelf, language: language),
               const SizedBox(height: 24),
               Text(
-                'You can follow your laundry live on the Orders page.',
-                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                isSelf
+                    ? clientLabel('You can follow your promise order on the Orders page.', 'Unaweza kuifuatilia oda yako kwenye ukurasa wa Oda.', language)
+                    : clientLabel('You can follow your laundry live on the Orders page.', 'Unaweza kuifuatilia nguo zako moja kwa moja kwenye ukurasa wa Oda.', language),
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -59,7 +75,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: PrimaryCtaBar(
-        label: 'View order status',
+        label: clientLabel('View order status', 'Angalia hali ya oda', language),
         onPressed: () => context.go('/orders'),
       ),
     );
@@ -147,9 +163,11 @@ class _Ripple extends StatelessWidget {
 }
 
 class _ReceiptCard extends StatelessWidget {
-  const _ReceiptCard({required this.order});
+  const _ReceiptCard({required this.order, required this.isSelf, required this.language});
 
   final Order order;
+  final bool isSelf;
+  final String language;
 
   @override
   Widget build(BuildContext context) {
@@ -157,21 +175,22 @@ class _ReceiptCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
+        color: AppColors.clientSurface(context),
+        border: Border.all(color: AppColors.clientBorder(context)),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _DetailRow(label: 'Order', value: order.id),
-          _DetailRow(label: 'Shop', value: order.shop),
-          _DetailRow(label: 'Items', value: order.items),
-          if (order.pickup.isNotEmpty) _DetailRow(label: 'Pickup', value: order.pickup),
-          if (order.address.isNotEmpty) _DetailRow(label: 'Address', value: order.address),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 14),
-            child: Divider(height: 1, color: AppColors.creamDark),
+          _DetailRow(label: clientLabel('Order', 'Oda', language), value: order.id, context: context),
+          _DetailRow(label: clientLabel('Shop', 'Duka', language), value: order.shop, context: context),
+          _DetailRow(label: clientLabel('Items', 'Vitu', language), value: order.items, context: context),
+          if (order.pickup.isNotEmpty) _DetailRow(label: isSelf ? clientLabel('Arrive at shop', 'Fika dukani', language) : clientLabel('Pickup', 'Kuchukua', language), value: order.pickup, context: context),
+          if (order.address.isNotEmpty) _DetailRow(label: isSelf ? clientLabel('Drop-off address', 'Anwani ya duka', language) : clientLabel('Address', 'Anwani', language), value: order.address, context: context),
+          if (!isSelf && order.driver.isNotEmpty) _DetailRow(label: clientLabel('Driver', 'Dereva', language), value: order.driver, context: context),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 14),
+            child: Divider(height: 1, color: AppColors.clientBorder(context)),
           ),
           Row(
             children: [
@@ -181,11 +200,11 @@ class _ReceiptCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('PAID WITH', style: AppText.eyebrow()),
+                    Text(clientLabel('PAID WITH', 'IMELIPWA NA', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                     const SizedBox(height: 3),
                     Text(
-                      order.paymentMethod.isEmpty ? 'Payment method' : order.paymentMethod,
-                      style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800),
+                      order.paymentMethod.isEmpty ? clientLabel('Payment method', 'Njia ya malipo', language) : order.paymentMethod,
+                      style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                     ),
                   ],
                 ),
@@ -196,7 +215,7 @@ class _ReceiptCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('AMOUNT', style: AppText.eyebrow()),
+              Text(clientLabel('AMOUNT', 'KIASI', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
               Text(order.total, style: AppText.sans(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.teal)),
             ],
           ),
@@ -207,10 +226,11 @@ class _ReceiptCard extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value, required this.context});
 
   final String label;
   final String value;
+  final BuildContext context;
 
   @override
   Widget build(BuildContext context) {
@@ -220,17 +240,17 @@ class _DetailRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 74,
+            width: 92,
             child: Text(
               label.toUpperCase(),
-              style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: AppColors.muted),
+              style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: AppColors.clientSecondaryText(context)),
             ),
           ),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+              style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
             ),
           ),
         ],

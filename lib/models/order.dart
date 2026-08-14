@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../theme/colors.dart';
+import 'order_line.dart';
 
 /// trackStep value meaning the order has been submitted but not yet picked
 /// up by a driver — earlier than index 0 of kTrackSteps.
@@ -20,6 +21,10 @@ class Order {
     this.paymentMethod = '',
     this.pickup = '',
     this.address = '',
+    this.lines = const [],
+    this.fulfillment = 'delivery',
+    this.driver = '',
+    this.deliveryFeeTzs = 0,
   });
 
   final String shop;
@@ -44,6 +49,15 @@ class Order {
   /// it's been submitted but not yet picked up.
   final int trackStep;
 
+  final List<OrderLine> lines;
+
+  /// 'delivery' (driver pickup + delivery) or 'self' (customer drops off at
+  /// the shop as a promise order).
+  final String fulfillment;
+
+  final String driver;
+  final int deliveryFeeTzs;
+
   Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep}) => Order(
     shop: shop,
     id: id,
@@ -57,6 +71,10 @@ class Order {
     paymentMethod: paymentMethod,
     pickup: pickup,
     address: address,
+    lines: lines,
+    fulfillment: fulfillment,
+    driver: driver,
+    deliveryFeeTzs: deliveryFeeTzs,
   );
 }
 
@@ -83,5 +101,20 @@ OrderStatus orderStatusForStep(int step) {
       return const OrderStatus('Out for delivery', AppColors.teal, AppColors.tealMuted);
     default:
       return const OrderStatus('Order placed', AppColors.amber, AppColors.amberLight);
+  }
+}
+
+OrderStatus selfOrderStatusForStep(int step) {
+  switch (step) {
+    case 0:
+      return const OrderStatus('At shop', AppColors.teal, AppColors.tealMuted);
+    case 1:
+      return const OrderStatus('Sorted', AppColors.teal, AppColors.tealMuted);
+    case 2:
+      return const OrderStatus('Washing', AppColors.teal, AppColors.tealMuted);
+    case 3:
+      return const OrderStatus('Ready for collection', AppColors.teal, AppColors.tealMuted);
+    default:
+      return const OrderStatus('Promise booked', AppColors.amber, AppColors.amberLight);
   }
 }
