@@ -17,6 +17,10 @@ import '../theme/colors.dart';
 
 const kWeekBarFractions = [.38, .52, .44, .68, .60, .82, 1.0];
 
+/// Trailing 7 days ending on "today" (Wednesday, the last/amber bar) —
+/// paired 1:1 with [kWeekBarFractions] for the dashboard revenue chart.
+const kWeekBarLabels = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'];
+
 const kVendorAlerts = [
   AlertItem(
     title: '#LD-2486 · express, 6h left',
@@ -206,3 +210,19 @@ const kReviews = [
   ),
   ReviewItem(name: 'Priya N.', stars: '★★★★★', text: 'Eco detergent option is worth the extra dollar fifty.'),
 ];
+
+/// Vendor Settings screen seed data (`state/vendor_profile_state.dart`).
+const kWeekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/// Default working days: Monday, Wednesday, Thursday and Sunday.
+const kDefaultWorkingDays = [true, false, true, true, false, false, true];
+
+const kVendorTimeOptions = [
+  '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+  '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM',
+  '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM',
+];
+
+const kDefaultVendorShopPhotos = ['Storefront', 'Interior', 'Machines'];
+
+const kVendorLanguageOptions = ['English', 'Swahili'];

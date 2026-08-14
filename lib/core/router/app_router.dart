@@ -40,6 +40,7 @@ import '../../screens/vendor/vendor_earnings_screen.dart';
 import '../../screens/vendor/vendor_logistics_screen.dart';
 import '../../screens/vendor/vendor_order_detail_screen.dart';
 import '../../screens/vendor/vendor_orders_screen.dart';
+import '../../screens/vendor/vendor_settings_screen.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/bottom_tab_bar.dart';
 import '../../widgets/announcement_banner.dart';
@@ -131,6 +132,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
     GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
     GoRoute(path: '/vendor/order-detail', builder: (_, _) => const VendorOrderDetailScreen()),
+    GoRoute(path: '/vendor/settings', builder: (_, _) => const VendorSettingsScreen()),
     GoRoute(path: '/admin/client', builder: (_, _) => const AdminClientScreen()),
     GoRoute(path: '/admin/vendor', builder: (_, _) => const AdminVendorScreen()),
     GoRoute(path: '/admin/driver', builder: (_, _) => const AdminDriverScreen()),
