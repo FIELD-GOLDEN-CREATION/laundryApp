@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
 import '../../data/mock_data.dart';
@@ -10,25 +9,23 @@ import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/remote_image.dart';
 
-/// A single conversation thread with one shop. Reachable from the Chat list
-/// (the `/chat` tab) or from an active order's chat icon.
-class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key, required this.shop});
-
-  final String shop;
-
-  @override
-  ConsumerState<ChatScreen> createState() => _ChatScreenState();
+/// Opens the vendor/client conversation as a dismissible panel over the
+/// current order. Chat is intentionally not a standalone navigation page.
+void showChatPanel(BuildContext context, String shop) {
+  showModalBottomSheet(context: context, useSafeArea: true, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => _ChatPanel(shop: shop));
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
-  final _controller = TextEditingController();
-
+class _ChatPanel extends ConsumerStatefulWidget {
+  const _ChatPanel({required this.shop});
+  final String shop;
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  ConsumerState<_ChatPanel> createState() => _ChatPanelState();
+}
+
+class _ChatPanelState extends ConsumerState<_ChatPanel> {
+  final _controller = TextEditingController();
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
 
   void _send() {
     ref.read(chatProvider.notifier).send(widget.shop);
@@ -37,111 +34,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final messages = ref.watch(chatProvider.select((s) => s.messagesFor(widget.shop)));
+    final messages = ref.watch(chatProvider.select((state) => state.messagesFor(widget.shop)));
     final notifier = ref.read(chatProvider.notifier);
-    final shopImage = shopByName(widget.shop)?.imageUrl ?? '';
+    final image = shopByName(widget.shop)?.imageUrl ?? '';
 
-    return Scaffold(
-      body: SafeArea(
+    return FractionallySizedBox(
+      heightFactor: 0.84,
+      child: Container(
+        decoration: const BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(bottom: BorderSide(color: AppColors.creamDark)),
-              ),
-              child: Row(
-                children: [
-                  Material(
-                    color: AppColors.cream,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => context.go('/chat'),
-                      child: const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Center(child: AppIcon(AppIcons.backChevron, size: 9)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(width: 40, height: 40, child: RemoteImage(url: shopImage, fallback: 'Shop', circle: true)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.shop,
-                          style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Usually replies in 2 min',
-                          style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.teal),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+              child: Column(children: [
+                Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.creamDark, borderRadius: BorderRadius.circular(99))),
+                const SizedBox(height: 12),
+                Row(children: [
+                  SizedBox(width: 42, height: 42, child: RemoteImage(url: image, fallback: 'Shop', circle: true)),
+                  const SizedBox(width: 11),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.shop, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800)), const SizedBox(height: 2), Text('Vendor conversation', style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.teal))])),
+                  IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded, color: AppColors.slate)),
+                ]),
+              ]),
             ),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.all(18),
-                itemCount: messages.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (_, i) => _Bubble(message: messages[i]),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              decoration: const BoxDecoration(
-                color: AppColors.cream,
-                border: Border(top: BorderSide(color: AppColors.creamDark)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 46,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppColors.creamDark),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      alignment: Alignment.centerLeft,
-                      child: TextField(
-                        controller: _controller,
-                        onChanged: notifier.setDraft,
-                        onSubmitted: (_) => _send(),
-                        style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600),
-                        decoration: InputDecoration.collapsed(
-                          hintText: 'Message the shop',
-                          hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.muted),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Material(
-                    color: AppColors.teal,
-                    shape: const CircleBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: _send,
-                      child: const SizedBox(
-                        width: 46,
-                        height: 46,
-                        child: Center(child: AppIcon(AppIcons.send, size: 19)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            const Divider(height: 1, color: AppColors.creamDark),
+            Expanded(child: ListView.separated(padding: const EdgeInsets.all(18), itemCount: messages.length, separatorBuilder: (_, _) => const SizedBox(height: 12), itemBuilder: (_, i) => _Bubble(message: messages[i]))),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 10, 16, 12 + MediaQuery.viewInsetsOf(context).bottom),
+              child: Row(children: [
+                Expanded(child: Container(height: 46, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(999)), child: TextField(controller: _controller, onChanged: notifier.setDraft, onSubmitted: (_) => _send(), style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600), decoration: InputDecoration.collapsed(hintText: 'Message the vendor', hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.muted))))),
+                const SizedBox(width: 9),
+                Material(color: AppColors.teal, shape: const CircleBorder(), clipBehavior: Clip.antiAlias, child: InkWell(onTap: _send, child: const SizedBox(width: 46, height: 46, child: Center(child: AppIcon(AppIcons.send, size: 19))))),
+              ]),
             ),
           ],
         ),
@@ -152,48 +76,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 class _Bubble extends StatelessWidget {
   const _Bubble({required this.message});
-
   final ChatMessage message;
 
   @override
   Widget build(BuildContext context) {
     final bg = message.isMe ? AppColors.teal : Colors.white;
     final fg = message.isMe ? AppColors.cream : AppColors.slate;
-    final radius = message.isMe
-        ? const BorderRadius.only(
-            topLeft: Radius.circular(18),
-            topRight: Radius.circular(18),
-            bottomLeft: Radius.circular(18),
-            bottomRight: Radius.circular(4),
-          )
-        : const BorderRadius.only(
-            topLeft: Radius.circular(18),
-            topRight: Radius.circular(18),
-            bottomLeft: Radius.circular(4),
-            bottomRight: Radius.circular(18),
-          );
-
-    return Align(
-      alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(color: bg, borderRadius: radius),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(message.text, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: fg)),
-              const SizedBox(height: 5),
-              Text(
-                message.time,
-                style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: fg.withValues(alpha: 0.55)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    final radius = message.isMe ? const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomLeft: Radius.circular(18), bottomRight: Radius.circular(4)) : const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomLeft: Radius.circular(4), bottomRight: Radius.circular(18));
+    return Align(alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft, child: ConstrainedBox(constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78), child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11), decoration: BoxDecoration(color: bg, borderRadius: radius), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(message.text, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: fg)), const SizedBox(height: 5), Text(message.time, style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: fg.withValues(alpha: 0.55)))]))));
   }
 }
