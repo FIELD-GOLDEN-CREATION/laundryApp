@@ -22,6 +22,7 @@ class Shop {
     required this.distanceKm,
     required this.is24h,
     required this.isOpenNow,
+    required this.phone,
     this.imageUrl = '',
   });
 
@@ -66,6 +67,10 @@ class Shop {
 
   /// Whether this vendor is open right now, backs the "Open now" filter.
   final bool isOpenNow;
+
+  /// Vendor contact number in international format (e.g. '+255754111222'),
+  /// used to launch a phone call and a WhatsApp chat from Orders.
+  final String phone;
 
   /// Storefront photo URL. Empty means "no photo yet" — the UI renders a
   /// styled placeholder via RemoteImage's fallback.

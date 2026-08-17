@@ -9,6 +9,7 @@ import '../models/notification_item.dart';
 import '../models/offer.dart';
 import '../models/order.dart';
 import '../models/order_line.dart';
+import '../models/service_package.dart';
 import '../models/shop.dart';
 import '../models/track_step_def.dart';
 import '../theme/colors.dart';
@@ -70,6 +71,7 @@ const kShops = [
     distanceKm: 1.2,
     is24h: true,
     isOpenNow: true,
+    phone: '+255754111222',
     imageUrl: _kShopPhotoWhite,
   ),
   Shop(
@@ -93,6 +95,7 @@ const kShops = [
     distanceKm: 2.0,
     is24h: false,
     isOpenNow: true,
+    phone: '+255762334455',
     imageUrl: _kShopPhotoGrayA,
   ),
   Shop(
@@ -116,6 +119,7 @@ const kShops = [
     distanceKm: 2.8,
     is24h: false,
     isOpenNow: true,
+    phone: '+255713998877',
     imageUrl: _kShopPhotoDryer,
   ),
   Shop(
@@ -139,6 +143,7 @@ const kShops = [
     distanceKm: 4.5,
     is24h: false,
     isOpenNow: false,
+    phone: '+255786223344',
     imageUrl: _kShopPhotoGrayB,
   ),
   Shop(
@@ -162,6 +167,7 @@ const kShops = [
     distanceKm: 3.6,
     is24h: true,
     isOpenNow: true,
+    phone: '+255745667788',
     imageUrl: _kShopPhotoWhite,
   ),
 ];
@@ -201,6 +207,136 @@ const kMenuItems = [
   MenuItem(key: 'dress', name: 'Dress / suit', unit: 'Dry clean, per piece', initial: 'D', price: 24700),
   MenuItem(key: 'bed', name: 'Bed linen', unit: 'Wash & fold, per set', initial: 'B', price: 18200),
 ];
+
+/// Bundled offers shown on the Shop Detail page between the shop's bio and
+/// its per-piece price list. Every `compareAtTzs` is the same basket priced
+/// at the [kMenuItems] single-item rates above, so the savings percentages
+/// the cards render are arithmetic rather than marketing.
+///
+/// Ordered so the four [PackageKind]s interleave — a shop that qualifies for
+/// everything shows one of each within the [kMaxShopPackages] display cap.
+const kServicePackages = [
+  ServicePackage(
+    id: 'student-bag',
+    name: 'The Student Bag',
+    tagline: 'Up to 5kg of everyday wear',
+    kind: PackageKind.weight,
+    priceTzs: 34000,
+    // 5 pieces at the 'Shirts & tops' wash & fold rate.
+    compareAtTzs: 45500,
+    priceUnit: '/ bag',
+    tag: 'Popular',
+    serviceTags: ['wash'],
+    note: 'Weighed at pickup · standard detergent',
+    inclusions: [
+      'Washed, dried and folded',
+      'Everyday wear — no suits or delicates',
+      'Standard detergent (hypoallergenic on request)',
+    ],
+  ),
+  ServicePackage(
+    id: 'corporate-weekly',
+    name: 'Corporate Weekly Pack',
+    tagline: '5 shirts + 5 trousers, cleaned & ironed',
+    kind: PackageKind.itemCount,
+    priceTzs: 78000,
+    // 5 x shirt (9,100) + 5 x trouser (11,050).
+    compareAtTzs: 100750,
+    priceUnit: '/ pack',
+    serviceTags: ['iron', 'dry clean'],
+    note: 'Returned on hangers in protective wrap',
+    inclusions: [
+      '5 shirts washed and pressed',
+      '5 trousers cleaned and creased',
+      'Collar and cuff treatment included',
+      'Ready in 24 hours',
+    ],
+  ),
+  ServicePackage(
+    id: 'bedding-refresh',
+    name: 'King Bedding Refresh',
+    tagline: '1 comforter + 2 pillows + 1 bedsheet',
+    kind: PackageKind.household,
+    priceTzs: 46000,
+    // 3 x 'Bed linen' set rate (18,200).
+    compareAtTzs: 54600,
+    priceUnit: '/ set',
+    serviceTags: ['wash'],
+    note: 'Fits up to King size · deep sanitised',
+    inclusions: [
+      'Comforter deep-washed and tumble dried',
+      '2 pillows sanitised and refluffed',
+      'Bedsheet washed and pressed',
+    ],
+  ),
+  ServicePackage(
+    id: 'family-monthly',
+    name: 'Family Monthly Plan',
+    tagline: '4 pickups, up to 20kg in total',
+    kind: PackageKind.subscription,
+    priceTzs: 195000,
+    // Four 5kg bags bought one at a time (4 x 65,000 at walk-in rates).
+    compareAtTzs: 260000,
+    priceUnit: '/ month',
+    tag: 'Best value',
+    note: 'Renews monthly · cancel any time',
+    inclusions: [
+      '4 scheduled pickups a month',
+      'Up to 20kg across the month',
+      'Free doorstep pickup and delivery',
+      'Unused weight rolls over one month',
+    ],
+  ),
+  ServicePackage(
+    id: 'family-bag',
+    name: 'The Family Bag',
+    tagline: 'Up to 12kg of mixed household wash',
+    kind: PackageKind.weight,
+    priceTzs: 72000,
+    // 11 pieces at the 'Shirts & tops' wash & fold rate.
+    compareAtTzs: 100100,
+    priceUnit: '/ bag',
+    serviceTags: ['wash'],
+    note: 'Weighed at pickup · sorted by colour',
+    inclusions: [
+      'Washed, dried and folded',
+      'Colours and whites sorted separately',
+      'Fabric softener included',
+    ],
+  ),
+  ServicePackage(
+    id: 'suit-care',
+    name: 'Suit Care Duo',
+    tagline: '2 two-piece suits, dry cleaned',
+    kind: PackageKind.itemCount,
+    priceTzs: 42000,
+    // 2 x 'Dress / suit' dry clean rate (24,700).
+    compareAtTzs: 49400,
+    priceUnit: '/ pair',
+    serviceTags: ['suits', 'dry clean'],
+    note: 'Hand-finished pressing · eco solvents',
+    inclusions: [
+      '2 jackets and 2 trousers dry cleaned',
+      'Hand-pressed and shaped',
+      'Returned on hangers in a suit bag',
+    ],
+  ),
+];
+
+/// How many packages a shop page shows. More than four and the section
+/// stops being a shortcut past the price list and becomes a second one.
+const kMaxShopPackages = 4;
+
+/// The packages a given shop offers — every active package whose
+/// `serviceTags` overlap that vendor's [Shop.services], capped for display.
+///
+/// This is the seam a vendor-authored package list writes through: the
+/// vendor's own shop reads `vendorPackagesProvider` instead (see
+/// `state/vendor_packages_state.dart`), which seeds itself from here.
+List<ServicePackage> packagesFor(Shop shop) => [
+  for (final p in kServicePackages)
+    if (p.active && p.matchesServices(shop.services)) p,
+].take(kMaxShopPackages).toList();
 
 const kAddresses = [
   Address(label: 'Home', line: '12 Chole Road, Masaki, Apt 4B'),

@@ -10,30 +10,30 @@ import '../../screens/admin/admin_orders_screen.dart';
 import '../../screens/admin/admin_reports_screen.dart';
 import '../../screens/admin/admin_settings_screen.dart';
 import '../../screens/admin/admin_vendor_screen.dart';
-import '../../screens/cart/cart_screen.dart';
+import '../../screens/customer/cart/cart_screen.dart';
 import '../../data/mock_data.dart';
 import '../../models/shop.dart';
-import '../../screens/checkout/checkout_screen.dart';
-import '../../screens/checkout/order_confirmation_screen.dart';
+import '../../screens/customer/checkout/checkout_screen.dart';
+import '../../screens/customer/checkout/order_confirmation_screen.dart';
 import '../../screens/driver/driver_dash_screen.dart';
 import '../../screens/driver/driver_profile_screen.dart';
 import '../../screens/driver/driver_queue_screen.dart';
 import '../../screens/driver/driver_wallet_screen.dart';
-import '../../screens/home/home_screen.dart';
+import '../../screens/customer/home/home_screen.dart';
 import '../../screens/login/login_screen.dart';
 import '../../screens/login/register_screen.dart';
-import '../../screens/onboarding/onboarding_screen.dart';
+import '../../screens/customer/onboarding/onboarding_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
-import '../../screens/orders/orders_screen.dart';
-import '../../screens/orders/order_detail_screen.dart';
-import '../../screens/profile/profile_screen.dart';
-import '../../screens/profile/profile_settings_screen.dart';
-import '../../screens/profile/edit_profile_screen.dart';
-import '../../screens/schedule/schedule_screen.dart';
-import '../../screens/search/search_screen.dart';
-import '../../screens/service/service_vendors_screen.dart';
-import '../../screens/shop_detail/shop_detail_screen.dart';
-import '../../screens/track/track_order_screen.dart';
+import '../../screens/customer/orders/orders_screen.dart';
+import '../../screens/customer/orders/order_detail_screen.dart';
+import '../../screens/customer/profile/profile_screen.dart';
+import '../../screens/customer/profile/profile_settings_screen.dart';
+import '../../screens/customer/profile/edit_profile_screen.dart';
+import '../../screens/customer/schedule/schedule_screen.dart';
+import '../../screens/customer/search/search_screen.dart';
+import '../../screens/customer/service/service_vendors_screen.dart';
+import '../../screens/customer/shop_detail/shop_detail_screen.dart';
+import '../../screens/customer/track/track_order_screen.dart';
 import '../../screens/vendor/vendor_catalog_screen.dart';
 import '../../screens/vendor/vendor_dashboard_screen.dart';
 import '../../screens/vendor/vendor_earnings_screen.dart';
@@ -147,11 +147,14 @@ class _CustomerTabShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: Column(
-        children: [
-          const AnnouncementBanner(),
-          Expanded(child: shell),
-        ],
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const AnnouncementBanner(),
+            Expanded(child: shell),
+          ],
+        ),
       ),
       bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: shell.currentIndex,
@@ -177,11 +180,14 @@ class _RoleTabShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          const AnnouncementBanner(),
-          Expanded(child: shell),
-        ],
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const AnnouncementBanner(),
+            Expanded(child: shell),
+          ],
+        ),
       ),
       bottomNavigationBar: AppBottomTabBar(
         items: items,

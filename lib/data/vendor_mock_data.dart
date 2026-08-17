@@ -1,8 +1,10 @@
 import '../models/addon_toggle.dart';
 import '../models/alert_item.dart';
+import '../models/chat_message.dart';
 import '../models/day_option.dart';
 import '../models/machine_status.dart';
 import '../models/menu_price_row.dart';
+import '../models/order_line.dart';
 import '../models/payout_record.dart';
 import '../models/review_item.dart';
 import '../models/track_step_def.dart';
@@ -106,6 +108,19 @@ const kVendorOrdersWip = [
   ),
 ];
 
+/// Vendor-side view of the same "Amara Reed" / #LD-2481 conversation seeded
+/// in [kInitialChatMessages] — same three messages, `isMe` flipped since the
+/// vendor is now the sender of the shop's replies.
+const kInitialVendorChatMessages = [
+  ChatMessage(isMe: true, text: 'Hi Amara! We picked up your bag — 8 items logged.', time: '9:12 AM'),
+  ChatMessage(isMe: false, text: 'Thanks! The linen shirt needs a gentle wash please.', time: '9:14 AM'),
+  ChatMessage(
+    isMe: true,
+    text: 'Noted, we will run it on delicate. Delivery still on for Thursday 6 PM.',
+    time: '9:15 AM',
+  ),
+];
+
 const kVendorOrdersReady = [
   VendorOrder(
     id: '#LD-2478',
@@ -132,6 +147,14 @@ const kVendorOrdersReady = [
 ];
 
 const kGarmentLabels = ['Shirts ×4', 'Trousers ×2', 'Dress ×1', 'Linen ×1'];
+
+/// Packages and per-piece services the customer picked when placing order
+/// #LD-2481 — read-only on the Vendor Order Detail screen.
+const kOrderLineItems = [
+  OrderLine(name: 'The Student Bag', qty: 1, unitPrice: 34000),
+  OrderLine(name: 'Ironing', qty: 3, unitPrice: 5200),
+  OrderLine(name: 'Delicate fabric treatment', qty: 1, unitPrice: 10400),
+];
 
 const kDamageLabels = [
   'Fading on collar (shirt 2)',

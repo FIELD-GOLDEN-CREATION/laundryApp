@@ -39,9 +39,9 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
     state = state.copyWith(categoriesOn: next);
   }
 
-  void adjustPrice(String key, double delta) {
+  void setPrice(String key, double value) {
     final next = Map.of(state.prices);
-    next[key] = ((next[key] ?? 0) + delta).clamp(0, double.infinity);
+    next[key] = value.clamp(0, double.infinity);
     state = state.copyWith(prices: next);
   }
 

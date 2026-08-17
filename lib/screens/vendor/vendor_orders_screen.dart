@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icons.dart';
 import '../../data/vendor_mock_data.dart';
 import '../../models/vendor_order.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import 'vendor_chat_screen.dart';
 
 const _kTabLabels = ['Incoming', 'In progress', 'Ready'];
 
@@ -59,6 +61,7 @@ class VendorOrdersScreen extends ConsumerWidget {
                   }
                 },
                 onOpen: () => context.push('/vendor/order-detail'),
+                onChat: orders[i].stage == 'wip' ? () => showVendorChatPanel(context, orders[i].customer) : null,
               ),
               if (i != orders.length - 1) const SizedBox(height: 12),
             ],
@@ -158,12 +161,16 @@ class _IncomingBannerState extends State<_IncomingBanner> with SingleTickerProvi
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.accepted, required this.onToggle, required this.onOpen});
+  const _OrderCard({required this.order, required this.accepted, required this.onToggle, required this.onOpen, this.onChat});
 
   final VendorOrder order;
   final bool accepted;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
+
+  /// Chat entry point — only set for in-progress orders (a vendor can only
+  /// message a customer while their order is being worked on).
+  final VoidCallback? onChat;
 
   @override
   Widget build(BuildContext context) {
@@ -237,41 +244,62 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Material(
-                color: active ? AppColors.tealMuted : AppColors.teal,
-                borderRadius: BorderRadius.circular(999),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: onToggle,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isNew ? (accepted ? 'Accepted' : 'Accept') : 'Update status',
-                          style: AppText.sans(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: active ? AppColors.teal : AppColors.cream,
-                          ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onChat != null) ...[
+                    Material(
+                      color: AppColors.tealMuted,
+                      borderRadius: BorderRadius.circular(12),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: onChat,
+                        child: SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Center(child: AppIcon(AppIcons.chatBubble, size: 17, color: AppColors.teal)),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 34,
-                          height: 20,
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: active ? AppColors.teal : Colors.white.withValues(alpha: 0.35),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          alignment: active ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Container(width: 16, height: 16, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Material(
+                    color: active ? AppColors.tealMuted : AppColors.teal,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: onToggle,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isNew ? (accepted ? 'Accepted' : 'Accept') : 'Update status',
+                              style: AppText.sans(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: active ? AppColors.teal : AppColors.cream,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 34,
+                              height: 20,
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: active ? AppColors.teal : Colors.white.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              alignment: active ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Container(width: 16, height: 16, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
