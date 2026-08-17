@@ -6,6 +6,7 @@ import '../../models/track_step_def.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import '../../utils/currency.dart';
 import '../../widgets/barcode_strip.dart';
 import '../../widgets/placeholder_image.dart';
 import '../../widgets/round_back_button.dart';
@@ -40,6 +41,42 @@ class VendorOrderDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ],
+            ),
+            const _SectionLabel('Packages & services selected'),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.creamDark),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < kOrderLineItems.length; i++)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: i == kOrderLineItems.length - 1 ? Colors.transparent : AppColors.cream),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${kOrderLineItems[i].qty}× ${kOrderLineItems[i].name}',
+                              style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Text(
+                            formatTzs(kOrderLineItems[i].total),
+                            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
             const _SectionLabel('Digital garment tag'),
             Container(

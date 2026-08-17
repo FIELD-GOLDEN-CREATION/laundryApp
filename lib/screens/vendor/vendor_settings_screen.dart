@@ -13,7 +13,7 @@ import '../../widgets/toggle_switch.dart';
 
 /// The vendor-facing settings hub, reached from the account sheet's
 /// "Settings" button. Mirrors the layout/design language of
-/// `screens/profile/profile_screen.dart` (hero header + eyebrow section
+/// `screens/customer/profile/profile_screen.dart` (hero header + eyebrow section
 /// labels + white bordered cards) but every field auto-saves to
 /// [vendorProfileProvider] as it changes — there's no separate Save button,
 /// so the "Last saved" caption at the bottom and the live hero title above

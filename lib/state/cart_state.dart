@@ -11,6 +11,10 @@ class CartNotifier extends Notifier<Map<String, int>> {
     next[key] = ((next[key] ?? 0) + delta).clamp(0, 999);
     state = next;
   }
+
+  /// Empties the basket — used when the customer starts an order at a
+  /// different vendor (see `widgets/basket_shop_guard.dart`).
+  void clear() => state = {};
 }
 
 final cartProvider = NotifierProvider<CartNotifier, Map<String, int>>(CartNotifier.new);

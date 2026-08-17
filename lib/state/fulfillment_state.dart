@@ -52,6 +52,11 @@ class FulfillmentNotifier extends Notifier<FulfillmentState> {
 
   void setShop(String shop) => state = state.copyWith(shop: shop);
 
+  /// Points the basket at [shop] and drops any non-catalog lines the
+  /// previous vendor contributed. Callers are responsible for clearing
+  /// `cartProvider` alongside it — `ensureBasketShop` does both.
+  void startBasketFor(String shop) => state = state.copyWith(shop: shop, extraItems: const {});
+
   void addServiceItem(MenuItem item) =>
       state = state.copyWith(extraItems: {...state.extraItems, item.key: item});
 

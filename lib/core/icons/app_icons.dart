@@ -64,6 +64,9 @@ abstract final class AppIcons {
   static const phone =
       '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#f5f0e8" stroke-width="1.8" stroke-linejoin="round"><path d="M6.5 2.5l2.4 3.4-2 2a11 11 0 0 0 5.2 5.2l2-2 3.4 2.4-1.2 3.2c-5.2.7-11.8-5.9-11.1-11.1z"/></svg>';
 
+  static const whatsapp =
+      '<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#1a5c58" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 9.5a7 7 0 0 1-9.9 6.4L2.5 17.5l1.6-5.1A7 7 0 1 1 17.5 9.5z"/><path d="M7.3 7.6c.2-.5.5-.5.7-.5h.4c.1 0 .3 0 .5.4.2.4.5 1.2.6 1.3.1.1.1.2 0 .4l-.4.5c-.1.1-.2.2-.1.4.2.3.6.9 1.2 1.4.6.5 1.1.7 1.3.8.2.1.3.1.4-.1l.5-.6c.1-.1.3-.1.4 0 .2.1 1 .5 1.2.6.2.1.3.1.3.3 0 .1 0 .7-.3 1-.3.4-1 .7-1.5.7-.4 0-1.2-.1-2.3-.8-1.4-.9-2.2-2.1-2.3-2.3-.1-.1-.8-1-.8-1.9 0-.9.4-1.4.6-1.6z" fill="#1a5c58" stroke="none"/></svg>';
+
   static const checkCircle =
       '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a5c58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>';
 
