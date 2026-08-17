@@ -18,24 +18,19 @@ class PlaceholderImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.creamDark,
+        color: AppColors.clientBorder(context),
         shape: circle ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circle ? null : BorderRadius.circular(borderRadius),
       ),
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      // FittedBox instead of a wrap/ellipsis budget: this same widget is
-      // reused from full-width hero banners down to 40px avatar circles,
-      // so a fixed font size either wastes space or breaks mid-word
-      // ("Drive"/"r") on the smallest ones. Shrinking to fit keeps every
-      // size legible on one line.
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
           label,
           textAlign: TextAlign.center,
           maxLines: 1,
-          style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.muted),
+          style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
         ),
       ),
     );

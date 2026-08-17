@@ -48,7 +48,7 @@ class CheckoutScreen extends ConsumerWidget {
         .firstWhere((c) => c?.id == checkout.selectedCardId, orElse: () => null);
 
     final subtotal = cartSubtotal(qty, extra);
-    final discount = discountFor(checkout.promo);
+    final discount = checkout.discountAmount;
     final deliveryFee = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
     final total = (subtotal - discount).clamp(0, double.infinity) + deliveryFee;
     final itemsCount = cartItemCount(qty, extra);
@@ -218,40 +218,60 @@ class CheckoutScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                          color: AppColors.clientSurface(context),
-                         border: Border.all(color: AppColors.amber, style: BorderStyle.solid),
+                         border: Border.all(
+                           color: checkout.appliedPromoId != null
+                               ? AppColors.teal
+                               : checkout.promoError.isNotEmpty
+                                   ? AppColors.danger
+                                   : AppColors.amber,
+                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       alignment: Alignment.centerLeft,
                       child: TextField(
                         onChanged: checkoutNotifier.setPromo,
+                        enabled: checkout.appliedPromoId == null,
                         style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
                         decoration: InputDecoration.collapsed(
-                          hintText: 'Promo code',
-                          hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                          hintText: checkout.appliedPromoId != null ? 'Promo applied!' : 'Promo code',
+                          hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: checkout.appliedPromoId != null ? AppColors.teal : AppColors.muted),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Material(
-                    color: AppColors.amberLight,
+                    color: checkout.appliedPromoId != null ? AppColors.dangerLight : AppColors.amberLight,
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () {},
+                      onTap: checkout.appliedPromoId != null
+                          ? () => checkoutNotifier.removePromo()
+                          : () => checkoutNotifier.applyPromo(subtotal.toDouble()),
                       child: Container(
                         height: 48,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         alignment: Alignment.center,
                         child: Text(
-                          'Apply',
-                          style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.amber),
+                          checkout.appliedPromoId != null ? 'Remove' : 'Apply',
+                          style: AppText.sans(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: checkout.appliedPromoId != null ? AppColors.danger : AppColors.amber,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
+              if (checkout.promoError.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  checkout.promoError,
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.danger),
+                ),
+              ],
               const SizedBox(height: 18),
               Container(
                 padding: const EdgeInsets.all(16),

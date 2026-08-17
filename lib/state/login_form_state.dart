@@ -56,7 +56,7 @@ class LoginFormNotifier extends Notifier<LoginFormState> {
   void fillCustomer() => state = state.copyWith(email: 'user@gmail.com', password: 'user04', error: '');
   void fillVendor() => state = state.copyWith(email: 'vendor@gmail.com', password: 'vendor04', error: '');
   void fillAdmin() => state = state.copyWith(email: 'admin@gmail.com', password: 'admin04', error: '');
-  void fillDriver() => state = state.copyWith(email: 'driver@gmail.com', password: 'driver04', error: '');
+  void fillStaff() => state = state.copyWith(email: 'staff@gmail.com', password: 'staff04', error: '');
 
   void reset() => state = const LoginFormState();
 }

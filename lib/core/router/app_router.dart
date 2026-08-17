@@ -13,12 +13,14 @@ import '../../screens/admin/admin_vendor_screen.dart';
 import '../../screens/customer/cart/cart_screen.dart';
 import '../../data/mock_data.dart';
 import '../../models/shop.dart';
+import '../../models/laundry_category.dart';
 import '../../screens/customer/checkout/checkout_screen.dart';
 import '../../screens/customer/checkout/order_confirmation_screen.dart';
-import '../../screens/driver/driver_dash_screen.dart';
-import '../../screens/driver/driver_profile_screen.dart';
-import '../../screens/driver/driver_queue_screen.dart';
-import '../../screens/driver/driver_wallet_screen.dart';
+import '../../screens/staff/staff_dashboard_screen.dart';
+import '../../screens/staff/staff_orders_screen.dart';
+import '../../screens/staff/staff_members_screen.dart';
+import '../../screens/staff/staff_promos_screen.dart';
+import '../../screens/staff/staff_profile_screen.dart';
 import '../../screens/customer/home/home_screen.dart';
 import '../../screens/login/login_screen.dart';
 import '../../screens/login/register_screen.dart';
@@ -32,12 +34,14 @@ import '../../screens/customer/profile/edit_profile_screen.dart';
 import '../../screens/customer/schedule/schedule_screen.dart';
 import '../../screens/customer/search/search_screen.dart';
 import '../../screens/customer/service/service_vendors_screen.dart';
+import '../../screens/customer/category_detail/category_detail_screen.dart';
+import '../../screens/customer/direction/direction_screen.dart';
 import '../../screens/customer/shop_detail/shop_detail_screen.dart';
 import '../../screens/customer/track/track_order_screen.dart';
 import '../../screens/vendor/vendor_catalog_screen.dart';
 import '../../screens/vendor/vendor_dashboard_screen.dart';
 import '../../screens/vendor/vendor_earnings_screen.dart';
-import '../../screens/vendor/vendor_logistics_screen.dart';
+import '../../screens/vendor/vendor_promos_screen.dart';
 import '../../screens/vendor/vendor_order_detail_screen.dart';
 import '../../screens/vendor/vendor_orders_screen.dart';
 import '../../screens/vendor/vendor_settings_screen.dart';
@@ -85,7 +89,7 @@ final appRouter = GoRouter(
         StatefulShellBranch(routes: [GoRoute(path: '/vendor/dashboard', builder: (_, _) => const VendorDashboardScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/vendor/orders', builder: (_, _) => const VendorOrdersScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/vendor/catalog', builder: (_, _) => const VendorCatalogScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/vendor/logistics', builder: (_, _) => const VendorLogisticsScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/vendor/promos', builder: (_, _) => const VendorPromosScreen())]),
         StatefulShellBranch(routes: [GoRoute(path: '/vendor/earnings', builder: (_, _) => const VendorEarningsScreen())]),
       ],
     ),
@@ -100,18 +104,26 @@ final appRouter = GoRouter(
       ],
     ),
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => _RoleTabShell(shell: navigationShell, items: kDriverTabs),
+      builder: (context, state, navigationShell) => _RoleTabShell(shell: navigationShell, items: kStaffTabs),
       branches: [
-        StatefulShellBranch(routes: [GoRoute(path: '/driver/dash', builder: (_, _) => const DriverDashScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/driver/queue', builder: (_, _) => const DriverQueueScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/driver/wallet', builder: (_, _) => const DriverWalletScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/driver/alerts', builder: (_, _) => const NotificationsScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/driver/profile', builder: (_, _) => const DriverProfileScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/staff/dashboard', builder: (_, _) => const StaffDashboardScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/staff/orders', builder: (_, _) => const StaffOrdersScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/staff/members', builder: (_, _) => const StaffMembersScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/staff/promos', builder: (_, _) => const StaffPromosScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/staff/profile', builder: (_, _) => const StaffProfileScreen())]),
       ],
     ),
     GoRoute(
       path: '/detail',
       builder: (_, state) => ShopDetailScreen(shop: (state.extra as Shop?) ?? kShops.first),
+    ),
+    GoRoute(
+      path: '/category-detail',
+      builder: (_, state) => CategoryDetailScreen(category: state.extra as LaundryCategory),
+    ),
+    GoRoute(
+      path: '/direction',
+      builder: (_, state) => DirectionScreen(shop: state.extra as Shop),
     ),
     GoRoute(path: '/service-vendors', builder: (_, state) => ServiceVendorsScreen(service: (state.extra as String?) ?? 'Ironing')),
     GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),

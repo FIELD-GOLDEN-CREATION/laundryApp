@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/laundry_categories_data.dart';
 import '../../data/mock_data.dart';
 import '../../data/vendor_mock_data.dart';
+import '../../models/laundry_category.dart';
 import '../../models/service_package.dart';
 import '../../state/vendor_catalog_state.dart';
 import '../../state/vendor_packages_state.dart';
@@ -13,6 +15,7 @@ import '../../utils/currency.dart';
 import '../../widgets/package_form_sheet.dart';
 import '../../widgets/selectable_chip.dart';
 import '../../widgets/toggle_switch.dart';
+import '../../widgets/remote_image.dart';
 
 class VendorCatalogScreen extends ConsumerWidget {
   const VendorCatalogScreen({super.key});
@@ -24,8 +27,6 @@ class VendorCatalogScreen extends ConsumerWidget {
     final packages = ref.watch(vendorPackagesProvider);
     final packagesNotifier = ref.read(vendorPackagesProvider.notifier);
     final liveCount = packages.where((p) => p.active).length;
-    // The customer-facing section caps how many it renders, so say so here
-    // rather than letting a vendor wonder where package five went.
     final displayedCount = liveCount < kMaxShopPackages ? liveCount : kMaxShopPackages;
 
     return Scaffold(
@@ -36,88 +37,23 @@ class VendorCatalogScreen extends ConsumerWidget {
             Text('Services & pricing', style: AppText.serif(fontSize: 28)),
             const SizedBox(height: 8),
             Text(
-              'Changes go live on your shop page straight away.',
+              'Select categories and items you offer. Changes go live on your shop page straight away.',
               style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
             ),
-            const _SectionLabel('Categories offered'),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < kCategoryLabels.length; i++)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: i == kCategoryLabels.length - 1 ? Colors.transparent : AppColors.cream),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              kCategoryLabels[i],
-                              style: AppText.sans(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: state.categoriesOn[i] ? AppColors.slate : AppColors.muted,
-                              ),
-                            ),
-                          ),
-                          ToggleSwitch(on: state.categoriesOn[i], onTap: () => notifier.toggleCategory(i)),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const _SectionLabel('Menu pricing'),
-            Column(
-              children: [
-                for (var i = 0; i < kMenuPriceRows.length; i++) ...[
-                  _PriceRow(
-                    name: kMenuPriceRows[i].name,
-                    unit: kMenuPriceRows[i].unit,
-                    price: state.prices[kMenuPriceRows[i].key] ?? 0,
-                    onSave: (value) => notifier.setPrice(kMenuPriceRows[i].key, value),
-                  ),
-                  if (i != kMenuPriceRows.length - 1) const SizedBox(height: 10),
-                ],
-              ],
-            ),
-            const _SectionLabel('Packages'),
-            Text(
-              liveCount == 0
-                  ? 'No packages live — your shop page shows the price list only.'
-                  : 'Your shop page shows the first $displayedCount of $liveCount live '
-                        '${liveCount == 1 ? 'package' : 'packages'}, above the price list.',
-              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.4),
-            ),
-            const SizedBox(height: 11),
-            Column(
-              children: [
-                for (final package in packages) ...[
-                  _PackageRow(
-                    package: package,
-                    onToggle: () => packagesNotifier.toggleActive(package.id),
-                    onSave: (value) => packagesNotifier.setPrice(package.id, value),
-                    onRemove: () => packagesNotifier.removePackage(package.id),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                _AddPackageButton(
-                  onTap: () async {
-                    final created = await showPackageFormSheet(context);
-                    if (created != null) packagesNotifier.addPackage(created);
-                  },
-                ),
-              ],
-            ),
+            const _SectionLabel('Categories & Items'),
+            ...List.generate(kLaundryCategories.length, (i) {
+              final category = kLaundryCategories[i];
+              final isCategoryOn = state.categoriesOn[i];
+              return _CategoryExpansionTile(
+                category: category,
+                isCategoryOn: isCategoryOn,
+                onToggleCategory: () => notifier.toggleCategory(i),
+                items: category.items,
+                state: state,
+                notifier: notifier,
+                categoryId: category.id,
+              );
+            }),
             const _SectionLabel('Turnaround offered'),
             Row(
               children: [
@@ -178,6 +114,34 @@ class VendorCatalogScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const _SectionLabel('Packages'),
+            Text(
+              liveCount == 0
+                  ? 'No packages live — your shop page shows the price list only.'
+                  : 'Your shop page shows the first $displayedCount of $liveCount live '
+                        '${liveCount == 1 ? 'package' : 'packages'}, above the price list.',
+              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.4),
+            ),
+            const SizedBox(height: 11),
+            Column(
+              children: [
+                for (final package in packages) ...[
+                  _PackageRow(
+                    package: package,
+                    onToggle: () => packagesNotifier.toggleActive(package.id),
+                    onSave: (value) => packagesNotifier.setPrice(package.id, value),
+                    onRemove: () => packagesNotifier.removePackage(package.id),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                _AddPackageButton(
+                  onTap: () async {
+                    final created = await showPackageFormSheet(context);
+                    if (created != null) packagesNotifier.addPackage(created);
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -194,6 +158,210 @@ class _SectionLabel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 11),
       child: Text(text.toUpperCase(), style: AppText.eyebrow()),
+    );
+  }
+}
+
+class _CategoryExpansionTile extends StatelessWidget {
+  const _CategoryExpansionTile({
+    required this.category,
+    required this.isCategoryOn,
+    required this.onToggleCategory,
+    required this.items,
+    required this.state,
+    required this.notifier,
+    required this.categoryId,
+  });
+
+  final LaundryCategory category;
+  final bool isCategoryOn;
+  final VoidCallback onToggleCategory;
+  final List<LaundryItem> items;
+  final VendorCatalogState state;
+  final VendorCatalogNotifier notifier;
+  final String categoryId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.creamDark),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 50,
+            height: 50,
+            child: RemoteImage(
+              url: category.imageUrl,
+              fallback: category.name,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        title: Text(
+          category.name,
+          style: AppText.sans(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: isCategoryOn ? AppColors.slate : AppColors.muted,
+          ),
+        ),
+        subtitle: Text(
+          '${items.length} items',
+          style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+        ),
+        trailing: ToggleSwitch(on: isCategoryOn, onTap: onToggleCategory),
+        children: items.map((item) => _ItemCheckboxRow(
+          item: item,
+          isChecked: notifier.isItemEnabled(categoryId, item.id),
+          onToggle: () => notifier.toggleItem(categoryId, item.id),
+          price: notifier.getItemPrice(item.id),
+          onPriceChanged: (price) => notifier.setItemPrice(item.id, price),
+        )).toList(),
+      ),
+    );
+  }
+}
+
+class _ItemCheckboxRow extends StatefulWidget {
+  const _ItemCheckboxRow({
+    required this.item,
+    required this.isChecked,
+    required this.onToggle,
+    required this.price,
+    required this.onPriceChanged,
+  });
+
+  final LaundryItem item;
+  final bool isChecked;
+  final VoidCallback onToggle;
+  final double price;
+  final ValueChanged<double> onPriceChanged;
+
+  @override
+  State<_ItemCheckboxRow> createState() => _ItemCheckboxRowState();
+}
+
+class _ItemCheckboxRowState extends State<_ItemCheckboxRow> {
+  bool _editing = false;
+  late final _controller = TextEditingController(text: widget.price.round().toString());
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _startEditing() => setState(() => _editing = true);
+
+  void _cancel() {
+    _controller.text = widget.price.round().toString();
+    setState(() => _editing = false);
+  }
+
+  void _save() {
+    final value = double.tryParse(_controller.text.trim());
+    if (value != null) widget.onPriceChanged(value);
+    setState(() => _editing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: widget.isChecked,
+                  onChanged: (_) => widget.onToggle(),
+                  activeColor: AppColors.teal,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.item.name,
+                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      widget.item.description,
+                      style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_editing) ...[
+                Text(
+                  formatTzs(widget.price),
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: _startEditing,
+                  child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                ),
+              ],
+            ],
+          ),
+          if (_editing) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.cream,
+                      border: Border.all(color: AppColors.creamDark),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: TextField(
+                      controller: _controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+                      decoration: InputDecoration.collapsed(
+                        hintText: 'Price (TZS)',
+                        hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _cancel,
+                  child: Text('Cancel', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _save,
+                  child: Text('Save', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

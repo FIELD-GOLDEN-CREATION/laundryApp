@@ -16,7 +16,7 @@ import '../theme/text_styles.dart';
 void showAccountSheet(BuildContext context, WidgetRef ref) {
   final auth = ref.read(authProvider);
   final isAdmin = auth.role == UserRole.admin;
-  final isDriver = auth.role == UserRole.driver;
+  final isStaff = auth.role == UserRole.staff || auth.role == UserRole.driver;
   final isVendor = auth.role == UserRole.vendor;
 
   showModalBottomSheet(
@@ -44,15 +44,15 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isAdmin ? AppColors.creamDark : (isDriver ? AppColors.successLight : AppColors.amberLight),
+                    color: isAdmin ? AppColors.creamDark : (isStaff ? AppColors.successLight : AppColors.amberLight),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    isAdmin ? 'A' : (isDriver ? 'D' : 'V'),
+                    child: Text(
+                      isAdmin ? 'A' : (isStaff ? 'S' : 'V'),
                     style: AppText.serif(
                       fontSize: 20,
-                      color: isAdmin ? AppColors.slate : (isDriver ? AppColors.success : AppColors.amber),
+                      color: isAdmin ? AppColors.slate : (isStaff ? AppColors.success : AppColors.amber),
                     ),
                   ),
                 ),
@@ -64,12 +64,12 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                       Text(
                         isAdmin
                             ? 'Site Administrator'
-                            : (isDriver ? 'Kofi Asante' : ref.read(vendorProfileProvider).shopTitle),
+                            : (isStaff ? 'Staff Member' : ref.read(vendorProfileProvider).shopTitle),
                         style: AppText.serif(fontSize: 20),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${auth.authEmail} · ${isAdmin ? 'Admin' : (isDriver ? 'Driver' : 'Vendor')} account',
+                        '${auth.authEmail} · ${isAdmin ? 'Admin' : (isStaff ? 'Staff' : 'Vendor')} account',
                         style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
                       ),
                     ],
@@ -93,7 +93,7 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                     height: 52,
                     alignment: Alignment.center,
                     child: Text(
-                      isAdmin ? 'Go to command center' : (isDriver ? 'Go to shift' : 'Go to dashboard'),
+                      isAdmin ? 'Go to command center' : (isStaff ? 'Go to dashboard' : 'Go to dashboard'),
                       style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.cream),
                     ),
                   ),

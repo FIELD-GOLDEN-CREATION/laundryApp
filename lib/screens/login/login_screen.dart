@@ -107,7 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 10),
                     Row(children: [Expanded(child: _DemoAccountButton(label: 'Customer', email: 'user@gmail.com', color: AppColors.teal, onTap: notifier.fillCustomer)), const SizedBox(width: 8), Expanded(child: _DemoAccountButton(label: 'Vendor', email: 'vendor@gmail.com', color: AppColors.amber, onTap: notifier.fillVendor))]),
                     const SizedBox(height: 8),
-                    Row(children: [Expanded(child: _DemoAccountButton(label: 'Admin', email: 'admin@gmail.com', color: AppColors.slate, onTap: notifier.fillAdmin)), const SizedBox(width: 8), Expanded(child: _DemoAccountButton(label: 'Driver', email: 'driver@gmail.com', color: AppColors.success, onTap: notifier.fillDriver))]),
+                    Row(children: [Expanded(child: _DemoAccountButton(label: 'Admin', email: 'admin@gmail.com', color: AppColors.slate, onTap: notifier.fillAdmin)), const SizedBox(width: 8), Expanded(child: _DemoAccountButton(label: 'Staff', email: 'staff@gmail.com', color: AppColors.success, onTap: notifier.fillStaff))]),
                     const SizedBox(height: 18),
                     Center(child: TextButton(onPressed: () => context.push('/register'), child: Text('Don\'t have an account?  Register', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.cream)))),
                     Center(child: TextButton(onPressed: () => context.go('/home'), child: Text('Keep browsing as guest', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.cream.withValues(alpha: 0.62))))),

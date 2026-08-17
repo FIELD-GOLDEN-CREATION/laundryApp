@@ -172,16 +172,35 @@ const kProcessingSteps = [
   TrackStepDef(title: 'Ready for delivery', time: '—'),
 ];
 
-const kCategoryLabels = ['Wash & fold', 'Ironing', 'Dry cleaning', 'Carpets & rugs', 'Shoe care'];
-const kDefaultCategoriesOn = [true, true, true, false, true];
+const kCategoryLabels = [
+  'Standard Everyday Wear',
+  'Formal, Woolen & Outerwear',
+  'Footwear & Bags Care',
+  'Bedding, Household & Heavy Fabrics',
+  'Bulk Services & Add-Ons',
+];
+const kDefaultCategoriesOn = [true, true, true, true, true];
 
 const kMenuPriceRows = [
-  MenuPriceRow(key: 'wash', name: 'Wash & fold', unit: 'per piece'),
-  MenuPriceRow(key: 'iron', name: 'Ironing', unit: 'per piece'),
-  MenuPriceRow(key: 'dry', name: 'Dry cleaning', unit: 'per piece'),
-  MenuPriceRow(key: 'carpet', name: 'Carpet cleaning', unit: 'per m²'),
+  MenuPriceRow(key: 'tshirt', name: 'T-Shirt / Polo', unit: 'per piece'),
+  MenuPriceRow(key: 'shirt', name: 'Casual Shirt / Blouse', unit: 'per piece'),
+  MenuPriceRow(key: 'trouser', name: 'Trousers / Jeans', unit: 'per piece'),
+  MenuPriceRow(key: 'suit', name: '2-Piece Suit', unit: 'per set'),
+  MenuPriceRow(key: 'coat', name: 'Heavy Coat', unit: 'per piece'),
+  MenuPriceRow(key: 'sneakers', name: 'Sneakers', unit: 'per pair'),
+  MenuPriceRow(key: 'blanket', name: 'Blanket', unit: 'per piece'),
+  MenuPriceRow(key: 'bedsheet', name: 'Bedsheet', unit: 'per piece'),
 ];
-const kDefaultVendorPrices = {'wash': 9100.0, 'iron': 5200.0, 'dry': 24700.0, 'carpet': 62400.0};
+const kDefaultVendorPrices = {
+  'tshirt': 2250.0,
+  'shirt': 3000.0,
+  'trouser': 3500.0,
+  'suit': 9500.0,
+  'coat': 11500.0,
+  'sneakers': 6000.0,
+  'blanket': 6500.0,
+  'bedsheet': 3000.0,
+};
 
 const kTurnaroundOptions = [
   TurnaroundOption(label: '6h', sub: 'Express +40%'),

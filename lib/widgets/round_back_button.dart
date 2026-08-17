@@ -16,15 +16,15 @@ class RoundBackButton extends StatelessWidget {
       width: 42,
       height: 42,
       child: Material(
-        color: Colors.white,
+        color: AppColors.clientSurface(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.creamDark),
+          side: BorderSide(color: AppColors.clientBorder(context)),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onPressed ?? () => Navigator.of(context).maybePop(),
-          child: const Center(child: AppIcon(AppIcons.backChevron, size: 9)),
+          child: Center(child: AppIcon(AppIcons.backChevron, size: 9, color: AppColors.clientText(context))),
         ),
       ),
     );

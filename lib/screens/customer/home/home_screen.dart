@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
 import '../../../data/mock_data.dart';
+import '../../../data/promo_mock_data.dart';
 import '../../../models/user_role.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/client_preferences_state.dart';
@@ -12,7 +13,9 @@ import '../../../theme/text_styles.dart';
 import '../../../widgets/section_header.dart';
 import 'widgets/active_order_banner.dart';
 import 'widgets/offer_card.dart';
-import 'widgets/service_grid.dart';
+import 'widgets/category_cards.dart';
+import 'widgets/delivery_widget.dart';
+import 'widgets/reviews_widget.dart';
 import 'widgets/shop_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -59,10 +62,10 @@ class HomeScreen extends ConsumerWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
-                  itemCount: kOffers.length,
+                  itemCount: kPromoOffers.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 14),
                   itemBuilder: (_, i) => OfferCard(
-                    offer: kOffers[i],
+                    offer: kPromoOffers[i],
                     onClaim: () {
                       if (gateGuest(
                         ref,
@@ -77,8 +80,26 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-               SectionHeader(title: clientLabel('Services', 'Huduma', language)),
-              ServiceGrid(onTap: (item) => context.push('/service-vendors', extra: item.label)),
+               SectionHeader(title: clientLabel('Categories', 'Kategoria', language)),
+              CategoryCardsWidget(
+                onCategoryTap: (category) {
+                  if (gateGuest(
+                    ref,
+                    context,
+                    'Log in as a customer to view ${category.name}.',
+                    redirectPath: '/category-detail',
+                    redirectExtra: category,
+                  )) {
+                    return;
+                  }
+                  context.push('/category-detail', extra: category);
+                },
+              ),
+              const SizedBox(height: 12),
+              const DeliveryWidget(),
+              const SizedBox(height: 12),
+              SectionHeader(title: clientLabel('What our customers say', 'Wateja wetu wanasema', language)),
+              const ReviewsWidget(),
                SectionHeader(title: clientLabel('Nearby shops', 'Maduka yaliyo karibu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 250,

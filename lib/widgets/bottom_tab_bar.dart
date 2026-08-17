@@ -102,7 +102,7 @@ const kVendorTabs = [
   TabBarItem(icon: AppIcons.tabDash, label: 'Dashboard'),
   TabBarItem(icon: AppIcons.tabOrders, label: 'Orders'),
   TabBarItem(icon: AppIcons.tabCatalog, label: 'Catalog'),
-  TabBarItem(icon: AppIcons.tabLogistics, label: 'Handoff'),
+  TabBarItem(icon: AppIcons.tabReports, label: 'Promos'),
   TabBarItem(icon: AppIcons.tabReports, label: 'Earnings'),
 ];
 
@@ -114,11 +114,11 @@ const kAdminTabs = [
   TabBarItem(icon: AppIcons.tabSettings, label: 'Settings'),
 ];
 
-const kDriverTabs = [
-  TabBarItem(icon: AppIcons.tabDash, label: 'Shift'),
-  TabBarItem(icon: AppIcons.tabOrders, label: 'Queue'),
-  TabBarItem(icon: AppIcons.tabReports, label: 'Wallet'),
-  TabBarItem(icon: AppIcons.bell, label: 'Alerts'),
+const kStaffTabs = [
+  TabBarItem(icon: AppIcons.tabDash, label: 'Dashboard'),
+  TabBarItem(icon: AppIcons.tabOrders, label: 'Orders'),
+  TabBarItem(icon: AppIcons.tabProfile, label: 'Members'),
+  TabBarItem(icon: AppIcons.tabReports, label: 'Promos'),
   TabBarItem(icon: AppIcons.tabProfile, label: 'Profile'),
 ];
 

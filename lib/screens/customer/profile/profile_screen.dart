@@ -15,7 +15,6 @@ import '../../../widgets/card_brand_tag.dart';
 import '../../../widgets/link_card_sheet.dart';
 import '../../../widgets/profile_action_tile.dart';
 import '../../../widgets/remote_image.dart';
-import '../../../widgets/profile_action_tile.dart';
 import '../../../widgets/toggle_switch.dart';
 
 const _kProfileImage = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=85';

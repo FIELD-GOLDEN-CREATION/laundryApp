@@ -19,7 +19,7 @@ class AuthNotifier extends Notifier<AuthState> {
     'admin@gmail.com': ('admin04', UserRole.admin),
     'vendor@gmail.com': ('vendor04', UserRole.vendor),
     'user@gmail.com': ('user04', UserRole.customer),
-    'driver@gmail.com': ('driver04', UserRole.driver),
+    'staff@gmail.com': ('staff04', UserRole.staff),
   };
 
   @override
@@ -57,7 +57,8 @@ final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new)
 String roleHomePath(UserRole role) => switch (role) {
   UserRole.admin => '/admin/dashboard',
   UserRole.vendor => '/vendor/dashboard',
-  UserRole.driver => '/driver/dash',
+  UserRole.staff => '/staff/dashboard',
+  UserRole.driver => '/staff/dashboard',
   UserRole.customer || UserRole.guest => '/home',
 };
 
