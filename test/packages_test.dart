@@ -188,7 +188,7 @@ void main() {
       final target = container.read(vendorPackagesProvider).firstWhere((p) => p.compareAtTzs != null);
       final before = target.savingsPercent!;
 
-      notifier.adjustPrice(target.id, -5000);
+      notifier.setPrice(target.id, target.priceTzs - 5000);
       final after = container.read(vendorPackagesProvider).firstWhere((p) => p.id == target.id);
 
       expect(after.priceTzs, target.priceTzs - 5000);
@@ -201,9 +201,7 @@ void main() {
 
       final notifier = container.read(vendorPackagesProvider.notifier);
       final id = container.read(vendorPackagesProvider).first.id;
-      for (var i = 0; i < 2000; i++) {
-        notifier.adjustPrice(id, -500);
-      }
+      notifier.setPrice(id, -500);
       expect(container.read(vendorPackagesProvider).first.priceTzs, 0);
     });
 
