@@ -3,13 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
+import '../../data/mock_data.dart';
 import '../../data/vendor_mock_data.dart';
+import '../../models/vendor_payment_method.dart';
+import '../../state/vendor_payment_methods_state.dart';
 import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import '../../widgets/mobile_money_logo.dart';
 import '../../widgets/placeholder_image.dart';
 import '../../widgets/round_back_button.dart';
 import '../../widgets/toggle_switch.dart';
+import '../../widgets/vendor_payment_method_sheet.dart';
 
 /// The vendor-facing settings hub, reached from the account sheet's
 /// "Settings" button. Mirrors the layout/design language of
@@ -67,6 +72,7 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
   Widget build(BuildContext context) {
     final vendor = ref.watch(vendorProfileProvider);
     final notifier = ref.read(vendorProfileProvider.notifier);
+    final paymentMethods = ref.watch(vendorPaymentMethodsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -156,6 +162,50 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
                   Text(
                     'Shown to customers as a slideshow on your shop page, 4s per photo.',
                     style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  ),
+
+                  const _SectionLabel('Payment methods'),
+                  if (paymentMethods.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(18)),
+                      child: Text(
+                        'No payout methods added yet.',
+                        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: [
+                        for (var i = 0; i < paymentMethods.length; i++) ...[
+                          _PaymentMethodRow(
+                            method: paymentMethods[i],
+                            onEdit: () => showVendorPaymentMethodForm(context, ref, kind: paymentMethods[i].kind, existing: paymentMethods[i]),
+                            onRemove: () => ref.read(vendorPaymentMethodsProvider.notifier).remove(paymentMethods[i].id),
+                          ),
+                          if (i != paymentMethods.length - 1) const SizedBox(height: 10),
+                        ],
+                      ],
+                    ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Material(
+                      color: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.teal, width: 1.5)),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => showVendorPaymentMethodPicker(context, ref),
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '+ Add payment method',
+                            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
 
                   const _SectionLabel('Preferences'),
@@ -556,6 +606,66 @@ class _ShopPhotosStrip extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// A single saved payout method — Mobile Money, Bank transfer, or Cash on
+/// delivery — with Edit/Remove actions. Mirrors `_SavedCardRow` on the
+/// customer Profile screen (icon + title/subtitle + text-link actions).
+/// Cash on delivery has no details to fill in, so its row skips "Edit".
+class _PaymentMethodRow extends StatelessWidget {
+  const _PaymentMethodRow({required this.method, required this.onEdit, required this.onRemove});
+
+  final VendorPaymentMethod method;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = method.provider == null ? null : mobileProviderByName(method.provider!);
+    final fallbackIcon = method.kind == VendorPaymentMethodKind.cashOnDelivery
+        ? Icons.payments_outlined
+        : Icons.account_balance_outlined;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(18)),
+      child: Row(
+        children: [
+          if (provider != null)
+            MobileMoneyLogo(provider: provider, size: 40)
+          else
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(13)),
+              alignment: Alignment.center,
+              child: Icon(fallbackIcon, size: 19, color: AppColors.teal),
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(method.title, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(method.subtitle, style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted)),
+              ],
+            ),
+          ),
+          if (method.kind != VendorPaymentMethodKind.cashOnDelivery) ...[
+            InkWell(
+              onTap: onEdit,
+              child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+            ),
+            const SizedBox(width: 14),
+          ],
+          InkWell(
+            onTap: onRemove,
+            child: Text('Remove', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.amber)),
+          ),
+        ],
       ),
     );
   }

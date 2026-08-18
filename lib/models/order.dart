@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/colors.dart';
 import 'order_line.dart';
+import 'vendor_payment_method.dart';
 
 /// trackStep value meaning the order has been submitted but not yet picked
 /// up by a driver — earlier than index 0 of kTrackSteps.
@@ -25,6 +26,7 @@ class Order {
     this.fulfillment = 'delivery',
     this.driver = '',
     this.deliveryFeeTzs = 0,
+    this.assignedPaymentMethods = const [],
   });
 
   final String shop;
@@ -56,7 +58,15 @@ class Order {
   final String fulfillment;
 
   final String driver;
+
+  /// Pickup/delivery fee the vendor set when accepting the order, based on
+  /// distance to the customer — shown on Order details and folded into the
+  /// displayed total.
   final int deliveryFeeTzs;
+
+  /// The payment methods the vendor offered for this order (from their own
+  /// saved payout methods), shown so the customer knows how to pay them.
+  final List<VendorPaymentMethod> assignedPaymentMethods;
 
   Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep}) => Order(
     shop: shop,
@@ -75,6 +85,7 @@ class Order {
     fulfillment: fulfillment,
     driver: driver,
     deliveryFeeTzs: deliveryFeeTzs,
+    assignedPaymentMethods: assignedPaymentMethods,
   );
 }
 

@@ -124,10 +124,10 @@ const kVendorMembers = [
   MemberRow(name: 'Crisp Corner', contact: 'Priya Nair · machine breakdown', state: 'Suspended'),
 ];
 
-const kDriverMembers = [
-  MemberRow(name: 'Daniel Okafor', contact: 'Vehicle · T 342 KLM · on duty', state: 'Active'),
-  MemberRow(name: 'Kofi Asante', contact: 'Motorcycle · MC 109 RTX · on duty', state: 'Active'),
-  MemberRow(name: 'Ivan Petrov', contact: 'Bicycle · Ilala', state: 'Pending'),
+const kStaffMembers = [
+  MemberRow(name: 'Rashid Juma', contact: 'Operations manager · full access', state: 'Active'),
+  MemberRow(name: 'Fatima Noor', contact: 'Support agent · orders & members', state: 'Active'),
+  MemberRow(name: 'Elias Mwangi', contact: 'Finance officer · reports only', state: 'Pending'),
 ];
 
 const kClientName = 'Amara Reed';
@@ -149,16 +149,16 @@ const kVendorFields = [
   KeyValueField('Orders today', '34'),
 ];
 
-const kDriverName = 'Daniel Okafor';
-const kDriverFields = [
-  KeyValueField('Full name', 'Daniel Okafor'),
-  KeyValueField('NIDA number', '1998-0417-2288-31'),
-  KeyValueField('Plate number', 'T · 342 KLM'),
-  KeyValueField('Home location', '22 Ali Hassan Mwinyi Road, Kinondoni'),
-  KeyValueField('Phone', '+255 744 418 820'),
+const kStaffName = 'Rashid Juma';
+const kStaffRole = 'Operations manager';
+const kStaffFields = [
+  KeyValueField('Full name', 'Rashid Juma'),
+  KeyValueField('Role', 'Operations manager'),
+  KeyValueField('Email', 'rashid.juma@laundryapp.com'),
+  KeyValueField('Phone', '+255 712 664 903'),
+  KeyValueField('Joined', '14 Feb 2024'),
 ];
-
-const kTransportLabels = ['Vehicle', 'Motorcycle', 'Bicycle', 'Foot'];
+const kStaffPermissions = ['Manage orders', 'Manage members', 'View financial reports'];
 
 const kAgentLabels = ['All agents', 'Selma D.', 'Kofi A.', 'Nadia B.'];
 const kPeriodLabels = ['Today', 'Week', 'Month', 'Quarter'];

@@ -51,7 +51,10 @@ class TrackOrderScreen extends ConsumerWidget {
     final step = order.trackStep;
     final awaitingPickup = step == kOrderPlacedStep;
     final isSelf = order.fulfillment == 'self';
-    final steps = isSelf ? kSelfTrackSteps : kTrackSteps;
+    final steps = kTrackSteps;
+    // Compresses the order's fine-grained trackStep (-1..3) down to the 3
+    // stages shown here: 0 Accepted, 1 Received, 2 Delivered.
+    final stageIndex = step >= 3 ? 2 : (step >= 0 ? 1 : 0);
     final driverName = order.driver.isNotEmpty ? order.driver : 'Daniel O.';
 
     return Scaffold(
@@ -107,7 +110,7 @@ class TrackOrderScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            isSelf ? selfOrderStatusForStep(step).label : orderStatusForStep(step).label,
+                            steps[stageIndex].title,
                             style: AppText.sans(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
@@ -123,9 +126,9 @@ class TrackOrderScreen extends ConsumerWidget {
                         for (var i = 0; i < steps.length; i++)
                           _StepTile(
                             step: steps[i],
-                            done: i <= step,
+                            done: i <= stageIndex,
                             isLast: i == steps.length - 1,
-                            lineActive: i < step,
+                            lineActive: i < stageIndex,
                           ),
                       ],
                     ),

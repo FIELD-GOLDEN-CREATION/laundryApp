@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock_data.dart';
 import '../../models/notification_item.dart';
+import '../../state/notifications_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/round_back_button.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifications = ref.watch(notificationsProvider);
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -25,9 +27,9 @@ class NotificationsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            for (var i = 0; i < kNotifications.length; i++) ...[
-              _NotificationCard(item: kNotifications[i]),
-              if (i != kNotifications.length - 1) const SizedBox(height: 11),
+            for (var i = 0; i < notifications.length; i++) ...[
+              _NotificationCard(item: notifications[i]),
+              if (i != notifications.length - 1) const SizedBox(height: 11),
             ],
           ],
         ),

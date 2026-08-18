@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/app_icons.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 import '../../../../state/client_preferences_state.dart';
@@ -31,21 +32,21 @@ class DeliveryWidget extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _DeliveryStep(
-                icon: Icons.local_laundry_service,
+                icon: AppIcons.stepPickup,
                 title: language == 'Swahili' ? 'Chukua' : 'Pickup',
                 subtitle: language == 'Swahili' ? 'Tunachukua' : 'We collect',
                 color: AppColors.teal,
               ),
               _DeliveryArrow(),
               _DeliveryStep(
-                icon: Icons.cleaning_services,
+                icon: AppIcons.serviceWashFold,
                 title: language == 'Swahili' ? 'Osha' : 'Wash',
                 subtitle: language == 'Swahili' ? 'Tunaosha' : 'We clean',
                 color: AppColors.amber,
               ),
               _DeliveryArrow(),
               _DeliveryStep(
-                icon: Icons.delivery_dining,
+                icon: AppIcons.stepDeliver,
                 title: language == 'Swahili' ? 'Leta' : 'Deliver',
                 subtitle: language == 'Swahili' ? 'Tunaleta' : 'We return',
                 color: AppColors.teal,
@@ -61,7 +62,7 @@ class DeliveryWidget extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: AppColors.teal, size: 20),
+                const AppIcon(AppIcons.infoCircle, size: 20, color: AppColors.teal),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -88,7 +89,7 @@ class _DeliveryStep extends StatelessWidget {
     required this.color,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final Color color;
@@ -104,7 +105,7 @@ class _DeliveryStep extends StatelessWidget {
             color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 24),
+          child: Center(child: AppIcon(icon, size: 24, color: color)),
         ),
         const SizedBox(height: 8),
         Text(
@@ -124,8 +125,8 @@ class _DeliveryStep extends StatelessWidget {
 class _DeliveryArrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      Icons.arrow_forward,
+    return AppIcon(
+      AppIcons.arrowRight,
       color: AppColors.clientSecondaryText(context),
       size: 20,
     );

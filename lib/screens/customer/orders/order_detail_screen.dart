@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../data/mock_data.dart';
 import '../../../models/order.dart';
+import '../../../models/vendor_payment_method.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/orders_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/currency.dart';
 import '../../../widgets/curved_clipper.dart';
+import '../../../widgets/mobile_money_logo.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
 
@@ -31,6 +34,9 @@ class OrderDetailScreen extends ConsumerWidget {
     final dark = AppColors.isClientDark(context);
     final surface = AppColors.clientSurface(context);
     final status = order.fulfillment == 'self' ? selfOrderStatusForStep(order.trackStep) : orderStatusForStep(order.trackStep);
+    final grandTotal = order.deliveryFeeTzs > 0
+        ? formatMoney((parseTzs(order.total) + order.deliveryFeeTzs).toDouble())
+        : order.total;
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF080D12) : AppColors.cream,
@@ -101,7 +107,27 @@ class OrderDetailScreen extends ConsumerWidget {
                       _TotalRow(label: clientLabel('Delivery fee', 'Nauli ya usafirishaji', language), value: formatMoney(order.deliveryFeeTzs.toDouble()), strong: false, context: context),
                     ],
                     const SizedBox(height: 10),
-                    _TotalRow(label: clientLabel('Total', 'Jumla', language), value: order.total, strong: true, context: context),
+                    _TotalRow(label: clientLabel('Total', 'Jumla', language), value: grandTotal, strong: true, context: context),
+                    if (order.assignedPaymentMethods.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      Text(clientLabel('Payment methods', 'Njia za malipo', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+                      const SizedBox(height: 3),
+                      Text(
+                        clientLabel(
+                          'Pay ${order.shop} using any of the methods below.',
+                          'Lipa ${order.shop} kwa kutumia mojawapo ya njia hizi.',
+                          language,
+                        ),
+                        style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                      ),
+                      const SizedBox(height: 10),
+                      Column(children: [
+                        for (final method in order.assignedPaymentMethods) ...[
+                          _PaymentMethodRow(method: method, context: context),
+                          if (method != order.assignedPaymentMethods.last) const SizedBox(height: 8),
+                        ],
+                      ]),
+                    ],
                     const SizedBox(height: 18),
                     SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => context.push('/track', extra: order.id), icon: const Icon(Icons.location_on_outlined, size: 17), label: Text(clientLabel('Track order', 'Fuatilia oda', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)), style: FilledButton.styleFrom(backgroundColor: AppColors.teal, foregroundColor: AppColors.cream, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
                   ]),
@@ -127,4 +153,38 @@ class _TotalRow extends StatelessWidget {
   final String label; final String value; final bool strong; final BuildContext context;
   @override
   Widget build(BuildContext _) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: AppText.sans(fontSize: strong ? 15 : 13, fontWeight: strong ? FontWeight.w800 : FontWeight.w600, color: AppColors.clientText(context))), Text(value, style: AppText.sans(fontSize: strong ? 16 : 13, fontWeight: FontWeight.w800, color: strong ? AppColors.teal : AppColors.clientSecondaryText(context)))]);
+}
+
+/// A payment method the vendor offered for this order — mirrors
+/// `_PaymentMethodRow` on Vendor Settings (icon + title/subtitle) but
+/// read-only, since the customer is only viewing how to pay.
+class _PaymentMethodRow extends StatelessWidget {
+  const _PaymentMethodRow({required this.method, required this.context});
+  final VendorPaymentMethod method;
+  final BuildContext context;
+
+  @override
+  Widget build(BuildContext _) {
+    final provider = method.provider == null ? null : mobileProviderByName(method.provider!);
+    final fallbackIcon = method.kind == VendorPaymentMethodKind.cashOnDelivery ? Icons.payments_outlined : Icons.account_balance_outlined;
+    final dark = AppColors.isClientDark(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: dark ? const Color(0xFF182631) : AppColors.cream, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.clientBorder(context))),
+      child: Row(children: [
+        if (provider != null)
+          MobileMoneyLogo(provider: provider, size: 36)
+        else
+          Container(width: 36, height: 36, decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(12)), alignment: Alignment.center, child: Icon(fallbackIcon, size: 17, color: AppColors.teal)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(method.title, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+            const SizedBox(height: 2),
+            Text(method.subtitle, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
+          ]),
+        ),
+      ]),
+    );
+  }
 }

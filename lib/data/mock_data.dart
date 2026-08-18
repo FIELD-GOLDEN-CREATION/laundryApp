@@ -12,6 +12,7 @@ import '../models/order_line.dart';
 import '../models/service_package.dart';
 import '../models/shop.dart';
 import '../models/track_step_def.dart';
+import '../models/vendor_payment_method.dart';
 import '../theme/colors.dart';
 import '../utils/currency.dart';
 
@@ -377,17 +378,9 @@ MobileMoneyProvider? detectMobileProvider(String number) {
 }
 
 const kTrackSteps = [
-  TrackStepDef(title: 'Picked up', time: 'Wed, 9:12 AM'),
-  TrackStepDef(title: 'Sorted & counted', time: 'Wed, 10:40 AM'),
-  TrackStepDef(title: 'Washing in progress', time: 'Wed, 2:15 PM'),
-  TrackStepDef(title: 'Out for delivery', time: 'Thu, 6:00 PM (est.)'),
-];
-
-const kSelfTrackSteps = [
-  TrackStepDef(title: 'Dropped at shop', time: 'Promise arrival window'),
-  TrackStepDef(title: 'Sorted & counted', time: 'On arrival'),
-  TrackStepDef(title: 'Washing in progress', time: 'After drop-off'),
-  TrackStepDef(title: 'Ready for collection', time: 'Thu, 6:00 PM (est.)'),
+  TrackStepDef(title: 'Accepted', time: 'Wed, 9:00 AM'),
+  TrackStepDef(title: 'Received', time: 'Wed, 9:12 AM'),
+  TrackStepDef(title: 'Delivered', time: 'Thu, 6:00 PM (est.)'),
 ];
 
 const kActiveOrders = [
@@ -401,6 +394,22 @@ const kActiveOrders = [
     date: 'Picked up Wed, 9:12 AM',
     total: 'TZS 90,350',
     trackStep: 2,
+    deliveryFeeTzs: 4500,
+    assignedPaymentMethods: [
+      VendorPaymentMethod(
+        id: 'pm-marina-bank',
+        kind: VendorPaymentMethodKind.bankTransfer,
+        bankName: 'CRDB Bank',
+        accountHolder: 'Marina Fresh Laundry',
+        accountNumber: '0150293841200',
+      ),
+      VendorPaymentMethod(
+        id: 'pm-marina-momo',
+        kind: VendorPaymentMethodKind.mobileMoney,
+        provider: 'M-Pesa',
+        phone: '+255 754 111 222',
+      ),
+    ],
   ),
   Order(
     shop: 'Bright & Fold',

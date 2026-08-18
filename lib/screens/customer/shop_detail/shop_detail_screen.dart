@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/icons/app_icons.dart';
 import '../../../data/mock_data.dart';
 import '../../../models/menu_item.dart';
 import '../../../models/service_package.dart';
@@ -258,19 +259,19 @@ class _EdgedHeroImage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _GlassButton(
-                    icon: Icons.arrow_back_ios_new,
+                    icon: AppIcons.backChevron,
                     onTap: onBack,
                   ),
                   Row(
                     children: [
                       _GlassButton(
-                        icon: fav ? Icons.favorite : Icons.favorite_border,
+                        icon: fav ? AppIcons.heartFilled : AppIcons.heartOutline,
                         onTap: onFavToggle,
                         iconColor: fav ? AppColors.danger : null,
                       ),
                       const SizedBox(width: 10),
                       _GlassButton(
-                        icon: Icons.share_outlined,
+                        icon: AppIcons.share,
                         onTap: () {},
                       ),
                     ],
@@ -320,7 +321,7 @@ class _GlassButton extends StatelessWidget {
     this.iconColor,
   });
 
-  final IconData icon;
+  final String icon;
   final VoidCallback onTap;
   final Color? iconColor;
 
@@ -339,7 +340,7 @@ class _GlassButton extends StatelessWidget {
           width: 42,
           height: 42,
           child: Center(
-            child: Icon(icon, size: 20, color: iconColor ?? Colors.white),
+            child: AppIcon(icon, size: 20, color: iconColor ?? Colors.white),
           ),
         ),
       ),
@@ -363,25 +364,25 @@ class _InfoChips extends StatelessWidget {
     return Row(
       children: [
         _InfoChip(
-          icon: Icons.star,
+          icon: AppIcons.star,
           text: shop.rating,
           color: AppColors.amber,
         ),
         const SizedBox(width: 8),
         _InfoChip(
-          icon: Icons.reviews_outlined,
+          icon: AppIcons.chatBubble,
           text: '${shop.reviewCount} reviews',
           color: AppColors.clientSecondaryText(context),
         ),
         const SizedBox(width: 8),
         _InfoChip(
-          icon: Icons.location_on_outlined,
+          icon: AppIcons.locationPin,
           text: shop.distance,
           color: AppColors.clientSecondaryText(context),
         ),
         const SizedBox(width: 8),
         _InfoChip(
-          icon: Icons.schedule,
+          icon: AppIcons.clock,
           text: displayHours,
           color: displayHoursColor,
         ),
@@ -397,7 +398,7 @@ class _InfoChip extends StatelessWidget {
     required this.color,
   });
 
-  final IconData icon;
+  final String icon;
   final String text;
   final Color color;
 
@@ -413,7 +414,7 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          AppIcon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
             text,
@@ -447,7 +448,7 @@ class _DirectionButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.directions_outlined, size: 18, color: AppColors.teal),
+              const AppIcon(AppIcons.directions, size: 18, color: AppColors.teal),
               const SizedBox(width: 8),
               Text(
                 'Get Directions',
@@ -495,7 +496,7 @@ class _AboutSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline, size: 18, color: AppColors.teal),
+                  const AppIcon(AppIcons.checkCircle, size: 18, color: AppColors.teal),
                   const SizedBox(width: 10),
                   Text(
                     service,
@@ -509,7 +510,7 @@ class _AboutSection extends StatelessWidget {
         if (isVendorShop) ...[
           Row(
             children: [
-              Icon(Icons.schedule_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
+              AppIcon(AppIcons.clock, size: 16, color: AppColors.clientSecondaryText(context)),
               const SizedBox(width: 8),
               Text(
                 vendorProfile.scheduleSummary,
@@ -521,7 +522,7 @@ class _AboutSection extends StatelessWidget {
         ],
         Row(
           children: [
-            Icon(Icons.location_on_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
+            AppIcon(AppIcons.locationPin, size: 16, color: AppColors.clientSecondaryText(context)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -672,7 +673,7 @@ class _ItemCheckbox extends StatelessWidget {
         border: Border.all(color: checked ? AppColors.teal : AppColors.clientBorder(context), width: 2),
         borderRadius: BorderRadius.circular(7),
       ),
-      child: checked ? const Icon(Icons.check, size: 15, color: Colors.white) : null,
+      child: checked ? const AppIcon(AppIcons.checkSmall, size: 14, color: Colors.white) : null,
     );
   }
 }

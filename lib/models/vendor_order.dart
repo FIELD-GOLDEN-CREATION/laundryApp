@@ -11,6 +11,7 @@ class VendorOrder {
     required this.when,
     required this.total,
     required this.stage,
+    required this.address,
   });
 
   final String id;
@@ -22,4 +23,8 @@ class VendorOrder {
   final String when;
   final String total;
   final String stage;
+
+  /// Customer's pickup/delivery address — shown on the "Accept order" sheet's
+  /// map/navigation section and the Vendor Order Detail screen.
+  final String address;
 }

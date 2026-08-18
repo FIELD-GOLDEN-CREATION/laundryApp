@@ -5,129 +5,170 @@ import '../models/modal_copy.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
 
-const _kAddRoles = ['Client', 'Vendor', 'Driver'];
+const _kAddRoles = ['Client', 'Vendor', 'Staff'];
 
 /// The generic CRUD form modal reused by every admin action (ports the
 /// source's `modalOpen`/`modalCopy()`). Confirm and Cancel both just close
 /// the sheet — this is a prototype with no backend to actually write to,
 /// same as the source.
 void showCrudFormModal(BuildContext context, ModalKind kind, {void Function(String name, String email, String phone, String password)? onClientCreated}) {
-  final copy = kModalCopy[kind]!;
-  final controllers = [for (final _ in copy.fields) TextEditingController()];
-
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (sheetContext) {
-      var addRole = 0;
-      return StatefulBuilder(
-        builder: (sheetContext, setState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
-              decoration: const BoxDecoration(
-                color: AppColors.cream,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    builder: (_) => _CrudFormModalSheet(kind: kind, onClientCreated: onClientCreated),
+  );
+}
+
+/// A StatefulWidget rather than a `StatefulBuilder` + controllers captured in
+/// the closure — same reasoning as `package_form_sheet.dart`'s `_PackageForm`
+/// — plus here the field count itself changes with the selected Add role, so
+/// the controller list has to be rebuilt (and disposed) alongside it rather
+/// than fixed for the sheet's lifetime.
+class _CrudFormModalSheet extends StatefulWidget {
+  const _CrudFormModalSheet({required this.kind, this.onClientCreated});
+
+  final ModalKind kind;
+  final void Function(String name, String email, String phone, String password)? onClientCreated;
+
+  @override
+  State<_CrudFormModalSheet> createState() => _CrudFormModalSheetState();
+}
+
+class _CrudFormModalSheetState extends State<_CrudFormModalSheet> {
+  var _addRole = 0;
+  late List<FormFieldSpec> _fields = _fieldsForRole(_addRole);
+  late List<TextEditingController> _controllers = [for (final _ in _fields) TextEditingController()];
+
+  List<FormFieldSpec> _fieldsForRole(int role) {
+    if (widget.kind != ModalKind.add) return kModalCopy[widget.kind]!.fields;
+    return role == 2 ? kAddStaffFields : kModalCopy[ModalKind.add]!.fields;
+  }
+
+  void _pickRole(int role) {
+    if (role == _addRole) return;
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    setState(() {
+      _addRole = role;
+      _fields = _fieldsForRole(role);
+      _controllers = [for (final _ in _fields) TextEditingController()];
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = kModalCopy[widget.kind]!;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+        decoration: const BoxDecoration(
+          color: AppColors.cream,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 5,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
-                    ),
-                  ),
-                  Text(copy.title, style: AppText.serif(fontSize: 22)),
-                  const SizedBox(height: 3),
-                  Text(copy.sub, style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted)),
-                  if (kind == ModalKind.add) ...[
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        for (var i = 0; i < _kAddRoles.length; i++) ...[
-                          if (i != 0) const SizedBox(width: 7),
-                          Expanded(
-                            child: _RolePill(
-                              label: _kAddRoles[i],
-                              selected: addRole == i,
-                              onTap: () => setState(() => addRole = i),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  for (var i = 0; i < copy.fields.length; i++) ...[
-                    if (i != 0) const SizedBox(height: 12),
-                     _ModalField(spec: copy.fields[i], controller: controllers[i]),
-                  ],
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
+              Text(copy.title, style: AppText.serif(fontSize: 22)),
+              const SizedBox(height: 3),
+              Text(copy.sub, style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted)),
+              if (widget.kind == ModalKind.add) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    for (var i = 0; i < _kAddRoles.length; i++) ...[
+                      if (i != 0) const SizedBox(width: 7),
                       Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            side: const BorderSide(color: AppColors.creamDark, width: 1.5),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                             onTap: () {
-                               if (kind == ModalKind.add && addRole == 0 && onClientCreated != null) {
-                                 onClientCreated(controllers[0].text, controllers[1].text, controllers[2].text, controllers[3].text);
-                               }
-                               Navigator.of(sheetContext).pop();
-                             },
-                            child: Container(
-                              height: 52,
-                              alignment: Alignment.center,
-                              child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.muted)),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 7,
-                        child: Material(
-                          color: AppColors.teal,
-                          borderRadius: BorderRadius.circular(18),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(18),
-                            onTap: () => Navigator.of(sheetContext).pop(),
-                            child: Container(
-                              height: 52,
-                              alignment: Alignment.center,
-                              child: Text(
-                                copy.primary,
-                                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream),
-                              ),
-                            ),
-                          ),
+                        child: _RolePill(
+                          label: _kAddRoles[i],
+                          selected: _addRole == i,
+                          onTap: () => _pickRole(i),
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              for (var i = 0; i < _fields.length; i++) ...[
+                if (i != 0) const SizedBox(height: 12),
+                _ModalField(spec: _fields[i], controller: _controllers[i]),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          height: 52,
+                          alignment: Alignment.center,
+                          child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.muted)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 7,
+                    child: Material(
+                      color: AppColors.teal,
+                      borderRadius: BorderRadius.circular(18),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () {
+                          if (widget.kind == ModalKind.add && _addRole == 0 && widget.onClientCreated != null) {
+                            widget.onClientCreated!(_controllers[0].text, _controllers[1].text, _controllers[2].text, _controllers[3].text);
+                          }
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          height: 52,
+                          alignment: Alignment.center,
+                          child: Text(
+                            copy.primary,
+                            style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          );
-        },
-      );
-    },
-  ).whenComplete(() {
-    for (final controller in controllers) {
-      controller.dispose();
-    }
-  });
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _RolePill extends StatelessWidget {

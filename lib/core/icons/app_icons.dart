@@ -157,4 +157,34 @@ abstract final class AppIcons {
 
   static const locate =
       '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c58" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5" fill="#1a5c58"/></svg>';
+
+  // "How it works" steps (Home)
+  static const stepPickup =
+      '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1a5c58" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10h16l-1.5 11a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8z"/><path d="M9 10V7a4 4 0 0 1 8 0v3"/><path d="M5 10l-2-3M21 10l2-3"/></svg>';
+
+  static const stepDeliver =
+      '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1a5c58" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="20" r="2.5"/><circle cx="19.5" cy="20" r="2.5"/><path d="M6.5 20h6l3-9h4"/><path d="M12.5 11h4l2 6"/><path d="M9 5h4l-1 4"/></svg>';
+
+  static const arrowRight =
+      '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h13M11 5l5 5-5 5"/></svg>';
+
+  static const infoCircle =
+      '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#1a5c58" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 9.3v5"/><path d="M10 6.3v.1" stroke-width="2.4"/></svg>';
+
+  // Reviews (Home — "What our customers say")
+  static const starOutline =
+      '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#d4841a" stroke-width="1" stroke-linejoin="round"><path d="M6 0l1.8 3.7 4.2.6-3 3 .7 4.1L6 9.4 2.3 11.4l.7-4.1-3-3 4.2-.6z"/></svg>';
+
+  static const quoteMark =
+      '<svg width="28" height="22" viewBox="0 0 28 22" fill="#e8f2f1"><path d="M0 22V13.2C0 5.9 4.7 1.1 11.6 0l1.3 3.4C8.5 4.6 6.4 7.2 6.1 11h6.1v11zM15.4 22V13.2c0-7.3 4.7-12.1 11.6-13.2l1.3 3.4c-4.4 1.2-6.5 3.8-6.8 7.6h6.1v11z"/></svg>';
+
+  // Shop detail
+  static const directions =
+      '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#1a5c58" stroke-width="1.8" stroke-linecap="round"><circle cx="4.5" cy="15.5" r="2"/><circle cx="15.5" cy="4.5" r="2"/><path d="M6 14L14 6" stroke-dasharray="2.5 2.5"/></svg>';
+
+  static const share =
+      '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"><circle cx="15.5" cy="4.5" r="2.3"/><circle cx="4.5" cy="10" r="2.3"/><circle cx="15.5" cy="15.5" r="2.3"/><path d="M6.5 8.8l7-3.3M6.5 11.2l7 3.3"/></svg>';
+
+  static const checkSmall =
+      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>';
 }

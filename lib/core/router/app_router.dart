@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../screens/admin/admin_client_screen.dart';
 import '../../screens/admin/admin_dashboard_screen.dart';
-import '../../screens/admin/admin_driver_screen.dart';
 import '../../screens/admin/admin_members_screen.dart';
 import '../../screens/admin/admin_orders_screen.dart';
 import '../../screens/admin/admin_reports_screen.dart';
 import '../../screens/admin/admin_settings_screen.dart';
+import '../../screens/admin/admin_staff_screen.dart';
 import '../../screens/admin/admin_vendor_screen.dart';
 import '../../screens/customer/cart/cart_screen.dart';
 import '../../data/mock_data.dart';
@@ -147,7 +147,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/vendor/settings', builder: (_, _) => const VendorSettingsScreen()),
     GoRoute(path: '/admin/client', builder: (_, _) => const AdminClientScreen()),
     GoRoute(path: '/admin/vendor', builder: (_, _) => const AdminVendorScreen()),
-    GoRoute(path: '/admin/driver', builder: (_, _) => const AdminDriverScreen()),
+    GoRoute(path: '/admin/staff', builder: (_, _) => const AdminStaffScreen()),
   ],
 );
 

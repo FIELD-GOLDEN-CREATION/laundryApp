@@ -58,6 +58,7 @@ const kVendorOrdersNew = [
     when: 'Requested 4 min ago',
     total: 'TZS 135,200',
     stage: 'new',
+    address: '14 Haile Selassie Road, Masaki',
   ),
   VendorOrder(
     id: '#LD-2491',
@@ -69,6 +70,7 @@ const kVendorOrdersNew = [
     when: 'Requested 11 min ago',
     total: 'TZS 99,840',
     stage: 'new',
+    address: '27 Chole Road, Msasani Peninsula',
   ),
   VendorOrder(
     id: '#LD-2490',
@@ -80,6 +82,7 @@ const kVendorOrdersNew = [
     when: 'Requested 22 min ago',
     total: 'TZS 37,050',
     stage: 'new',
+    address: '5 Toure Drive, Oyster Bay',
   ),
 ];
 
@@ -94,6 +97,7 @@ const kVendorOrdersWip = [
     when: 'Washer 2 · 14 min left',
     total: 'TZS 90,350',
     stage: 'wip',
+    address: '12 Chole Road, Masaki, Apt 4B',
   ),
   VendorOrder(
     id: '#LD-2486',
@@ -105,6 +109,7 @@ const kVendorOrdersWip = [
     when: 'Press queue',
     total: 'TZS 119,600',
     stage: 'wip',
+    address: '8 Kenyatta Drive, Msasani',
   ),
 ];
 
@@ -132,6 +137,7 @@ const kVendorOrdersReady = [
     when: 'Packed 12:40 PM',
     total: 'TZS 106,860',
     stage: 'ready',
+    address: '3 Bagamoyo Road, Mikocheni',
   ),
   VendorOrder(
     id: '#LD-2475',
@@ -143,10 +149,9 @@ const kVendorOrdersReady = [
     when: 'Packed 11:05 AM',
     total: 'TZS 58,500',
     stage: 'ready',
+    address: '19 Ali Hassan Mwinyi Road, Kinondoni',
   ),
 ];
-
-const kGarmentLabels = ['Shirts ×4', 'Trousers ×2', 'Dress ×1', 'Linen ×1'];
 
 /// Packages and per-piece services the customer picked when placing order
 /// #LD-2481 — read-only on the Vendor Order Detail screen.
@@ -156,20 +161,10 @@ const kOrderLineItems = [
   OrderLine(name: 'Delicate fabric treatment', qty: 1, unitPrice: 10400),
 ];
 
-const kDamageLabels = [
-  'Fading on collar (shirt 2)',
-  'Loose seam on trousers',
-  'Bleach mark on linen',
-  'Missing button',
-];
-const kDefaultDamageChecked = [true, false, false, false];
-
 const kProcessingSteps = [
+  TrackStepDef(title: 'Accepted', time: '9:02 AM'),
   TrackStepDef(title: 'Received', time: '9:12 AM'),
-  TrackStepDef(title: 'Sorted & tagged', time: '10:40 AM'),
-  TrackStepDef(title: 'Washing', time: '2:15 PM'),
-  TrackStepDef(title: 'Drying & pressing', time: '4:05 PM'),
-  TrackStepDef(title: 'Ready for delivery', time: '—'),
+  TrackStepDef(title: 'Delivered', time: '—'),
 ];
 
 const kCategoryLabels = [

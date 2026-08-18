@@ -12,8 +12,8 @@ import '../../theme/text_styles.dart';
 import '../../widgets/placeholder_image.dart';
 import '../../widgets/crud_form_modal.dart';
 
-const _kMemberTabLabels = ['Clients', 'Vendors', 'Drivers'];
-const _kDetailRoutes = ['/admin/client', '/admin/vendor', '/admin/driver'];
+const _kMemberTabLabels = ['Clients', 'Vendors', 'Staff'];
+const _kDetailRoutes = ['/admin/client', '/admin/vendor', '/admin/staff'];
 
 class AdminMembersScreen extends ConsumerWidget {
   const AdminMembersScreen({super.key});
@@ -25,7 +25,7 @@ class AdminMembersScreen extends ConsumerWidget {
     final members = switch (tab) {
       0 => kClientMembers,
       1 => kVendorMembers,
-      _ => kDriverMembers,
+      _ => kStaffMembers,
     };
 
     return Scaffold(

@@ -89,3 +89,15 @@ const kModalCopy = {
     ],
   ),
 };
+
+/// The Staff role tab of the "Add member" modal swaps in this field set —
+/// Client and Vendor keep [ModalKind.add]'s generic fields, but staff also
+/// need the role that determines their platform permissions (see
+/// admin_settings_screen's "Staff permissions").
+const kAddStaffFields = [
+  FormFieldSpec(label: 'Full name', placeholder: 'e.g. Rashid Juma'),
+  FormFieldSpec(label: 'Email', placeholder: 'name@laundryapp.com'),
+  FormFieldSpec(label: 'Phone', placeholder: '+255 712 345 678'),
+  FormFieldSpec(label: 'Role', placeholder: 'e.g. Operations manager'),
+  FormFieldSpec(label: 'Password', placeholder: '••••••••', obscure: true),
+];

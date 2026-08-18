@@ -9,3 +9,7 @@ String formatTzs(num amount) {
   }
   return 'TZS $buffer';
 }
+
+/// Reverses [formatTzs] — strips everything but digits, so a fee can be
+/// added to an already-formatted total like 'TZS 90,350'.
+num parseTzs(String formatted) => num.tryParse(formatted.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
