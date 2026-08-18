@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "563839138064",
+    "project_id": "freshfold-86da1",
+    "storage_bucket": "freshfold-86da1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:563839138064:android:0d8f8fca301a832b038d95",
+        "android_client_info": {
+          "package_name": "golden.freshfold"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQqE9O9Yvb3JvxOp4WZrxrpD4rd0UMDbg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
