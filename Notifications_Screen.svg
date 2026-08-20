@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <!-- Page background -->
+  <rect x="0" y="0" width="390" height="844" fill="#F5F0E8" />
+
+  <!-- Status bar -->
+  <text x="22" y="28" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="600" fill="#2C3E50">9:41</text>
+  <rect x="298" y="23" width="3" height="5" rx="1" fill="#2C3E50" />
+  <rect x="303" y="21" width="3" height="7" rx="1" fill="#2C3E50" />
+  <rect x="308" y="19" width="3" height="9" rx="1" fill="#2C3E50" />
+  <rect x="313" y="17" width="3" height="11" rx="1" fill="#2C3E50" />
+  <rect x="352" y="17" width="22" height="11" rx="2.5" fill="none" stroke="#2C3E50" stroke-width="1" />
+  <rect x="354" y="19" width="16" height="7" rx="1" fill="#2C3E50" />
+  <rect x="375" y="20" width="2" height="5" rx="1" fill="#2C3E50" />
+
+  <!-- Header row -->
+  <rect x="22" y="56" width="42" height="42" rx="14" fill="#FFFFFF" stroke="#EDE7D9" stroke-width="1" />
+  <path d="M 47,71 L 39,77 L 47,83" fill="none" stroke="#2C3E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="76" y="85" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" fill="#2C3E50">Notifications</text>
+
+  <!-- Card 1 -->
+  <g transform="translate(22,118)">
+    <rect x="0" y="0" width="346" height="105" rx="20" fill="#FFFFFF" stroke="#EDE7D9" stroke-width="1" />
+    <rect x="14" y="14" width="38" height="38" rx="13" fill="#E8F2F1" />
+    <text x="33" y="39" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1A5C58">W</text>
+    <text x="65" y="25" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#2C3E50">Your laundry is being washed</text>
+    <text x="65" y="45" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">Order #LD-2481 moved to the wash cycle.</text>
+    <text x="65" y="63" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">Delivery still on for Thursday 6 PM.</text>
+    <text x="65" y="86" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748B" fill-opacity="0.8">12 min ago</text>
+  </g>
+
+  <!-- Card 2 -->
+  <g transform="translate(22,234)">
+    <rect x="0" y="0" width="346" height="105" rx="20" fill="#FDF3E3" stroke="#EDE7D9" stroke-width="1" />
+    <rect x="14" y="14" width="38" height="38" rx="13" fill="#FFFFFF" />
+    <text x="33" y="39" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#D4841A">%</text>
+    <text x="65" y="25" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#2C3E50">40% off your next wash</text>
+    <text x="65" y="45" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">A thank-you for your 24th order.</text>
+    <text x="65" y="63" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">Valid until Sunday.</text>
+    <text x="65" y="86" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748B" fill-opacity="0.8">2 hours ago</text>
+  </g>
+
+  <!-- Card 3 -->
+  <g transform="translate(22,350)">
+    <rect x="0" y="0" width="346" height="105" rx="20" fill="#FFFFFF" stroke="#EDE7D9" stroke-width="1" />
+    <rect x="14" y="14" width="38" height="38" rx="13" fill="#E8F2F1" />
+    <text x="33" y="39" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1A5C58">D</text>
+    <text x="65" y="25" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#2C3E50">Daniel is on the way</text>
+    <text x="65" y="45" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">Your driver will arrive between 10 and</text>
+    <text x="65" y="63" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">12.</text>
+    <text x="65" y="86" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748B" fill-opacity="0.8">Yesterday</text>
+  </g>
+
+  <!-- Card 4 -->
+  <g transform="translate(22,466)">
+    <rect x="0" y="0" width="346" height="87" rx="20" fill="#FFFFFF" stroke="#EDE7D9" stroke-width="1" />
+    <rect x="14" y="14" width="38" height="38" rx="13" fill="#EDE7D9" />
+    <text x="33" y="39" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#2C3E50">&#9733;</text>
+    <text x="65" y="25" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#2C3E50">How did we do?</text>
+    <text x="65" y="45" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#64748B">Rate Crisp Corner for order #LD-2390.</text>
+    <text x="65" y="67" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#64748B" fill-opacity="0.8">Jul 29</text>
+  </g>
+
+  <!-- Home indicator -->
+  <rect x="128" y="822" width="134" height="5" rx="2.5" fill="#2C3E50" fill-opacity="0.3" />
+</svg>
