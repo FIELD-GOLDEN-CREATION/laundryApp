@@ -9,14 +9,12 @@ import '../state/vendor_profile_state.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
 
-/// The account bottom-sheet triggered by the "V"/"A" corner button on the
-/// Vendor/Admin dashboards (ports the source's `sheetOpen`). Only ever
-/// shown to an already-authed vendor/admin — there's no guest variant here
+/// The account bottom-sheet triggered by the "V" corner button on the
+/// Vendor dashboard (ports the source's `sheetOpen`). Only ever
+/// shown to an already-authed vendor — there's no guest variant here
 /// since a guest can't reach those dashboards in the first place.
 void showAccountSheet(BuildContext context, WidgetRef ref) {
   final auth = ref.read(authProvider);
-  final isAdmin = auth.role == UserRole.admin;
-  final isStaff = auth.role == UserRole.staff || auth.role == UserRole.driver;
   final isVendor = auth.role == UserRole.vendor;
 
   showModalBottomSheet(
@@ -44,15 +42,15 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isAdmin ? AppColors.creamDark : (isStaff ? AppColors.successLight : AppColors.amberLight),
+                    color: AppColors.amberLight,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   alignment: Alignment.center,
                     child: Text(
-                      isAdmin ? 'A' : (isStaff ? 'S' : 'V'),
+                      'V',
                     style: AppText.serif(
                       fontSize: 20,
-                      color: isAdmin ? AppColors.slate : (isStaff ? AppColors.success : AppColors.amber),
+                      color: AppColors.amber,
                     ),
                   ),
                 ),
@@ -62,14 +60,12 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAdmin
-                            ? 'Site Administrator'
-                            : (isStaff ? 'Staff Member' : ref.read(vendorProfileProvider).shopTitle),
+                        ref.read(vendorProfileProvider).shopTitle,
                         style: AppText.serif(fontSize: 20),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${auth.authEmail} · ${isAdmin ? 'Admin' : (isStaff ? 'Staff' : 'Vendor')} account',
+                        '${auth.authEmail} · Vendor account',
                         style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
                       ),
                     ],
@@ -93,7 +89,7 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
                     height: 52,
                     alignment: Alignment.center,
                     child: Text(
-                      isAdmin ? 'Go to command center' : (isStaff ? 'Go to dashboard' : 'Go to dashboard'),
+                      'Go to dashboard',
                       style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.cream),
                     ),
                   ),

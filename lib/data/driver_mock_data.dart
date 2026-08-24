@@ -4,7 +4,7 @@ import '../models/trip_ledger_row.dart';
 import '../theme/colors.dart';
 
 /// Static seed data for the Driver module — same 1:1 port-of-the-JS-mock
-/// approach as data/vendor_mock_data.dart and data/admin_mock_data.dart.
+/// approach as data/vendor_mock_data.dart.
 
 const kDriverPickupJobs = [
   DriverJob(

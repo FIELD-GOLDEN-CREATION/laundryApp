@@ -8,7 +8,7 @@ import '../../state/login_form_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 
-const _kDefaultReason = 'Customers track orders. Vendors run the shop. Admins oversee the platform.';
+const _kDefaultReason = 'Customers track orders. Vendors run the shop.';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});

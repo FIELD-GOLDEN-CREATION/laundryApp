@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/laundry_categories_data.dart';
 import '../../data/mock_data.dart';
-import '../../data/vendor_mock_data.dart';
 import '../../models/laundry_category.dart';
 import '../../models/service_package.dart';
 import '../../state/vendor_catalog_state.dart';
@@ -13,7 +12,6 @@ import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/currency.dart';
 import '../../widgets/package_form_sheet.dart';
-import '../../widgets/selectable_chip.dart';
 import '../../widgets/toggle_switch.dart';
 import '../../widgets/remote_image.dart';
 
@@ -54,27 +52,12 @@ class VendorCatalogScreen extends ConsumerWidget {
                 categoryId: category.id,
               );
             }),
-            const _SectionLabel('Turnaround offered'),
-            Row(
-              children: [
-                for (var i = 0; i < kTurnaroundOptions.length; i++) ...[
-                  if (i != 0) const SizedBox(width: 10),
-                  Expanded(
-                    child: SelectableChip(
-                      label: kTurnaroundOptions[i].label,
-                      sub: kTurnaroundOptions[i].sub,
-                      selected: state.turnaround == i,
-                      onTap: () => notifier.pickTurnaround(i),
-                      variant: ChipVariant.muted,
-                      borderRadius: 16,
-                      fontSize: 15,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ],
-              ],
+            const _SectionLabel('Add-on services'),
+            Text(
+              'Define extra services customers can add to their order at checkout.',
+              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.3),
             ),
-            const _SectionLabel('Add-ons & upsells'),
+            const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -84,33 +67,15 @@ class VendorCatalogScreen extends ConsumerWidget {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (var i = 0; i < kAddonToggles.length; i++)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: i == kAddonToggles.length - 1 ? Colors.transparent : AppColors.cream),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(kAddonToggles[i].label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 3),
-                                Text(
-                                  kAddonToggles[i].price,
-                                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.amber),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ToggleSwitch(on: state.addonsOn[i], onTap: () => notifier.toggleAddon(i)),
-                        ],
-                      ),
+                  for (var i = 0; i < state.addons.length; i++)
+                    _AddonRow(
+                      addon: state.addons[i],
+                      onRemove: () => notifier.removeAddon(i),
+                      onUpdated: (title, price) => notifier.updateAddon(i, title: title, priceTzs: price),
                     ),
+                  _AddAddonRow(
+                    onAdd: (title, price) => notifier.addAddon(title, price),
+                  ),
                 ],
               ),
             ),
@@ -752,6 +717,253 @@ class _AddPackageButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AddonRow extends StatefulWidget {
+  const _AddonRow({required this.addon, required this.onRemove, required this.onUpdated});
+  final VendorAddon addon;
+  final VoidCallback onRemove;
+  final void Function(String title, double priceTzs) onUpdated;
+
+  @override
+  State<_AddonRow> createState() => _AddonRowState();
+}
+
+class _AddonRowState extends State<_AddonRow> {
+  bool _editing = false;
+  late final _titleCtrl = TextEditingController(text: widget.addon.title);
+  late final _priceCtrl = TextEditingController(text: widget.addon.priceTzs.round().toString());
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final title = _titleCtrl.text.trim();
+    final price = double.tryParse(_priceCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    if (title.isNotEmpty && price > 0) {
+      widget.onUpdated(title, price);
+    }
+    setState(() => _editing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_editing) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.cream))),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(color: AppColors.cream, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(12)),
+                    alignment: Alignment.centerLeft,
+                    child: TextField(
+                      controller: _titleCtrl,
+                      autofocus: true,
+                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+                      decoration: InputDecoration.collapsed(
+                        hintText: 'Service name',
+                        hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 110,
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(color: AppColors.cream, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(12)),
+                  alignment: Alignment.centerLeft,
+                  child: TextField(
+                    controller: _priceCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration.collapsed(
+                      hintText: 'TZS',
+                      hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => setState(() => _editing = false),
+                  child: Text('Cancel', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _save,
+                  child: Text('Save', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.cream))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.addon.title, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(formatTzs(widget.addon.priceTzs), style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.amber)),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: () => setState(() => _editing = true),
+            child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+          ),
+          const SizedBox(width: 12),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: widget.onRemove,
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(Icons.delete_outline_rounded, size: 19, color: AppColors.danger),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddAddonRow extends StatefulWidget {
+  const _AddAddonRow({required this.onAdd});
+  final void Function(String title, double priceTzs) onAdd;
+
+  @override
+  State<_AddAddonRow> createState() => _AddAddonRowState();
+}
+
+class _AddAddonRowState extends State<_AddAddonRow> {
+  bool _expanded = false;
+  final _titleCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final title = _titleCtrl.text.trim();
+    final price = double.tryParse(_priceCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    if (title.isNotEmpty && price > 0) {
+      widget.onAdd(title, price);
+      _titleCtrl.clear();
+      _priceCtrl.clear();
+      setState(() => _expanded = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_expanded) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _expanded = true),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            child: Center(
+              child: Text('+ Add service', style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.cream))),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(color: AppColors.cream, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(12)),
+                  alignment: Alignment.centerLeft,
+                  child: TextField(
+                    controller: _titleCtrl,
+                    autofocus: true,
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration.collapsed(
+                      hintText: 'Service name (e.g. Express delivery)',
+                      hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 110,
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(color: AppColors.cream, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(12)),
+                alignment: Alignment.centerLeft,
+                child: TextField(
+                  controller: _priceCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
+                  decoration: InputDecoration.collapsed(
+                    hintText: 'TZS',
+                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => _expanded = false),
+                child: Text('Cancel', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _add,
+                child: Text('Add', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

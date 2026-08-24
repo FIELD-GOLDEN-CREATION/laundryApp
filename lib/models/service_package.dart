@@ -17,6 +17,32 @@ enum PackageKind {
   subscription,
 }
 
+/// A single line item inside a vendor-created package, pairing a laundry
+/// item with its quantity. The customer sees these as "3× T-Shirt / Polo"
+/// inside the package details.
+class PackageItem {
+  const PackageItem({
+    required this.itemId,
+    required this.itemName,
+    required this.qty,
+    required this.unitPrice,
+  });
+
+  final String itemId;
+  final String itemName;
+  final int qty;
+  final double unitPrice;
+
+  double get lineTotal => unitPrice * qty;
+
+  PackageItem copyWith({int? qty}) => PackageItem(
+    itemId: itemId,
+    itemName: itemName,
+    qty: qty ?? this.qty,
+    unitPrice: unitPrice,
+  );
+}
+
 class ServicePackage {
   const ServicePackage({
     required this.id,
@@ -31,6 +57,7 @@ class ServicePackage {
     this.tag = '',
     this.serviceTags = const [],
     this.active = true,
+    this.packageItems = const [],
   });
 
   /// Stable slug, unique within a vendor's package list.
@@ -70,6 +97,11 @@ class ServicePackage {
   /// Vendors can retire a package without deleting it; inactive packages
   /// never reach the customer-facing shop page.
   final bool active;
+
+  /// Specific items with quantities included in this package.
+  /// When non-empty, the package is item-based: the customer gets exactly
+  /// these items. Empty means the package is a generic bundle (weight/subscription).
+  final List<PackageItem> packageItems;
 
   /// Avatar letter for the cart row, matching `MenuItem.initial`.
   String get initial => name.isEmpty ? 'P' : name[0].toUpperCase();
@@ -128,6 +160,7 @@ class ServicePackage {
     String? tag,
     List<String>? serviceTags,
     bool? active,
+    List<PackageItem>? packageItems,
   }) => ServicePackage(
     id: id,
     name: name ?? this.name,
@@ -141,6 +174,7 @@ class ServicePackage {
     tag: tag ?? this.tag,
     serviceTags: serviceTags ?? this.serviceTags,
     active: active ?? this.active,
+    packageItems: packageItems ?? this.packageItems,
   );
 }
 

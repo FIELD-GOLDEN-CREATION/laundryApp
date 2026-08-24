@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/vendor_mock_data.dart';
 import '../../models/track_step_def.dart';
+import '../../state/vendor_catalog_state.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
@@ -19,6 +20,7 @@ class VendorOrderDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(vendorOrderDetailProvider);
     final notifier = ref.read(vendorOrderDetailProvider.notifier);
+    final vendorAddons = ref.watch(vendorCatalogProvider.select((s) => s.addons));
 
     return Scaffold(
       body: SafeArea(
@@ -78,6 +80,55 @@ class VendorOrderDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            if (vendorAddons.isNotEmpty) ...[
+              const _SectionLabel('Add-on services requested'),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.creamDark),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < vendorAddons.length; i++)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: i == vendorAddons.length - 1 ? Colors.transparent : AppColors.cream),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.tealMuted,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.teal),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                vendorAddons[i].title,
+                                style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            Text(
+                              formatTzs(vendorAddons[i].priceTzs),
+                              style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.amber),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
             const _SectionLabel('Digital garment tag'),
             Container(
               padding: const EdgeInsets.all(16),

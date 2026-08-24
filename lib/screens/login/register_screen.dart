@@ -133,7 +133,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     onTap: _registerWithGoogle,
                   ),
                   const SizedBox(height: 14),
-                  Center(child: Text('Client accounts only · Staff are invited by admin', textAlign: TextAlign.center, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.62)))),
+                  Center(child: Text('Client accounts only', textAlign: TextAlign.center, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.62)))),
                   Center(child: TextButton(onPressed: () => context.pop(), child: Text('Already have an account?  Sign in', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.cream)))),
                 ]),
               ),

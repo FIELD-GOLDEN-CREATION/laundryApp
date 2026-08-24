@@ -106,22 +106,6 @@ const kVendorTabs = [
   TabBarItem(icon: AppIcons.tabReports, label: 'Earnings'),
 ];
 
-const kAdminTabs = [
-  TabBarItem(icon: AppIcons.tabDash, label: 'Dashboard'),
-  TabBarItem(icon: AppIcons.tabOrders, label: 'Orders'),
-  TabBarItem(icon: AppIcons.tabProfile, label: 'Members'),
-  TabBarItem(icon: AppIcons.tabReports, label: 'Reports'),
-  TabBarItem(icon: AppIcons.tabSettings, label: 'Settings'),
-];
-
-const kStaffTabs = [
-  TabBarItem(icon: AppIcons.tabDash, label: 'Dashboard'),
-  TabBarItem(icon: AppIcons.tabOrders, label: 'Orders'),
-  TabBarItem(icon: AppIcons.tabProfile, label: 'Members'),
-  TabBarItem(icon: AppIcons.tabReports, label: 'Promos'),
-  TabBarItem(icon: AppIcons.tabProfile, label: 'Profile'),
-];
-
 /// Bottom tab bar ported from the source's `tabs` render block: active tab
 /// gets a teal-muted pill behind its icon and teal text/icon; inactive tabs
 /// are a flat neutral gray. Item set varies by role (see the 3 const lists

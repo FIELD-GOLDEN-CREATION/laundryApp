@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/laundry_categories_data.dart';
 import '../data/vendor_mock_data.dart';
+import '../models/laundry_category.dart';
 import '../models/service_package.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
+import '../utils/currency.dart';
 import 'selectable_chip.dart';
 
 /// "New package" composer for the Vendor Catalog screen. Returns the built
@@ -43,6 +46,7 @@ class _PackageFormState extends State<_PackageForm> {
 
   PackageKind _kind = PackageKind.weight;
   List<String> _inclusions = [];
+  final Map<String, int> _packageItemQty = {}; // itemId -> qty
 
   @override
   void dispose() {
@@ -58,10 +62,23 @@ class _PackageFormState extends State<_PackageForm> {
 
   void _save() {
     final unit = _unit.text.trim();
+    // Build package items from selected items with quantities
+    final packageItems = <PackageItem>[];
+    for (final entry in _packageItemQty.entries) {
+      if (entry.value > 0) {
+        final item = getItemById(entry.key);
+        if (item != null) {
+          packageItems.add(PackageItem(
+            itemId: item.id,
+            itemName: item.name,
+            qty: entry.value,
+            unitPrice: item.priceTzs,
+          ));
+        }
+      }
+    }
     Navigator.of(context).pop(
       ServicePackage(
-        // Vendor-authored packages are runtime-only, so a timestamp keeps
-        // them distinct from each other and from the seeded slugs.
         id: 'vendor-${DateTime.now().microsecondsSinceEpoch}',
         name: _name.text.trim(),
         tagline: _tagline.text.trim(),
@@ -70,8 +87,7 @@ class _PackageFormState extends State<_PackageForm> {
         priceUnit: unit.isEmpty ? '/ package' : '/ $unit',
         inclusions: _inclusions,
         note: _note.text.trim(),
-        // No compare-at total: the vendor did not state one, and inventing a
-        // "was" price to print a savings badge against would be a lie.
+        packageItems: packageItems,
       ),
     );
   }
@@ -84,6 +100,20 @@ class _PackageFormState extends State<_PackageForm> {
       builder: (_) => _InclusionsSheet(selected: _inclusions),
     );
     if (picked != null) setState(() => _inclusions = picked);
+  }
+
+  Future<void> _pickPackageItems() async {
+    final picked = await showModalBottomSheet<Map<String, int>>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _PackageItemsSheet(selected: Map.of(_packageItemQty)),
+    );
+    if (picked != null) {
+      setState(() => _packageItemQty
+        ..clear()
+        ..addAll(picked));
+    }
   }
 
   @override
@@ -153,6 +183,72 @@ class _PackageFormState extends State<_PackageForm> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Text('PACKAGE ITEMS', style: AppText.eyebrow()),
+              const SizedBox(height: 7),
+              Text(
+                'Select items and quantities for this package. Any items not included will use normal basket pricing.',
+                style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.3),
+              ),
+              const SizedBox(height: 7),
+              Material(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: AppColors.creamDark),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: _pickPackageItems,
+                  child: Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _packageItemQty.isEmpty
+                                ? 'Select items for this package'
+                                : '${_packageItemQty.values.where((q) => q > 0).length} items selected',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.sans(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: _packageItemQty.isEmpty ? AppColors.muted : AppColors.slate,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.muted),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (_packageItemQty.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final entry in _packageItemQty.entries)
+                      if (entry.value > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.tealMuted,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${entry.value}× ${getItemById(entry.key)?.name ?? entry.key}',
+                            style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal),
+                          ),
+                        ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               Text('INCLUDES', style: AppText.eyebrow()),
               const SizedBox(height: 7),
@@ -446,6 +542,211 @@ class _InclusionCheckbox extends StatelessWidget {
         borderRadius: BorderRadius.circular(7),
       ),
       child: checked ? const Icon(Icons.check, size: 14, color: AppColors.cream) : null,
+    );
+  }
+}
+
+/// Multi-select sheet for picking items with quantities for a package.
+/// Each item shows a stepper (+/−) so the vendor can set how many of each
+/// garment goes into the bundle.
+class _PackageItemsSheet extends StatefulWidget {
+  const _PackageItemsSheet({required this.selected});
+  final Map<String, int> selected;
+
+  @override
+  State<_PackageItemsSheet> createState() => _PackageItemsSheetState();
+}
+
+class _PackageItemsSheetState extends State<_PackageItemsSheet> {
+  late final Map<String, int> _qty;
+
+  @override
+  void initState() {
+    super.initState();
+    _qty = Map.of(widget.selected);
+  }
+
+  void _setQty(String itemId, int delta) {
+    setState(() {
+      _qty[itemId] = ((_qty[itemId] ?? 0) + delta).clamp(0, 99);
+    });
+  }
+
+  void _done() {
+    // Only return items with qty > 0
+    final result = <String, int>{};
+    for (final entry in _qty.entries) {
+      if (entry.value > 0) result[entry.key] = entry.value;
+    }
+    Navigator.of(context).pop(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+            decoration: const BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
+                  ),
+                ),
+                Text('Package Items', style: AppText.serif(fontSize: 22)),
+                const SizedBox(height: 3),
+                Text(
+                  'Select items and set quantities for this package.',
+                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                ),
+                const SizedBox(height: 14),
+                ...kLaundryCategories.map((cat) => _CategorySection(
+                  category: cat,
+                  qty: _qty,
+                  onSetQty: _setQty,
+                )),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: Material(
+                    color: AppColors.teal,
+                    borderRadius: BorderRadius.circular(18),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: _done,
+                      child: Container(
+                        height: 52,
+                        alignment: Alignment.center,
+                        child: Text('Done', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategorySection extends StatelessWidget {
+  const _CategorySection({required this.category, required this.qty, required this.onSetQty});
+  final LaundryCategory category;
+  final Map<String, int> qty;
+  final void Function(String itemId, int delta) onSetQty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.creamDark),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        title: Text(category.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
+        subtitle: Text('${category.items.length} items', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+        children: category.items.map((item) => _ItemQtyRow(
+          item: item,
+          qty: qty[item.id] ?? 0,
+          onIncrement: () => onSetQty(item.id, 1),
+          onDecrement: () => onSetQty(item.id, -1),
+        )).toList(),
+      ),
+    );
+  }
+}
+
+class _ItemQtyRow extends StatelessWidget {
+  const _ItemQtyRow({required this.item, required this.qty, required this.onIncrement, required this.onDecrement});
+  final LaundryItem item;
+  final int qty;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  '${formatTzs(item.priceTzs)} ${item.unit}',
+                  style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          if (qty > 0) ...[
+            GestureDetector(
+              onTap: onDecrement,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.cream,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.creamDark),
+                ),
+                alignment: Alignment.center,
+                child: const Text('−', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.teal)),
+              ),
+            ),
+            SizedBox(
+              width: 32,
+              child: Text('$qty', textAlign: TextAlign.center, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal)),
+            ),
+            GestureDetector(
+              onTap: onIncrement,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: const Text('+', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
+            ),
+          ] else ...[
+            GestureDetector(
+              onTap: onIncrement,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.cream,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.creamDark),
+                ),
+                child: Text('Add', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

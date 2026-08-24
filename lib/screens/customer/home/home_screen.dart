@@ -17,6 +17,8 @@ import 'widgets/category_cards.dart';
 import 'widgets/delivery_widget.dart';
 import 'widgets/reviews_widget.dart';
 import 'widgets/shop_card.dart';
+import 'widgets/packages_carousel.dart';
+import 'widgets/vendor_banner.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -80,6 +82,9 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
+              const PackagesCarousel(),
+              const SizedBox(height: 8),
                SectionHeader(title: clientLabel('Categories', 'Kategoria', language)),
               CategoryCardsWidget(
                 onCategoryTap: (category) {
@@ -100,6 +105,9 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               SectionHeader(title: clientLabel('What our customers say', 'Wateja wetu wanasema', language)),
               const ReviewsWidget(),
+              const SizedBox(height: 6),
+              const VendorBannerWidget(),
+              const SizedBox(height: 8),
                SectionHeader(title: clientLabel('Nearby shops', 'Maduka yaliyo karibu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 250,

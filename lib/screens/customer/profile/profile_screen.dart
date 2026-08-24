@@ -94,6 +94,56 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            // Become a Vendor CTA
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Material(
+                color: AppColors.tealMuted,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(color: AppColors.teal.withValues(alpha: 0.2), width: 1.5),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => context.push('/profile/apply-vendor'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.teal,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.store_rounded, size: 20, color: AppColors.cream),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                clientLabel('Become a Vendor', 'Kuwa Muuzaji', language),
+                                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                clientLabel('Start your laundry business on FreshFold', 'Anza biashara yako ya ufagaji kwenye FreshFold', language),
+                                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, size: 22, color: AppColors.teal),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 22), child: Text(clientLabel('ACCOUNT DETAILS', 'TAARIFA ZA AKAUNTI', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)))),
             _SectionLabel(clientLabel('Saved addresses', 'Anwani zilizohifadhiwa', language)),
             Column(

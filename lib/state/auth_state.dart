@@ -30,9 +30,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
   UserRole _parseRole(String role) {
     return switch (role) {
-      'admin' => UserRole.admin,
       'vendor' => UserRole.vendor,
-      'staff' => UserRole.staff,
       'driver' => UserRole.driver,
       _ => UserRole.customer,
     };
@@ -232,10 +230,8 @@ class AuthNotifier extends Notifier<AuthState> {
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
 
 String roleHomePath(UserRole role) => switch (role) {
-  UserRole.admin => '/admin/dashboard',
   UserRole.vendor => '/vendor/dashboard',
-  UserRole.staff => '/staff/dashboard',
-  UserRole.driver => '/staff/dashboard',
+  UserRole.driver => '/vendor/dashboard',
   UserRole.customer || UserRole.guest => '/home',
 };
 

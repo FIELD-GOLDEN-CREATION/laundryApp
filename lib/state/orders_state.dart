@@ -27,6 +27,8 @@ class OrdersNotifier extends Notifier<List<Order>> {
     String fulfillment = 'delivery',
     String driver = '',
     int deliveryFeeTzs = 0,
+    String customerName = '',
+    String customerPhone = '',
   }) {
     _placedCount++;
     final placed = orderStatusForStep(kOrderPlacedStep);
@@ -47,9 +49,18 @@ class OrdersNotifier extends Notifier<List<Order>> {
       fulfillment: fulfillment,
       driver: driver,
       deliveryFeeTzs: deliveryFeeTzs,
+      customerName: customerName,
+      customerPhone: customerPhone,
     );
     state = [order, ...state];
     return order;
+  }
+
+  void updateDeliveryFee(String id, int deliveryFeeTzs) {
+    state = [
+      for (final o in state)
+        if (o.id == id) o.copyWith(deliveryFeeTzs: deliveryFeeTzs) else o,
+    ];
   }
 
   /// Demo-only control (ported from the old global TrackingNotifier.advance)

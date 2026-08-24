@@ -102,6 +102,84 @@ class OrderDetailScreen extends ConsumerWidget {
                     ],
                     const SizedBox(height: 10),
                     _TotalRow(label: clientLabel('Total', 'Jumla', language), value: order.total, strong: true, context: context),
+
+                    // Payment method section
+                    if (order.paymentMethod.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      Text(clientLabel('Payment method', 'Njia ya malipo', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.cream,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.clientBorder(context)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(12)),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                order.paymentMethod.contains('Mobile') ? Icons.phone_android_rounded : Icons.credit_card_rounded,
+                                size: 18,
+                                color: AppColors.teal,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(order.paymentMethod, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    clientLabel('Saved to your profile', 'Imehifadhiwaswa kwenye wasifu wako', language),
+                                    style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.check_circle_rounded, size: 20, color: AppColors.teal),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Customer info (name + phone)
+                    if (order.customerName.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      Text(clientLabel('Your details', 'Maelezo yako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.cream,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.clientBorder(context)),
+                        ),
+                        child: Column(
+                          children: [
+                            _ProfileInfoRow(
+                              icon: Icons.person_outline_rounded,
+                              label: clientLabel('Name', 'Jina', language),
+                              value: order.customerName,
+                            ),
+                            if (order.customerPhone.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              _ProfileInfoRow(
+                                icon: Icons.call_outlined,
+                                label: clientLabel('Phone', 'Simu', language),
+                                value: order.customerPhone,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 18),
                     SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => context.push('/track', extra: order.id), icon: const Icon(Icons.location_on_outlined, size: 17), label: Text(clientLabel('Track order', 'Fuatilia oda', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)), style: FilledButton.styleFrom(backgroundColor: AppColors.teal, foregroundColor: AppColors.cream, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
                   ]),
@@ -127,4 +205,29 @@ class _TotalRow extends StatelessWidget {
   final String label; final String value; final bool strong; final BuildContext context;
   @override
   Widget build(BuildContext _) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: AppText.sans(fontSize: strong ? 15 : 13, fontWeight: strong ? FontWeight.w800 : FontWeight.w600, color: AppColors.clientText(context))), Text(value, style: AppText.sans(fontSize: strong ? 16 : 13, fontWeight: FontWeight.w800, color: strong ? AppColors.teal : AppColors.clientSecondaryText(context)))]);
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  const _ProfileInfoRow({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 17, color: AppColors.teal),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+            const SizedBox(height: 1),
+            Text(value, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+          ],
+        ),
+      ],
+    );
+  }
 }

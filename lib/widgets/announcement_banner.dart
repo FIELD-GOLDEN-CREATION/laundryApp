@@ -47,7 +47,7 @@ class _AnnouncementBannerState extends ConsumerState<AnnouncementBanner> {
   void _openProfile(BuildContext context, UserRole role) {
     if (role == UserRole.customer) {
       context.go('/profile');
-    } else {
+    } else if (role == UserRole.vendor) {
       showAccountSheet(context, ref);
     }
   }

@@ -25,6 +25,8 @@ class Order {
     this.fulfillment = 'delivery',
     this.driver = '',
     this.deliveryFeeTzs = 0,
+    this.customerName = '',
+    this.customerPhone = '',
   });
 
   final String shop;
@@ -35,30 +37,18 @@ class Order {
   final Color statusBg;
   final String date;
   final String total;
-
-  /// How the order was paid, e.g. "Mobile money · M-Pesa" or "Card · Visa •••• 4412".
   final String paymentMethod;
-
-  /// Pickup day/time summary, e.g. "Thu 13, 6 – 8 PM".
   final String pickup;
-
-  /// Pickup address line.
   final String address;
-
-  /// Index into kTrackSteps the order has reached, or kOrderPlacedStep if
-  /// it's been submitted but not yet picked up.
   final int trackStep;
-
   final List<OrderLine> lines;
-
-  /// 'delivery' (driver pickup + delivery) or 'self' (customer drops off at
-  /// the shop as a promise order).
   final String fulfillment;
-
   final String driver;
   final int deliveryFeeTzs;
+  final String customerName;
+  final String customerPhone;
 
-  Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep}) => Order(
+  Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep, int? deliveryFeeTzs}) => Order(
     shop: shop,
     id: id,
     items: items,
@@ -74,7 +64,9 @@ class Order {
     lines: lines,
     fulfillment: fulfillment,
     driver: driver,
-    deliveryFeeTzs: deliveryFeeTzs,
+    deliveryFeeTzs: deliveryFeeTzs ?? this.deliveryFeeTzs,
+    customerName: customerName,
+    customerPhone: customerPhone,
   );
 }
 

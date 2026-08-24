@@ -58,6 +58,10 @@ const kVendorOrdersNew = [
     when: 'Requested 4 min ago',
     total: 'TZS 135,200',
     stage: 'new',
+    fulfillment: 'delivery',
+    subtotalTzs: 135200,
+    customerPhone: '+255 712 345 678',
+    customerAddress: '12 Chole Road, Masaki, Apt 4B',
   ),
   VendorOrder(
     id: '#LD-2491',
@@ -69,6 +73,10 @@ const kVendorOrdersNew = [
     when: 'Requested 11 min ago',
     total: 'TZS 99,840',
     stage: 'new',
+    fulfillment: 'delivery',
+    subtotalTzs: 99840,
+    customerPhone: '+255 765 432 109',
+    customerAddress: '8 Haile Selassie Road, Oysterbay',
   ),
   VendorOrder(
     id: '#LD-2490',
@@ -80,6 +88,10 @@ const kVendorOrdersNew = [
     when: 'Requested 22 min ago',
     total: 'TZS 37,050',
     stage: 'new',
+    fulfillment: 'self',
+    subtotalTzs: 37050,
+    customerPhone: '+255 789 012 345',
+    customerAddress: '',
   ),
 ];
 

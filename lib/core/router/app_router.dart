@@ -2,25 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../screens/admin/admin_client_screen.dart';
-import '../../screens/admin/admin_dashboard_screen.dart';
-import '../../screens/admin/admin_driver_screen.dart';
-import '../../screens/admin/admin_members_screen.dart';
-import '../../screens/admin/admin_orders_screen.dart';
-import '../../screens/admin/admin_reports_screen.dart';
-import '../../screens/admin/admin_settings_screen.dart';
-import '../../screens/admin/admin_vendor_screen.dart';
 import '../../screens/customer/cart/cart_screen.dart';
 import '../../data/mock_data.dart';
 import '../../models/shop.dart';
 import '../../models/laundry_category.dart';
 import '../../screens/customer/checkout/checkout_screen.dart';
 import '../../screens/customer/checkout/order_confirmation_screen.dart';
-import '../../screens/staff/staff_dashboard_screen.dart';
-import '../../screens/staff/staff_orders_screen.dart';
-import '../../screens/staff/staff_members_screen.dart';
-import '../../screens/staff/staff_promos_screen.dart';
-import '../../screens/staff/staff_profile_screen.dart';
 import '../../screens/customer/home/home_screen.dart';
 import '../../screens/login/login_screen.dart';
 import '../../screens/login/register_screen.dart';
@@ -31,6 +18,7 @@ import '../../screens/customer/orders/order_detail_screen.dart';
 import '../../screens/customer/profile/profile_screen.dart';
 import '../../screens/customer/profile/profile_settings_screen.dart';
 import '../../screens/customer/profile/edit_profile_screen.dart';
+import '../../screens/customer/profile/vendor_apply_screen.dart';
 import '../../screens/customer/schedule/schedule_screen.dart';
 import '../../screens/customer/search/search_screen.dart';
 import '../../screens/customer/service/service_vendors_screen.dart';
@@ -93,26 +81,6 @@ final appRouter = GoRouter(
         StatefulShellBranch(routes: [GoRoute(path: '/vendor/earnings', builder: (_, _) => const VendorEarningsScreen())]),
       ],
     ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => _RoleTabShell(shell: navigationShell, items: kAdminTabs),
-      branches: [
-        StatefulShellBranch(routes: [GoRoute(path: '/admin/dashboard', builder: (_, _) => const AdminDashboardScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/admin/orders', builder: (_, _) => const AdminOrdersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/admin/members', builder: (_, _) => const AdminMembersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/admin/reports', builder: (_, _) => const AdminReportsScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/admin/settings', builder: (_, _) => const AdminSettingsScreen())]),
-      ],
-    ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => _RoleTabShell(shell: navigationShell, items: kStaffTabs),
-      branches: [
-        StatefulShellBranch(routes: [GoRoute(path: '/staff/dashboard', builder: (_, _) => const StaffDashboardScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/staff/orders', builder: (_, _) => const StaffOrdersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/staff/members', builder: (_, _) => const StaffMembersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/staff/promos', builder: (_, _) => const StaffPromosScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/staff/profile', builder: (_, _) => const StaffProfileScreen())]),
-      ],
-    ),
     GoRoute(
       path: '/detail',
       builder: (_, state) => ShopDetailScreen(shop: (state.extra as Shop?) ?? kShops.first),
@@ -141,13 +109,11 @@ final appRouter = GoRouter(
     GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
     GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
     GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
+    GoRoute(path: '/profile/apply-vendor', builder: (_, _) => const VendorApplyScreen()),
     GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
     GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
     GoRoute(path: '/vendor/order-detail', builder: (_, _) => const VendorOrderDetailScreen()),
     GoRoute(path: '/vendor/settings', builder: (_, _) => const VendorSettingsScreen()),
-    GoRoute(path: '/admin/client', builder: (_, _) => const AdminClientScreen()),
-    GoRoute(path: '/admin/vendor', builder: (_, _) => const AdminVendorScreen()),
-    GoRoute(path: '/admin/driver', builder: (_, _) => const AdminDriverScreen()),
   ],
 );
 

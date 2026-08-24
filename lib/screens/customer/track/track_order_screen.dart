@@ -178,6 +178,26 @@ class TrackOrderScreen extends ConsumerWidget {
                       ),
                     if (isActive) ...[
                       const SizedBox(height: 14),
+                      // Show "Mark as Delivered" button when order is out for delivery (step 3)
+                      if (step == 3)
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () => _showDeliveredDialog(context, ref, order!, language),
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                            label: Text(
+                              clientLabel('Mark as Delivered', 'Weka kama Imefikishwa', language),
+                              style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.teal,
+                              foregroundColor: AppColors.cream,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
+                        ),
+                      // Demo advance button
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
@@ -209,6 +229,145 @@ class TrackOrderScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, String language) {
+  int rating = 0;
+  final commentController = TextEditingController();
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialogState) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: const Icon(Icons.check_circle_rounded, size: 30, color: AppColors.teal),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                clientLabel('Order Delivered!', 'Oda Imefikishwa!', language),
+                style: AppText.serif(fontSize: 22),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                clientLabel(
+                  'How was your experience with ${order.shop}?',
+                  'Uzoefu wako na ${order.shop} ulikuwaje?',
+                  language,
+                ),
+                textAlign: TextAlign.center,
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setDialogState(() => rating = i + 1),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      size: 36,
+                      color: i < rating ? AppColors.amber : AppColors.creamDark,
+                    ),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.cream,
+                  border: Border.all(color: AppColors.creamDark),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: TextField(
+                  controller: commentController,
+                  maxLines: 3,
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    hintText: clientLabel('Leave a comment (optional)', 'Wacha maoni (si lazima)', language),
+                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => Navigator.of(ctx).pop(),
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          child: Text(
+                            clientLabel('Skip', 'Ruka', language),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: Material(
+                      color: rating > 0 ? AppColors.teal : AppColors.creamDark,
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: rating > 0
+                            ? () {
+                                Navigator.of(ctx).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(clientLabel('Thanks for your feedback!', 'Asante kwa maoni yako!', language)),
+                                    backgroundColor: AppColors.teal,
+                                  ),
+                                );
+                              }
+                            : null,
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          child: Text(
+                            clientLabel('Submit Review', 'Wasilisha Maoni', language),
+                            style: AppText.sans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: rating > 0 ? AppColors.cream : AppColors.muted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ).then((_) => commentController.dispose());
 }
 
 /// Shown instead of the driver card while an order hasn't been picked up

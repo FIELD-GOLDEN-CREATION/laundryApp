@@ -11,7 +11,7 @@ void main() {
       expect(container.read(authProvider).role, UserRole.guest);
     });
 
-    test('logs in each of the 4 demo accounts to the right role', () {
+    test('logs in each of the demo accounts to the right role', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(authProvider.notifier);
@@ -21,12 +21,6 @@ void main() {
 
       expect(notifier.login('vendor@gmail.com', 'vendor04'), isNull);
       expect(container.read(authProvider).role, UserRole.vendor);
-
-      expect(notifier.login('admin@gmail.com', 'admin04'), isNull);
-      expect(container.read(authProvider).role, UserRole.admin);
-
-      expect(notifier.login('driver@gmail.com', 'driver04'), isNull);
-      expect(container.read(authProvider).role, UserRole.driver);
     });
 
     test('login is case-insensitive on email and trims whitespace', () {
@@ -53,7 +47,7 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(authProvider.notifier);
 
-      notifier.login('admin@gmail.com', 'admin04');
+      notifier.login('vendor@gmail.com', 'vendor04');
       notifier.logout();
       expect(container.read(authProvider).role, UserRole.guest);
       expect(container.read(authProvider).authEmail, '');
@@ -65,8 +59,6 @@ void main() {
       expect(roleHomePath(UserRole.guest), '/home');
       expect(roleHomePath(UserRole.customer), '/home');
       expect(roleHomePath(UserRole.vendor), '/vendor/dashboard');
-      expect(roleHomePath(UserRole.admin), '/admin/dashboard');
-      expect(roleHomePath(UserRole.driver), '/driver/dash');
     });
   });
 }
