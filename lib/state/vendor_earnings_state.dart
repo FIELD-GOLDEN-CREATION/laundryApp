@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/review_item.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 import 'catalog_state.dart' show reviewFromJson;
 
 /// One row of the payout history table.
@@ -116,11 +117,11 @@ class VendorEarningsNotifier extends Notifier<VendorEarningsState> {
     try {
       final data = await api.getEarnings();
       state = state.copyWith(
-        balance: (data['balance'] as num?)?.toDouble() ?? 0,
-        totalRevenue: (data['total_revenue'] as num?)?.toDouble() ?? 0,
-        totalPayouts: (data['total_payouts'] as num?)?.toDouble() ?? 0,
-        pendingPayouts: (data['pending_payouts'] as num?)?.toDouble() ?? 0,
-        totalCommission: (data['total_commission'] as num?)?.toDouble() ?? 0,
+        balance: parseDouble(data['balance']) ?? 0,
+        totalRevenue: parseDouble(data['total_revenue']) ?? 0,
+        totalPayouts: parseDouble(data['total_payouts']) ?? 0,
+        pendingPayouts: parseDouble(data['pending_payouts']) ?? 0,
+        totalCommission: parseDouble(data['total_commission']) ?? 0,
         isLoading: false,
       );
     } on ApiException {
@@ -133,7 +134,7 @@ class VendorEarningsNotifier extends Notifier<VendorEarningsState> {
         payouts: [
           for (final j in rows)
             VendorPayout(
-              amountTzs: (j['amount_tzs'] as num?)?.toDouble() ?? 0,
+              amountTzs: parseDouble(j['amount_tzs']) ?? 0,
               method: j['method'] as String? ?? '',
               reference: j['reference'] as String? ?? '',
               status: j['status'] as String? ?? '',

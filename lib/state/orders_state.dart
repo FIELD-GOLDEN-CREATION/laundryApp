@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/order.dart';
 import '../models/order_line.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 /// Active orders, fetched from the API and mutable so Checkout can insert a
 /// freshly placed order at the top and Track can advance its step.
@@ -133,7 +134,7 @@ Order orderFromJson(Map<String, dynamic> j) {
   final lines = (j['items'] as List?)?.map((l) => OrderLine(
     name: l['name'] as String? ?? '',
     qty: l['quantity'] as int? ?? 1,
-    unitPrice: (l['price'] as num?)?.toDouble() ?? 0,
+    unitPrice: parseDouble(l['price']) ?? 0,
   )).toList() ?? [];
 
   return Order(
@@ -152,7 +153,7 @@ Order orderFromJson(Map<String, dynamic> j) {
     lines: lines,
     fulfillment: j['fulfillment'] as String? ?? 'delivery',
     driver: j['driver_name'] as String? ?? '',
-    deliveryFeeTzs: (j['delivery_fee'] as num?)?.toInt() ?? 0,
+    deliveryFeeTzs: parseInt(j['delivery_fee']) ?? 0,
     customerName: j['customer_name'] as String? ?? '',
     customerPhone: j['customer_phone'] as String? ?? '',
   );

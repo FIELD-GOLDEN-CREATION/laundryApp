@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 class VendorAddon {
   const VendorAddon({required this.title, required this.priceTzs, this.id});
@@ -114,8 +115,8 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
       final addons = data.map((j) => VendorAddon(
         id: j['id'] as String?,
         title: j['name'] as String? ?? j['title'] as String? ?? '',
-        priceTzs: (j['price'] as num?)?.toDouble()
-            ?? (j['price_tzs'] as num?)?.toDouble()
+        priceTzs: parseDouble(j['price'])
+            ?? parseDouble(j['price_tzs'])
             ?? 0,
       )).toList();
       state = state.copyWith(addons: addons, isLoading: false);

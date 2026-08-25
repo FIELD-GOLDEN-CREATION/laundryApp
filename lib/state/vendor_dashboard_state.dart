@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 import '../theme/colors.dart';
 
 /// One "needs attention" row from GET /vendor/dashboard's `alerts`.
@@ -129,19 +130,19 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
 
       state = VendorDashboardState(
         shopName: shop['name'] as String? ?? '',
-        ordersToday: (data['orders_today'] as num?)?.toInt() ?? 0,
-        revenueTodayTzs: (data['revenue_today'] as num?)?.toInt() ?? 0,
-        activeOrders: (data['active_orders'] as num?)?.toInt() ?? 0,
-        completedOrders: (data['completed_orders'] as num?)?.toInt() ?? 0,
-        totalCustomers: (data['total_customers'] as num?)?.toInt() ?? 0,
-        ratingAvg: (data['rating_avg'] as num?)?.toDouble() ?? 0,
-        ratingCount: (data['rating_count'] as num?)?.toInt() ?? 0,
+        ordersToday: parseInt(data['orders_today']) ?? 0,
+        revenueTodayTzs: parseInt(data['revenue_today']) ?? 0,
+        activeOrders: parseInt(data['active_orders']) ?? 0,
+        completedOrders: parseInt(data['completed_orders']) ?? 0,
+        totalCustomers: parseInt(data['total_customers']) ?? 0,
+        ratingAvg: parseDouble(data['rating_avg']) ?? 0,
+        ratingCount: parseInt(data['rating_count']) ?? 0,
         weekBars: _weekBars(data['week_bars'] as List?),
         alerts: _alerts(data['alerts'] as List?),
         planName: sub['plan_name'] as String? ?? '',
         planStatus: sub['status'] as String? ?? '',
-        ordersUsed: (sub['orders_used'] as num?)?.toInt() ?? 0,
-        maxOrders: (sub['max_orders_per_month'] as num?)?.toInt() ?? 0,
+        ordersUsed: parseInt(sub['orders_used']) ?? 0,
+        maxOrders: parseInt(sub['max_orders_per_month']) ?? 0,
         periodEnd: sub['current_period_end'] as String? ?? '',
       );
     } on ApiException {
@@ -154,7 +155,7 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
     final rows = (raw ?? []).whereType<Map<String, dynamic>>().toList();
     if (rows.isEmpty) return const [];
     final counts = [
-      for (final r in rows) (r['count'] as num?)?.toInt() ?? 0,
+      for (final r in rows) parseInt(r['count']) ?? 0,
     ];
     final peak = counts.fold<int>(0, (m, c) => c > m ? c : m);
     return [

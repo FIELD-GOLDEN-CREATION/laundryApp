@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/vendor_order.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 import 'vendor_order_detail_state.dart';
 
 class VendorOrdersState {
@@ -101,10 +102,10 @@ class VendorOrdersNotifier extends Notifier<VendorOrdersState> {
       total: j['total'] != null ? 'TZS ${j['total']}' : (j['total_tzs']?.toString() ?? ''),
       stage: j['stage'] as String? ?? 'new',
       fulfillment: j['fulfillment'] as String? ?? 'delivery',
-      deliveryFeeTzs: (j['delivery_fee'] as num?)?.toInt() ?? 0,
+      deliveryFeeTzs: parseInt(j['delivery_fee']) ?? 0,
       customerPhone: j['customer_phone'] as String? ?? '',
       customerAddress: j['delivery_address'] as String? ?? '',
-      subtotalTzs: (j['subtotal'] as num?)?.toInt() ?? 0,
+      subtotalTzs: parseInt(j['subtotal']) ?? 0,
     );
   }
 }

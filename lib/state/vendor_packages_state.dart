@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/service_package.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
   @override
@@ -88,10 +89,10 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
       name: j['name'] as String? ?? '',
       tagline: j['tagline'] as String? ?? '',
       kind: kind,
-      priceTzs: (j['price'] as num?)?.toDouble() ?? 0,
+      priceTzs: parseDouble(j['price']) ?? 0,
       priceUnit: j['price_unit'] as String? ?? '/ pack',
       inclusions: (j['inclusions'] as List?)?.cast<String>() ?? [],
-      compareAtTzs: (j['compare_price'] as num?)?.toDouble(),
+      compareAtTzs: parseDouble(j['compare_price']),
       note: j['note'] as String? ?? '',
       tag: j['tag'] as String? ?? '',
       serviceTags: (j['service_tags'] as List?)?.cast<String>() ?? [],

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/track_step_def.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 const kGarmentLabels = ['Shirts ×4', 'Trousers ×2', 'Dress ×1', 'Linen ×1'];
 const kDamageLabels = [
@@ -120,8 +121,8 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
           for (final j in (data['lines'] as List?)?.whereType<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[])
             DetailLine(
               name: j['item_name'] as String? ?? '',
-              qty: (j['qty'] as num?)?.toInt() ?? 0,
-              unitPriceTzs: (j['unit_price_tzs'] as num?)?.toDouble() ?? 0,
+              qty: parseInt(j['qty']) ?? 0,
+              unitPriceTzs: parseDouble(j['unit_price_tzs']) ?? 0,
               lineType: j['line_type'] as String? ?? '',
             ),
         ],

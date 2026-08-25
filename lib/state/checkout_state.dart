@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 class CheckoutState {
   const CheckoutState({
@@ -75,7 +76,7 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
     state = state.copyWith(isValidatingPromo: true, promoError: '');
     try {
       final data = await api.validatePromo(code, shopId, subtotal);
-      final discount = (data['discount'] as num?)?.toDouble() ?? 0;
+      final discount = parseDouble(data['discount']) ?? 0;
       state = state.copyWith(
         appliedPromoCode: code,
         promoError: '',
@@ -107,7 +108,7 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
   Future<void> loadDeliveryFee(String shopId, String address) async {
     try {
       final data = await api.getDeliveryFee(shopId, address);
-      final fee = (data['fee'] as num?)?.toDouble() ?? 0;
+      final fee = parseDouble(data['fee']) ?? 0;
       state = state.copyWith(deliveryFee: fee);
     } on ApiException {
       // Keep default

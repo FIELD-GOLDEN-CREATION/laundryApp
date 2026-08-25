@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/promo_offer.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 class CartPromoState {
   const CartPromoState({
@@ -57,7 +58,7 @@ class CartPromoNotifier extends Notifier<CartPromoState> {
     state = state.copyWith(isValidating: true, promoError: '');
     try {
       final data = await api.validatePromo(code, shopId, subtotal);
-      final discount = (data['discount'] as num?)?.toDouble() ?? 0;
+      final discount = parseDouble(data['discount']) ?? 0;
       final promoData = data['promo'] as Map<String, dynamic>?;
       final promo = promoData != null
           ? PromoOffer(
@@ -65,7 +66,7 @@ class CartPromoNotifier extends Notifier<CartPromoState> {
               code: promoData['code'] as String? ?? code,
               title: promoData['title'] as String? ?? '',
               description: promoData['description'] as String? ?? '',
-              discountValue: (promoData['discount_value'] as num?)?.toDouble() ?? discount,
+              discountValue: parseDouble(promoData['discount_value']) ?? discount,
               isPercentage: promoData['is_percentage'] as bool? ?? false,
               expiresAt: promoData['expires_at'] != null
                   ? DateTime.tryParse(promoData['expires_at'] as String) ?? DateTime.now().add(const Duration(days: 7))

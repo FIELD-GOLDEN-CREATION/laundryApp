@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/promo_offer.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 class VendorPromosState {
   const VendorPromosState({
@@ -176,7 +177,7 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       code: j['code'] as String? ?? '',
       title: j['title'] as String? ?? '',
       description: j['description'] as String? ?? '',
-      discountValue: (j['discount_value'] as num?)?.toDouble() ?? 0,
+      discountValue: parseDouble(j['discount_value']) ?? 0,
       isPercentage: j['is_percentage'] as bool? ?? true,
       expiresAt: j['expires_at'] != null
           ? DateTime.tryParse(j['expires_at'] as String) ?? DateTime.now().add(const Duration(days: 7))
@@ -184,7 +185,7 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       imageUrl: j['image_url'] as String? ?? '',
       vendorName: j['vendor_name'] as String? ?? '',
       vendorId: j['vendor_id'] as String?,
-      minSpend: (j['min_spend'] as num?)?.toDouble() ?? 0,
+      minSpend: parseDouble(j['min_spend']) ?? 0,
       appliesTo: _parseAppliesTo(j['applies_to'] as String?),
       targetCategory: j['target_category'] as String?,
       targetItem: j['target_item'] as String?,

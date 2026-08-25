@@ -9,6 +9,7 @@ import '../models/review_item.dart';
 import '../models/service_package.dart';
 import '../models/shop.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 // ── JSON → model mappers shared by every catalog screen ─────────────────
 
@@ -23,7 +24,7 @@ Shop shopFromJson(Map<String, dynamic> j) {
     slotId: '${j['id']}',
     listSlotId: '${j['slug'] ?? j['id']}',
     name: j['name'] as String? ?? '',
-    rating: ((j['rating_avg'] as num?)?.toDouble() ?? 0).toStringAsFixed(1),
+    rating: (parseNum(j['rating_avg'])?.toDouble() ?? 0).toStringAsFixed(1),
     meta: (j['services'] as List?)?.isNotEmpty == true
         ? (j['services'][0]['name'] as String? ?? '')
         : (j['address'] as String? ?? ''),
@@ -42,7 +43,7 @@ Shop shopFromJson(Map<String, dynamic> j) {
       ...(j['services'] as List?)?.map((s) => s['name'] as String? ?? '').where((s) => s.isNotEmpty) ?? <String>[],
     ],
     services: (j['services'] as List?)?.map((s) => s['name'] as String? ?? '').toList() ?? [],
-    ratingValue: (j['rating_avg'] as num?)?.toDouble() ?? 0,
+    ratingValue: parseNum(j['rating_avg'])?.toDouble() ?? 0,
     priceFromTzs: 0,
     distanceKm: _distanceKm(lat, lng),
     is24h: is24h,
@@ -77,18 +78,18 @@ PromoOffer promoFromJson(Map<String, dynamic> j) {
     code: j['code'] as String? ?? '',
     title: j['title'] as String? ?? '',
     description: j['description'] as String? ?? '',
-    discountValue: (j['discount_value'] as num?)?.toDouble() ?? 0,
+    discountValue: parseNum(j['discount_value'])?.toDouble() ?? 0,
     isPercentage: j['is_percentage'] as bool? ?? false,
     expiresAt: DateTime.tryParse(j['expires_at'] as String? ?? '') ?? DateTime.now().add(const Duration(days: 30)),
     imageUrl: '',
     vendorName: j['shop'] != null ? j['shop']['name'] as String? ?? '' : 'FreshFold',
     vendorId: j['shop_id'] != null ? '${j['shop_id']}' : null,
-    minSpend: (j['min_spend_tzs'] as num?)?.toDouble() ?? 0,
+    minSpend: parseNum(j['min_spend_tzs'])?.toDouble() ?? 0,
     appliesTo: appliesTo,
     targetCategory: j['target_category_id'] != null ? '${j['target_category_id']}' : null,
     targetItem: j['target_item_id'] != null ? '${j['target_item_id']}' : null,
-    maxRedemptions: (j['max_redemptions'] as num?)?.toInt(),
-    currentRedemptions: (j['redemptions_count'] as num?)?.toInt() ?? 0,
+    maxRedemptions: parseNum(j['max_redemptions'])?.toInt(),
+    currentRedemptions: parseNum(j['redemptions_count'])?.toInt() ?? 0,
     isActive: j['is_active'] as bool? ?? true,
   );
 }
@@ -111,9 +112,9 @@ LaundryItem itemFromJson(Map<String, dynamic> j) {
     nameSwahili: j['name_swahili'] as String? ?? '',
     description: j['description'] as String? ?? '',
     imageUrl: j['image_url'] as String? ?? '',
-    priceTzs: (j['price_tzs'] as num?)?.toDouble() ??
-        (j['vendor_price'] as num?)?.toDouble() ??
-        (j['default_price_tzs'] as num?)?.toDouble() ??
+    priceTzs: parseNum(j['price_tzs'])?.toDouble() ??
+        parseNum(j['vendor_price'])?.toDouble() ??
+        parseNum(j['default_price_tzs'])?.toDouble() ??
         0,
     unit: j['unit'] as String? ?? 'per piece',
     isAvailable: j['is_available'] as bool? ?? true,
@@ -134,14 +135,14 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
     name: j['name'] as String? ?? '',
     tagline: j['tagline'] as String? ?? '',
     kind: kind,
-    priceTzs: (j['price_tzs'] as num?)?.toDouble() ?? 0,
+    priceTzs: parseNum(j['price_tzs'])?.toDouble() ?? 0,
     priceUnit: j['price_unit'] as String? ?? '/ bag',
     inclusions: (j['inclusions'] as List?)
             ?.map((e) => e is Map<String, dynamic> ? e['label'] as String? ?? '' : '$e')
             .where((s) => s.isNotEmpty)
             .toList() ??
         [],
-    compareAtTzs: (j['compare_at_tzs'] as num?)?.toDouble(),
+    compareAtTzs: parseNum(j['compare_at_tzs'])?.toDouble(),
     note: j['note'] as String? ?? '',
     tag: j['tag'] as String? ?? '',
     serviceTags: (j['service_tags'] as List?)
@@ -157,8 +158,8 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
               return PackageItem(
                 itemId: '${e['item_id'] ?? item?['id'] ?? ''}',
                 itemName: item?['name'] as String? ?? e['name'] as String? ?? '',
-                qty: (e['qty'] as num?)?.toInt() ?? 0,
-                unitPrice: (item?['default_price_tzs'] as num?)?.toDouble() ?? 0,
+                qty: parseNum(e['qty'])?.toInt() ?? 0,
+                unitPrice: parseDouble(item?['default_price_tzs']) ?? 0,
               );
             })
             .whereType<PackageItem>()
@@ -168,7 +169,7 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
 }
 
 ReviewItem reviewFromJson(Map<String, dynamic> j) {
-  final rating = (j['rating'] as num?)?.toDouble() ?? 5;
+  final rating = parseDouble(j['rating']) ?? 5;
   final customer = j['customer'] as Map<String, dynamic>?;
   return ReviewItem(
     name: customer?['name'] as String? ?? 'Customer',
@@ -335,7 +336,7 @@ class ItemOffersNotifier extends Notifier<Map<String, ItemOffer>> {
           shopName: best['shop_name'] as String? ?? '',
           shopSlug: best['shop_slug'] as String? ?? '',
           imageUrl: best['image_url'] as String? ?? '',
-          priceTzs: (best['price_tzs'] as num?)?.toDouble() ?? 0,
+          priceTzs: parseDouble(best['price_tzs']) ?? 0,
         ),
       };
     } on ApiException {
@@ -369,7 +370,7 @@ final shopDetailProvider = FutureProvider.family<List<MenuItem>, String>((ref, s
           initial: (vi['item']?['name'] as String?)?.isNotEmpty == true
               ? (vi['item']['name'] as String)[0].toUpperCase()
               : '?',
-          price: (vi['price_tzs'] as num?)?.toDouble() ?? 0,
+          price: parseDouble(vi['price_tzs']) ?? 0,
         ),
   ];
 });
