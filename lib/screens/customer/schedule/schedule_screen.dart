@@ -98,7 +98,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final day = days[schedule.dayIndex.clamp(0, days.length - 1)];
     final pickupSummary = '${day.dow} ${day.num}, ${kTimeSlots[schedule.slotIndex]}';
 
-    final order = placeCurrentOrder(
+    final order = await placeCurrentOrder(
       ref,
       paymentMethod: '',
       pickup: pickupSummary,

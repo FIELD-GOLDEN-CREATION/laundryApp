@@ -327,9 +327,9 @@ class CheckoutScreen extends ConsumerWidget {
       bottomNavigationBar: PrimaryCtaBar(
         label: clientLabel('Place order', 'Weka oda', language),
         hint: formatMoney(total.toDouble()),
-        onPressed: () {
-          if (gateGuest(ref, context, 'Log in to place your order â€” guests can browse everything else.')) return;
-          final order = placeCurrentOrder(
+        onPressed: () async {
+          if (gateGuest(ref, context, 'Log in to place your order â€" guests can browse everything else.')) return;
+          final order = await placeCurrentOrder(
             ref,
             paymentMethod: _paymentLabel(checkout, selectedCard, fulfillment.isDelivery),
             pickup: pickupSummary,
@@ -542,7 +542,7 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
-    final order = placeCurrentOrder(
+    final order = await placeCurrentOrder(
       ref,
       paymentMethod: paymentMethod,
       pickup: widget.pickup,
@@ -835,9 +835,9 @@ class _MobileMoneySheetState extends ConsumerState<_MobileMoneySheet> {
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
-final order = placeCurrentOrder(
+final order = await placeCurrentOrder(
       ref,
-      paymentMethod: 'Mobile money Â· ${provider.name}',
+      paymentMethod: 'Mobile money · ${provider.name}',
       pickup: widget.pickup,
       address: widget.address,
       total: widget.total,
