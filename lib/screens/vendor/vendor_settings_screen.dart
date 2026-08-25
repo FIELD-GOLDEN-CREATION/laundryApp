@@ -3,13 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
-import '../../data/vendor_mock_data.dart';
 import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/placeholder_image.dart';
 import '../../widgets/round_back_button.dart';
 import '../../widgets/toggle_switch.dart';
+
+/// Pure UI config — the opening/closing time picker options.
+const _kVendorTimeOptions = [
+  '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+  '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM',
+  '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM',
+];
 
 /// The vendor-facing settings hub, reached from the account sheet's
 /// "Settings" button. Mirrors the layout/design language of
@@ -44,7 +50,7 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
                 height: 320,
                 child: ListView(
                   children: [
-                    for (final option in kVendorTimeOptions)
+                    for (final option in _kVendorTimeOptions)
                       ListTile(
                         title: Text(option, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
                         trailing: option == value ? const Icon(Icons.check_rounded, color: AppColors.teal) : null,

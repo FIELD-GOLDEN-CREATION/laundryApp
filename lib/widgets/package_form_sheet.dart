@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/laundry_categories_data.dart';
-import '../data/vendor_mock_data.dart';
 import '../models/laundry_category.dart';
 import '../models/service_package.dart';
+import '../state/catalog_state.dart';
 import '../theme/colors.dart';
 import '../theme/text_styles.dart';
 import '../utils/currency.dart';
@@ -30,14 +32,14 @@ Future<ServicePackage?> showPackageFormSheet(BuildContext context) {
 /// after `showModalBottomSheet`'s future resolves, so controllers disposed
 /// alongside that future get used after disposal. Owning them here ties
 /// their lifetime to the subtree that actually reads them.
-class _PackageForm extends StatefulWidget {
+class _PackageForm extends ConsumerStatefulWidget {
   const _PackageForm();
 
   @override
-  State<_PackageForm> createState() => _PackageFormState();
+  ConsumerState<_PackageForm> createState() => _PackageFormState();
 }
 
-class _PackageFormState extends State<_PackageForm> {
+class _PackageFormState extends ConsumerState<_PackageForm> {
   final _name = TextEditingController();
   final _tagline = TextEditingController();
   final _price = TextEditingController();
@@ -49,11 +51,33 @@ class _PackageFormState extends State<_PackageForm> {
   final Map<String, int> _packageItemQty = {}; // itemId -> qty
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (ref.read(categoriesProvider).items.isEmpty) {
+        ref.read(categoriesProvider.notifier).load(withItems: true);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     for (final controller in [_name, _tagline, _price, _unit, _note]) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  /// Every catalog item across categories — the live replacement for the
+  /// old static menu-price rows.
+  List<LaundryItem> get _allItems =>
+      ref.watch(categoriesProvider).items.expand((c) => c.items).toList();
+
+  LaundryItem? _itemById(String itemId) {
+    for (final item in _allItems) {
+      if (item.id == itemId) return item;
+    }
+    return null;
   }
 
   double get _priceTzs => double.tryParse(_price.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
@@ -66,7 +90,7 @@ class _PackageFormState extends State<_PackageForm> {
     final packageItems = <PackageItem>[];
     for (final entry in _packageItemQty.entries) {
       if (entry.value > 0) {
-        final item = getItemById(entry.key);
+        final item = _itemById(entry.key);
         if (item != null) {
           packageItems.add(PackageItem(
             itemId: item.id,
@@ -97,7 +121,13 @@ class _PackageFormState extends State<_PackageForm> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _InclusionsSheet(selected: _inclusions),
+      builder: (_) => Consumer(builder: (_, ref, _) {
+        final names = [
+          for (final item in ref.watch(categoriesProvider).items.expand((c) => c.items))
+            if (item.name.isNotEmpty) item.name,
+        ];
+        return _InclusionsSheet(selected: _inclusions, options: names.toSet().toList());
+      }),
     );
     if (picked != null) setState(() => _inclusions = picked);
   }
@@ -107,7 +137,12 @@ class _PackageFormState extends State<_PackageForm> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _PackageItemsSheet(selected: Map.of(_packageItemQty)),
+      builder: (_) => Consumer(builder: (_, ref, _) {
+        return _PackageItemsSheet(
+          selected: Map.of(_packageItemQty),
+          categories: ref.watch(categoriesProvider).items,
+        );
+      }),
     );
     if (picked != null) {
       setState(() => _packageItemQty
@@ -242,7 +277,7 @@ class _PackageFormState extends State<_PackageForm> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${entry.value}× ${getItemById(entry.key)?.name ?? entry.key}',
+                            '${entry.value}× ${_itemById(entry.key)?.name ?? entry.key}',
                             style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal),
                           ),
                         ),
@@ -403,12 +438,13 @@ class _Field extends StatelessWidget {
 }
 
 /// Multi-select checklist for a package's inclusions — sourced from the
-/// vendor's own menu pricing rather than free text, so a package can never
-/// claim to include a service the vendor doesn't actually offer.
+/// live catalog items rather than free text, so a package can never claim
+/// to include a service the vendor doesn't actually offer.
 class _InclusionsSheet extends StatefulWidget {
-  const _InclusionsSheet({required this.selected});
+  const _InclusionsSheet({required this.selected, required this.options});
 
   final List<String> selected;
+  final List<String> options;
 
   @override
   State<_InclusionsSheet> createState() => _InclusionsSheetState();
@@ -423,8 +459,8 @@ class _InclusionsSheetState extends State<_InclusionsSheet> {
 
   void _done() {
     Navigator.of(context).pop([
-      for (final row in kMenuPriceRows)
-        if (_picked.contains(row.name)) row.name,
+      for (final name in widget.options)
+        if (_picked.contains(name)) name,
     ]);
   }
 
@@ -455,52 +491,62 @@ class _InclusionsSheetState extends State<_InclusionsSheet> {
                 ),
                 Text('Includes', style: AppText.serif(fontSize: 22)),
                 const SizedBox(height: 3),
-                Text(
-                  'Pick from the services in your menu pricing.',
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: AppColors.creamDark),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < kMenuPriceRows.length; i++)
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _toggle(kMenuPriceRows[i].name),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: i == kMenuPriceRows.length - 1 ? Colors.transparent : AppColors.cream,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  _InclusionCheckbox(checked: _picked.contains(kMenuPriceRows[i].name)),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      kMenuPriceRows[i].name,
-                                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                 Text(
+                   'Pick from the services in your catalog.',
+                   style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                 ),
+                 const SizedBox(height: 14),
+                 widget.options.isEmpty
+                     ? Padding(
+                         padding: const EdgeInsets.symmetric(vertical: 24),
+                         child: Center(
+                           child: Text(
+                             'No catalog items yet.',
+                             style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                           ),
+                         ),
+                       )
+                     : Container(
+                         decoration: BoxDecoration(
+                           color: Colors.white,
+                           border: Border.all(color: AppColors.creamDark),
+                           borderRadius: BorderRadius.circular(18),
+                         ),
+                         clipBehavior: Clip.antiAlias,
+                         child: Column(
+                           children: [
+                             for (var i = 0; i < widget.options.length; i++)
+                               Material(
+                                 color: Colors.transparent,
+                                 child: InkWell(
+                                   onTap: () => _toggle(widget.options[i]),
+                                   child: Container(
+                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                     decoration: BoxDecoration(
+                                       border: Border(
+                                         bottom: BorderSide(
+                                           color: i == widget.options.length - 1 ? Colors.transparent : AppColors.cream,
+                                         ),
+                                       ),
+                                     ),
+                                     child: Row(
+                                       children: [
+                                         _InclusionCheckbox(checked: _picked.contains(widget.options[i])),
+                                         const SizedBox(width: 12),
+                                         Expanded(
+                                           child: Text(
+                                             widget.options[i],
+                                             style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                                           ),
+                                         ),
+                                       ],
+                                     ),
+                                   ),
+                                 ),
+                               ),
+                           ],
+                         ),
+                       ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -548,10 +594,11 @@ class _InclusionCheckbox extends StatelessWidget {
 
 /// Multi-select sheet for picking items with quantities for a package.
 /// Each item shows a stepper (+/−) so the vendor can set how many of each
-/// garment goes into the bundle.
+/// garment goes into the bundle. Items come from the live catalog provider.
 class _PackageItemsSheet extends StatefulWidget {
-  const _PackageItemsSheet({required this.selected});
+  const _PackageItemsSheet({required this.selected, required this.categories});
   final Map<String, int> selected;
+  final List<LaundryCategory> categories;
 
   @override
   State<_PackageItemsSheet> createState() => _PackageItemsSheetState();
@@ -607,17 +654,28 @@ class _PackageItemsSheetState extends State<_PackageItemsSheet> {
                   ),
                 ),
                 Text('Package Items', style: AppText.serif(fontSize: 22)),
-                const SizedBox(height: 3),
-                Text(
-                  'Select items and set quantities for this package.',
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
-                ),
-                const SizedBox(height: 14),
-                ...kLaundryCategories.map((cat) => _CategorySection(
-                  category: cat,
-                  qty: _qty,
-                  onSetQty: _setQty,
-                )),
+                 const SizedBox(height: 3),
+                 Text(
+                   'Select items and set quantities for this package.',
+                   style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                 ),
+                 const SizedBox(height: 14),
+                 if (widget.categories.isEmpty)
+                   Padding(
+                     padding: const EdgeInsets.symmetric(vertical: 24),
+                     child: Center(
+                       child: Text(
+                         'No catalog items yet.',
+                         style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                       ),
+                     ),
+                   )
+                 else
+                   ...widget.categories.map((cat) => _CategorySection(
+                     category: cat,
+                     qty: _qty,
+                     onSetQty: _setQty,
+                   )),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,

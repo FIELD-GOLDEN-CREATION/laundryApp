@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/mock_data.dart';
 import '../../../models/laundry_category.dart';
 import '../../../models/shop.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -12,15 +12,36 @@ import '../../../utils/currency.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
 
-class CategoryDetailScreen extends ConsumerWidget {
+class CategoryDetailScreen extends ConsumerStatefulWidget {
   const CategoryDetailScreen({super.key, required this.category});
 
   final LaundryCategory category;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoryDetailScreen> createState() => _CategoryDetailScreenState();
+}
+
+class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(shopsProvider.notifier).load();
+      // Load per-vendor offers for every item in this category.
+      for (final item in widget.category.items) {
+        ref.read(itemOffersProvider.notifier).loadFor(item.id);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final category = widget.category;
     final language = ref.watch(clientPreferencesProvider).language;
     final dark = AppColors.isClientDark(context);
+    final offers = ref.watch(itemOffersProvider);
+    final shops = ref.watch(shopsProvider).items;
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -70,17 +91,24 @@ class CategoryDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   ...category.items.map((item) {
-                    final shopWithItem = _findCheapestShopForItem(item.id);
-                    final vendorPrice = shopWithItem?.$2 ?? item.priceTzs;
-                    final vendorShop = shopWithItem?.$1;
+                    final offer = offers[item.id];
+                    Shop? vendorShop;
+                    if (offer != null) {
+                      for (final s in shops) {
+                        if (s.slotId == offer.shopId || s.listSlotId == offer.shopSlug || s.name == offer.shopName) {
+                          vendorShop = s;
+                          break;
+                        }
+                      }
+                    }
                     return _CategoryItemCard(
                       item: item,
                       language: language,
                       dark: dark,
-                      vendorPrice: vendorPrice,
-                      shopName: vendorShop?.name,
+                      vendorPrice: offer?.priceTzs ?? item.priceTzs,
+                      shopName: vendorShop?.name ?? offer?.shopName,
                       onTap: vendorShop != null
-                          ? () => context.push('/detail', extra: vendorShop)
+                          ? () => context.push('/detail', extra: vendorShop!)
                           : () {},
                     );
                   }),
@@ -100,62 +128,6 @@ class CategoryDetailScreen extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// Returns (Shop, price) for the cheapest shop that offers this item, or null.
-(Shop, double)? _findCheapestShopForItem(String itemId) {
-  (Shop, double)? cheapest;
-  for (final shop in kShops) {
-    final menuItem = kMenuItems.where((m) => m.key == itemId).firstOrNull;
-    if (menuItem != null) {
-      if (cheapest == null || menuItem.price < cheapest.$2) {
-        cheapest = (shop, menuItem.price);
-      }
-    }
-    // Map category item IDs to menu items
-    final mappedKey = _itemToMenuKey(itemId);
-    if (mappedKey != null) {
-      final mappedItem = kMenuItems.where((m) => m.key == mappedKey).firstOrNull;
-      if (mappedItem != null) {
-        if (cheapest == null || mappedItem.price < cheapest.$2) {
-          cheapest = (shop, mappedItem.price);
-        }
-      }
-    }
-  }
-  // Return first shop as fallback if no match found
-  return cheapest ?? (kShops.first, kMenuItems.first.price);
-}
-
-String? _itemToMenuKey(String itemId) {
-  const mapping = {
-    'tshirt-polo': 'shirt',
-    'casual-shirt': 'shirt',
-    'trousers-jeans': 'trouser',
-    'shorts-skirt': 'shirt',
-    'underwear-socks': 'shirt',
-    'suit-2piece': 'dress',
-    'suit-3piece': 'dress',
-    'suit-jacket': 'dress',
-    'heavy-coat': 'dress',
-    'sweater-cardigan': 'dress',
-    'evening-gown': 'dress',
-    'wedding-dress': 'dress',
-    'sneakers': 'shirt',
-    'leather-shoes': 'dress',
-    'suede-shoes': 'dress',
-    'backpack-duffel': 'shirt',
-    'handbag-leather': 'dress',
-    'blanket-single': 'bed',
-    'blanket-duvet': 'bed',
-    'bedsheet': 'bed',
-    'duvet-cover': 'bed',
-    'pillow-cushion': 'bed',
-    'curtains': 'bed',
-    'bulk-wash-kg': 'shirt',
-    'ironing-only': 'shirt',
-  };
-  return mapping[itemId];
 }
 
 class _HeroSection extends StatefulWidget {

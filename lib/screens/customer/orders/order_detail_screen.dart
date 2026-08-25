@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/mock_data.dart';
 import '../../../models/order.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/orders_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/cart_math.dart';
 import '../../../widgets/curved_clipper.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
@@ -16,18 +17,31 @@ class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, this.orderId});
   final String? orderId;
 
-  Order _findOrder(WidgetRef ref) {
-    final active = ref.read(ordersProvider);
-    for (final order in [...active, ...kCompletedOrders]) {
+  Order? _findOrder(WidgetRef ref) {
+    final active = ref.watch(ordersProvider);
+    final completed = ref.watch(completedOrdersProvider);
+    for (final order in [...active, ...completed]) {
       if (order.id == orderId) return order;
     }
-    return active.isNotEmpty ? active.first : kCompletedOrders.first;
+    return active.isNotEmpty ? active.first : (completed.isNotEmpty ? completed.first : null);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Ensure both lists are loaded so the requested order can resolve.
+    ref.listen(ordersProvider, (_, _) {});
+    Future.microtask(() {
+      ref.read(ordersProvider.notifier).loadOrders();
+      ref.read(completedOrdersProvider.notifier).loadOrders();
+      ref.read(shopsProvider.notifier).load();
+    });
     final order = _findOrder(ref);
     final language = ref.watch(clientPreferencesProvider).language;
+
+    if (order == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+
     final dark = AppColors.isClientDark(context);
     final surface = AppColors.clientSurface(context);
     final status = order.fulfillment == 'self' ? selfOrderStatusForStep(order.trackStep) : orderStatusForStep(order.trackStep);
@@ -77,7 +91,7 @@ class OrderDetailScreen extends ConsumerWidget {
                       decoration: BoxDecoration(color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.cream, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.clientBorder(context))),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
-                          SizedBox(width: 58, height: 58, child: RemoteImage(url: shopByName(order.shop)?.imageUrl ?? '', fallback: 'Laundry', borderRadius: 14)),
+                          SizedBox(width: 58, height: 58, child: RemoteImage(url: ref.watch(shopsProvider).items.where((s) => s.name == order.shop).map((s) => s.imageUrl).firstOrNull ?? '', fallback: 'Laundry', borderRadius: 14)),
                           const SizedBox(width: 12),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(order.shop, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))), const SizedBox(height: 3), Text(order.items, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)))])),
                           Text(order.total, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal)),

@@ -1,18 +1,20 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/mock_data.dart';
 import '../../../models/menu_item.dart';
 import '../../../models/service_package.dart';
+import '../../../models/shop.dart';
 import '../../../state/cart_addons_state.dart';
 import '../../../state/cart_state.dart';
 import '../../../state/cart_promo_state.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/fulfillment_state.dart';
 import '../../../state/vendor_catalog_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/cart_math.dart';
 import '../../../widgets/curved_clipper.dart';
 import '../../../widgets/round_back_button.dart';
 
@@ -25,11 +27,11 @@ class CartScreen extends ConsumerWidget {
     final notifier = ref.read(cartProvider.notifier);
     final fulfillment = ref.watch(fulfillmentProvider);
     final language = ref.watch(clientPreferencesProvider).language;
-    final extra = fulfillment.extraItems.values.toList();
+    final priced = fulfillment.pricedItems;
     final pkg = ref.watch(cartPackageProvider);
     final pkgNotifier = ref.read(cartPackageProvider.notifier);
-    final lines = [...kMenuItems, ...extra].where((i) => (qty[i.key] ?? 0) > 0).toList();
-    final subtotal = cartSubtotal(qty, extra);
+    final lines = priced.where((i) => (qty[i.key] ?? 0) > 0).toList();
+    final subtotal = cartSubtotal(qty, [], priced);
     final delivery = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
     final promoState = ref.watch(cartPromoProvider);
     final discount = promoState.discountAmount;
@@ -40,10 +42,19 @@ class CartScreen extends ConsumerWidget {
     final addonTotal = cartAddonsNotifier.totalFor(vendorAddons);
     final total = (subtotal - discount).clamp(0.0, double.infinity) + delivery + addonTotal;
 
-    // Back to the shop the basket already belongs to. Without the `extra`
-    // the Detail route falls back to `kShops.first`, which would then trip
-    // the "start a new basket?" guard on the customer's own items.
-    void openBasketShop() => context.push('/detail', extra: shopByName(fulfillment.shop));
+    // Back to the shop the basket already belongs to â€” resolved from the
+    // live shop list by name.
+    void openBasketShop() {
+      final shops = ref.read(shopsProvider).items;
+      Shop? match;
+      for (final s in shops) {
+        if (s.name == fulfillment.shop) {
+          match = s;
+          break;
+        }
+      }
+      if (match != null) context.push('/detail', extra: match);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.isClientDark(context) ? const Color(0xFF0A1117) : AppColors.cream,
@@ -67,7 +78,7 @@ class CartScreen extends ConsumerWidget {
                   child: Row(children: [
                     const Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.amber),
                     const SizedBox(width: 5),
-                    Text('${cartItemCount(qty, extra)}', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.amber)),
+                    Text('${cartItemCount(qty, [], priced)}', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.amber)),
                   ]),
                 ),
               ]),
@@ -99,7 +110,7 @@ class CartScreen extends ConsumerWidget {
                           Expanded(child: _FulfillmentTile(
                             icon: Icons.storefront_outlined,
                             title: clientLabel('Self drop-off', 'Unapeleka mwenyewe', language),
-                            sub: clientLabel('Promise order — you take it to the shop', 'Oda ya ahadi — unapeleka dukani', language),
+                            sub: clientLabel('Promise order â€” you take it to the shop', 'Oda ya ahadi â€” unapeleka dukani', language),
                             time: clientLabel('Free, no delivery fee', 'Bure, hakuna nauli', language),
                             selected: !fulfillment.isDelivery,
                             onTap: () => ref.read(fulfillmentProvider.notifier).setMode('self'),
@@ -109,7 +120,7 @@ class CartScreen extends ConsumerWidget {
                         Row(children: [
                           Text(pkg != null ? clientLabel('Additional items', 'Vitu nyongeza', language) : clientLabel('Your items', 'Vitu vyako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                           const Spacer(),
-                          Text('${cartItemCount(qty, extra)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                          Text('${cartItemCount(qty, [], priced)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
                         ]),
                         const SizedBox(height: 10),
                         for (final item in lines) ...[
@@ -243,7 +254,7 @@ class _PackageBundleCard extends StatelessWidget {
                 for (final pi in pkg.packageItems) ...[
                   Row(
                     children: [
-                      Text('${pi.qty}×', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                      Text('${pi.qty}Ã—', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal)),
                       const SizedBox(width: 8),
                       Expanded(child: Text(pi.itemName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate))),
                       Text(formatMoney(pi.lineTotal), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.slate)),
@@ -420,7 +431,7 @@ class _CartRow extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  _StepButton(symbol: '−', bg: AppColors.clientSurfaceRaised(context), fg: AppColors.teal, onTap: () => notifier.setQty(item.key, -1)),
+                  _StepButton(symbol: 'âˆ’', bg: AppColors.clientSurfaceRaised(context), fg: AppColors.teal, onTap: () => notifier.setQty(item.key, -1)),
                   SizedBox(
                     width: 26,
                     child: Text('$qty', textAlign: TextAlign.center, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
@@ -634,7 +645,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                       ),
                       onChanged: (v) => notifier.setPromo(v),
-                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal),
+                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal, ''),
                     ),
                   ),
                   Container(
@@ -646,7 +657,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                       child: InkWell(
                         onTap: () {
                           _focusNode.unfocus();
-                          notifier.applyPromo(widget.subtotal);
+                          notifier.applyPromo(widget.subtotal, '');
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -689,8 +700,8 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
     final promo = state.appliedPromo!;
     if (promo.isPercentage) {
       return clientLabel(
-        '${promo.discountValue.round()}% off · Save ${formatMoney(state.discountAmount)}',
-        'Punguzo la ${promo.discountValue.round()}% · Okoa ${formatMoney(state.discountAmount)}',
+        '${promo.discountValue.round()}% off Â· Save ${formatMoney(state.discountAmount)}',
+        'Punguzo la ${promo.discountValue.round()}% Â· Okoa ${formatMoney(state.discountAmount)}',
         lang,
       );
     }

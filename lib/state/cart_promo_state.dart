@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/promo_mock_data.dart';
 import '../models/promo_offer.dart';
+import '../services/api_service.dart';
 
 class CartPromoState {
   const CartPromoState({
@@ -10,6 +10,7 @@ class CartPromoState {
     this.promoError = '',
     this.discountAmount = 0,
     this.appliedPromo,
+    this.isValidating = false,
   });
 
   final String promo;
@@ -17,6 +18,7 @@ class CartPromoState {
   final String promoError;
   final double discountAmount;
   final PromoOffer? appliedPromo;
+  final bool isValidating;
 
   bool get hasPromo => appliedPromoId != null;
 
@@ -26,14 +28,17 @@ class CartPromoState {
     String? promoError,
     double? discountAmount,
     PromoOffer? appliedPromo,
+    bool? isValidating,
     bool clearPromo = false,
-  }) => CartPromoState(
-    promo: promo ?? this.promo,
-    appliedPromoId: clearPromo ? null : (appliedPromoId ?? this.appliedPromoId),
-    promoError: promoError ?? this.promoError,
-    discountAmount: clearPromo ? 0 : (discountAmount ?? this.discountAmount),
-    appliedPromo: clearPromo ? null : (appliedPromo ?? this.appliedPromo),
-  );
+  }) =>
+      CartPromoState(
+        promo: promo ?? this.promo,
+        appliedPromoId: clearPromo ? null : (appliedPromoId ?? this.appliedPromoId),
+        promoError: promoError ?? this.promoError,
+        discountAmount: clearPromo ? 0 : (discountAmount ?? this.discountAmount),
+        appliedPromo: clearPromo ? null : (appliedPromo ?? this.appliedPromo),
+        isValidating: isValidating ?? this.isValidating,
+      );
 }
 
 class CartPromoNotifier extends Notifier<CartPromoState> {
@@ -42,56 +47,49 @@ class CartPromoNotifier extends Notifier<CartPromoState> {
 
   void setPromo(String promo) => state = state.copyWith(promo: promo, promoError: '');
 
-  void applyPromo(double subtotal) {
+  Future<void> applyPromo(double subtotal, String shopId) async {
     final code = state.promo.trim();
     if (code.isEmpty) {
       state = state.copyWith(promoError: 'Enter a promo code');
       return;
     }
 
-    final promo = findPromoByCode(code);
-    if (promo == null) {
-      state = state.copyWith(promoError: 'Invalid promo code');
-      return;
+    state = state.copyWith(isValidating: true, promoError: '');
+    try {
+      final data = await api.validatePromo(code, shopId, subtotal);
+      final discount = (data['discount'] as num?)?.toDouble() ?? 0;
+      final promoData = data['promo'] as Map<String, dynamic>?;
+      final promo = promoData != null
+          ? PromoOffer(
+              id: promoData['id'] as String? ?? '',
+              code: promoData['code'] as String? ?? code,
+              title: promoData['title'] as String? ?? '',
+              description: promoData['description'] as String? ?? '',
+              discountValue: (promoData['discount_value'] as num?)?.toDouble() ?? discount,
+              isPercentage: promoData['is_percentage'] as bool? ?? false,
+              expiresAt: promoData['expires_at'] != null
+                  ? DateTime.tryParse(promoData['expires_at'] as String) ?? DateTime.now().add(const Duration(days: 7))
+                  : DateTime.now().add(const Duration(days: 7)),
+              imageUrl: promoData['image_url'] as String? ?? '',
+              vendorName: promoData['vendor_name'] as String? ?? '',
+              vendorId: promoData['vendor_id'] as String?,
+            )
+          : null;
+      state = state.copyWith(
+        appliedPromoId: code,
+        appliedPromo: promo,
+        promoError: '',
+        discountAmount: discount,
+        isValidating: false,
+      );
+    } on ValidationException catch (e) {
+      state = state.copyWith(promoError: e.message, isValidating: false);
+    } on ApiException catch (e) {
+      state = state.copyWith(promoError: e.message, isValidating: false);
     }
-
-    if (promo.isExpired) {
-      state = state.copyWith(promoError: 'This promo has expired');
-      return;
-    }
-
-    if (!promo.isActive) {
-      state = state.copyWith(promoError: 'This promo is no longer active');
-      return;
-    }
-
-    if (promo.minSpend > 0 && subtotal < promo.minSpend) {
-      state = state.copyWith(promoError: 'Minimum spend is TZS ${promo.minSpend.round()}');
-      return;
-    }
-
-    if (promo.maxRedemptions != null && promo.currentRedemptions >= promo.maxRedemptions!) {
-      state = state.copyWith(promoError: 'Redemption limit reached');
-      return;
-    }
-
-    final discount = _calculateDiscount(promo, subtotal);
-    state = state.copyWith(
-      appliedPromoId: promo.id,
-      appliedPromo: promo,
-      promoError: '',
-      discountAmount: discount,
-    );
   }
 
   void removePromo() => state = state.copyWith(clearPromo: true);
-
-  double _calculateDiscount(PromoOffer promo, double subtotal) {
-    if (promo.isPercentage) {
-      return subtotal * (promo.discountValue / 100);
-    }
-    return promo.discountValue;
-  }
 }
 
 final cartPromoProvider = NotifierProvider<CartPromoNotifier, CartPromoState>(CartPromoNotifier.new);

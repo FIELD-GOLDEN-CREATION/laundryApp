@@ -1,4 +1,3 @@
-import '../data/mock_data.dart';
 import 'fulfillment_state.dart';
 
 /// Whether adding an item from [shop] into the current basket would mix two
@@ -13,5 +12,5 @@ import 'fulfillment_state.dart';
 /// `FulfillmentState.shop`'s seed value alone is not evidence of intent.
 bool basketBelongsToOtherShop(Map<String, int> qty, FulfillmentState fulfillment, String shop) {
   if (fulfillment.shop == shop) return false;
-  return cartItemCount(qty, fulfillment.extraItems.values.toList()) > 0;
+  return qty.values.any((n) => n > 0);
 }

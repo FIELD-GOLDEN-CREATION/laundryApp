@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/promo_mock_data.dart';
-import '../models/promo_offer.dart';
+import '../services/api_service.dart';
 
 class CheckoutState {
   const CheckoutState({
@@ -10,9 +9,11 @@ class CheckoutState {
     this.selectedCardId,
     this.selectedMobileProvider,
     this.mobileMoneyPhone,
-    this.appliedPromoId,
+    this.appliedPromoCode,
     this.promoError = '',
     this.discountAmount = 0,
+    this.isValidatingPromo = false,
+    this.deliveryFee = 0,
   });
 
   final int payIndex;
@@ -20,9 +21,11 @@ class CheckoutState {
   final String? selectedCardId;
   final String? selectedMobileProvider;
   final String? mobileMoneyPhone;
-  final String? appliedPromoId;
+  final String? appliedPromoCode;
   final String promoError;
   final double discountAmount;
+  final bool isValidatingPromo;
+  final double deliveryFee;
 
   CheckoutState copyWith({
     int? payIndex,
@@ -30,19 +33,24 @@ class CheckoutState {
     String? selectedCardId,
     String? selectedMobileProvider,
     String? mobileMoneyPhone,
-    String? appliedPromoId,
+    String? appliedPromoCode,
     String? promoError,
     double? discountAmount,
-  }) => CheckoutState(
-    payIndex: payIndex ?? this.payIndex,
-    promo: promo ?? this.promo,
-    selectedCardId: selectedCardId ?? this.selectedCardId,
-    selectedMobileProvider: selectedMobileProvider ?? this.selectedMobileProvider,
-    mobileMoneyPhone: mobileMoneyPhone ?? this.mobileMoneyPhone,
-    appliedPromoId: appliedPromoId ?? this.appliedPromoId,
-    promoError: promoError ?? this.promoError,
-    discountAmount: discountAmount ?? this.discountAmount,
-  );
+    bool? isValidatingPromo,
+    double? deliveryFee,
+  }) =>
+      CheckoutState(
+        payIndex: payIndex ?? this.payIndex,
+        promo: promo ?? this.promo,
+        selectedCardId: selectedCardId ?? this.selectedCardId,
+        selectedMobileProvider: selectedMobileProvider ?? this.selectedMobileProvider,
+        mobileMoneyPhone: mobileMoneyPhone ?? this.mobileMoneyPhone,
+        appliedPromoCode: appliedPromoCode ?? this.appliedPromoCode,
+        promoError: promoError ?? this.promoError,
+        discountAmount: discountAmount ?? this.discountAmount,
+        isValidatingPromo: isValidatingPromo ?? this.isValidatingPromo,
+        deliveryFee: deliveryFee ?? this.deliveryFee,
+      );
 }
 
 class CheckoutNotifier extends Notifier<CheckoutState> {
@@ -51,69 +59,60 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
 
   void pickPayment(int i) => state = state.copyWith(payIndex: i);
   void setPromo(String promo) => state = state.copyWith(promo: promo, promoError: '');
+
   void selectCard(String id) => state = state.copyWith(payIndex: 0, selectedCardId: id);
 
   void selectMobileProvider(String name, String phone) =>
       state = state.copyWith(payIndex: 1, selectedMobileProvider: name, mobileMoneyPhone: phone);
 
-  void applyPromo(double subtotal) {
+  Future<void> applyPromo(double subtotal, String shopId) async {
     final code = state.promo.trim();
     if (code.isEmpty) {
       state = state.copyWith(promoError: 'Enter a promo code');
       return;
     }
 
-    final promo = findPromoByCode(code);
-    if (promo == null) {
-      state = state.copyWith(promoError: 'Invalid promo code');
-      return;
+    state = state.copyWith(isValidatingPromo: true, promoError: '');
+    try {
+      final data = await api.validatePromo(code, shopId, subtotal);
+      final discount = (data['discount'] as num?)?.toDouble() ?? 0;
+      state = state.copyWith(
+        appliedPromoCode: code,
+        promoError: '',
+        discountAmount: discount,
+        isValidatingPromo: false,
+      );
+    } on ValidationException catch (e) {
+      state = state.copyWith(
+        promoError: e.message,
+        isValidatingPromo: false,
+      );
+    } on ApiException catch (e) {
+      state = state.copyWith(
+        promoError: e.message,
+        isValidatingPromo: false,
+      );
     }
-
-    if (promo.isExpired) {
-      state = state.copyWith(promoError: 'This promo has expired');
-      return;
-    }
-
-    if (!promo.isActive) {
-      state = state.copyWith(promoError: 'This promo is no longer active');
-      return;
-    }
-
-    if (promo.minSpend > 0 && subtotal < promo.minSpend) {
-      state = state.copyWith(promoError: 'Minimum spend is TZS ${promo.minSpend.round()}');
-      return;
-    }
-
-    if (promo.maxRedemptions != null && promo.currentRedemptions >= promo.maxRedemptions!) {
-      state = state.copyWith(promoError: 'This promo has reached its redemption limit');
-      return;
-    }
-
-    final discount = _calculateDiscount(promo, subtotal);
-    state = state.copyWith(
-      appliedPromoId: promo.id,
-      promoError: '',
-      discountAmount: discount,
-    );
   }
 
   void removePromo() {
     state = state.copyWith(
-      appliedPromoId: null,
+      appliedPromoCode: null,
       promo: '',
       promoError: '',
       discountAmount: 0,
     );
   }
 
-  double _calculateDiscount(PromoOffer promo, double subtotal) {
-    if (promo.isPercentage) {
-      return subtotal * (promo.discountValue / 100);
+  Future<void> loadDeliveryFee(String shopId, String address) async {
+    try {
+      final data = await api.getDeliveryFee(shopId, address);
+      final fee = (data['fee'] as num?)?.toDouble() ?? 0;
+      state = state.copyWith(deliveryFee: fee);
+    } on ApiException {
+      // Keep default
     }
-    return promo.discountValue;
   }
 }
 
 final checkoutProvider = NotifierProvider<CheckoutNotifier, CheckoutState>(CheckoutNotifier.new);
-
-double discountFor(String promo) => promo.trim().isNotEmpty ? 10400.0 : 0.0;

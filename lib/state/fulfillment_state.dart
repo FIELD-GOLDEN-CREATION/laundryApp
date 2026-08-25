@@ -8,8 +8,10 @@ class FulfillmentState {
     this.quoting = false,
     this.deliveryFeeTzs = 0,
     this.driver = '',
-    this.shop = 'Marina Fresh Laundry',
+    this.shop = '',
     this.extraItems = const {},
+    this.catalog = const {},
+    this.shopId = '',
   });
 
   final String mode;
@@ -18,7 +20,19 @@ class FulfillmentState {
   final String driver;
   final String shop;
 
+  /// Package/addon lines contributed by the shop screen.
   final Map<String, MenuItem> extraItems;
+
+  /// Every priced item the customer can order at the current basket's shop —
+  /// per-piece menu plus package/addon extras. Populated from API data by
+  /// whichever screen fills the basket, so totals never depend on mock data.
+  final Map<String, MenuItem> catalog;
+
+  /// Backend id of the basket's shop (for order placement).
+  final String shopId;
+
+  /// Catalog including extras — what totals are computed over.
+  List<MenuItem> get pricedItems => [...catalog.values, ...extraItems.values];
 
   bool get isDelivery => mode == 'delivery';
 
@@ -29,6 +43,8 @@ class FulfillmentState {
     String? driver,
     String? shop,
     Map<String, MenuItem>? extraItems,
+    Map<String, MenuItem>? catalog,
+    String? shopId,
   }) =>
       FulfillmentState(
         mode: mode ?? this.mode,
@@ -37,6 +53,8 @@ class FulfillmentState {
         driver: driver ?? this.driver,
         shop: shop ?? this.shop,
         extraItems: extraItems ?? this.extraItems,
+        catalog: catalog ?? this.catalog,
+        shopId: shopId ?? this.shopId,
       );
 }
 
@@ -55,10 +73,25 @@ class FulfillmentNotifier extends Notifier<FulfillmentState> {
   /// Points the basket at [shop] and drops any non-catalog lines the
   /// previous vendor contributed. Callers are responsible for clearing
   /// `cartProvider` alongside it — `ensureBasketShop` does both.
-  void startBasketFor(String shop) => state = state.copyWith(shop: shop, extraItems: const {});
+  void startBasketFor(String shop) =>
+      state = state.copyWith(shop: shop, extraItems: const {}, catalog: const {});
 
-  void addServiceItem(MenuItem item) =>
-      state = state.copyWith(extraItems: {...state.extraItems, item.key: item});
+  /// Registers the current basket's shop and its full price list (API data).
+  void setShopCatalog({
+    required String shopId,
+    required String shopName,
+    required List<MenuItem> items,
+  }) =>
+      state = state.copyWith(
+        shopId: shopId,
+        shop: shopName,
+        catalog: {for (final item in items) item.key: item},
+      );
+
+  void addServiceItem(MenuItem item) => state = state.copyWith(
+        extraItems: {...state.extraItems, item.key: item},
+        catalog: {...state.catalog, item.key: item},
+      );
 
   void setQuoting(bool quoting) => state = state.copyWith(quoting: quoting);
 

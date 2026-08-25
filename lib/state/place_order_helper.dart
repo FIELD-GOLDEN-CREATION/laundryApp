@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/mock_data.dart';
 import '../models/order.dart';
+import '../utils/cart_math.dart';
 import 'cart_state.dart';
 import 'fulfillment_state.dart';
 import 'orders_state.dart';
@@ -15,16 +15,16 @@ Order placeCurrentOrder(
 }) {
   final qty = ref.read(cartProvider);
   final fulfillment = ref.read(fulfillmentProvider);
-  final extra = fulfillment.extraItems.values.toList();
-  final amount = total ?? formatMoney(cartSubtotal(qty, extra));
+  final priced = fulfillment.pricedItems;
+  final amount = total ?? formatMoney(cartSubtotal(qty, priced));
   return ref.read(ordersProvider.notifier).placeOrder(
     shop: fulfillment.shop,
-    items: '${cartItemCount(qty, extra)} items',
+    items: '${cartItemCount(qty, priced)} items',
     total: amount,
     paymentMethod: paymentMethod,
     pickup: pickup,
     address: address,
-    lines: cartLines(qty, extra),
+    lines: cartLines(qty, [], priced),
     fulfillment: fulfillment.mode,
     driver: fulfillment.driver,
     deliveryFeeTzs: fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0,

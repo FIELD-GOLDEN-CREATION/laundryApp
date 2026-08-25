@@ -11,46 +11,13 @@ void main() {
       expect(container.read(authProvider).role, UserRole.guest);
     });
 
-    test('logs in each of the demo accounts to the right role', () {
+    test('initial state has empty email and name', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final notifier = container.read(authProvider.notifier);
-
-      expect(notifier.login('user@gmail.com', 'user04'), isNull);
-      expect(container.read(authProvider).role, UserRole.customer);
-
-      expect(notifier.login('vendor@gmail.com', 'vendor04'), isNull);
-      expect(container.read(authProvider).role, UserRole.vendor);
-    });
-
-    test('login is case-insensitive on email and trims whitespace', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(authProvider.notifier);
-
-      expect(notifier.login('  USER@Gmail.com  ', 'user04'), isNull);
-      expect(container.read(authProvider).role, UserRole.customer);
-    });
-
-    test('bad credentials return an error and leave role as guest', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(authProvider.notifier);
-
-      final error = notifier.login('user@gmail.com', 'wrong');
-      expect(error, isNotNull);
-      expect(container.read(authProvider).role, UserRole.guest);
-    });
-
-    test('logout resets to guest', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(authProvider.notifier);
-
-      notifier.login('vendor@gmail.com', 'vendor04');
-      notifier.logout();
-      expect(container.read(authProvider).role, UserRole.guest);
-      expect(container.read(authProvider).authEmail, '');
+      final state = container.read(authProvider);
+      expect(state.authEmail, '');
+      expect(state.userName, '');
+      expect(state.isLoading, isFalse);
     });
   });
 

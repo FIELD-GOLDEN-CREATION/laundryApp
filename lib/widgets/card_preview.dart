@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
-import '../data/mock_data.dart';
 import '../models/saved_card.dart';
 import '../theme/text_styles.dart';
 import 'remote_image.dart';
 
-/// Credit-card visual for the card-payment sheet — the Visa photo with a
+/// Card artwork — display asset, not business data.
+const kCardArtUrl = 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&q=80';
+
+/// Credit-card visual for the card-payment sheet â€” the Visa photo with a
 /// gradient overlay, showing the live (or selected saved) card details.
 class CardPreview extends StatelessWidget {
   const CardPreview({super.key, required this.brand, required this.number, required this.name, required this.expiry});
@@ -20,7 +22,7 @@ class CardPreview extends StatelessWidget {
     final sb = StringBuffer();
     for (var i = 0; i < 16; i++) {
       if (i > 0 && i % 4 == 0) sb.write(' ');
-      sb.write(i < digits.length ? digits[i] : '•');
+      sb.write(i < digits.length ? digits[i] : 'â€¢');
     }
     return sb.toString();
   }
@@ -35,7 +37,7 @@ class CardPreview extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const RemoteImage(url: kCardPhotoUrl, fallback: 'Card', placeholder: ColoredBox(color: Color(0xFF2C3E50))),
+            const RemoteImage(url: kCardArtUrl, fallback: 'Card', placeholder: ColoredBox(color: Color(0xFF2C3E50))),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

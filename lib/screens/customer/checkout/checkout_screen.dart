@@ -1,11 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
 import '../../../models/address.dart';
 import '../../../models/mobile_money_provider.dart';
 import '../../../models/saved_card.dart';
@@ -15,10 +14,14 @@ import '../../../state/checkout_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/fulfillment_state.dart';
 import '../../../state/place_order_helper.dart';
+import '../../../state/profile_state.dart';
 import '../../../state/saved_cards_state.dart';
 import '../../../state/schedule_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/cart_math.dart';
+import '../../../utils/mobile_money.dart' show detectMobileProvider, mobileProviderByName;
+import '../../../utils/schedule_options.dart';
 import '../../../widgets/card_brand_tag.dart';
 import '../../../widgets/card_preview.dart';
 import '../../../widgets/announcement_banner.dart';
@@ -42,20 +45,23 @@ class CheckoutScreen extends ConsumerWidget {
     final savedCards = ref.watch(savedCardsProvider);
     final fulfillment = ref.watch(fulfillmentProvider);
     final language = ref.watch(clientPreferencesProvider).language;
-    final extra = fulfillment.extraItems.values.toList();
     final selectedCard = savedCards
         .cast<SavedCard?>()
         .firstWhere((c) => c?.id == checkout.selectedCardId, orElse: () => null);
 
-    final subtotal = cartSubtotal(qty, extra);
+    final subtotal = cartSubtotal(qty, [], fulfillment.pricedItems);
     final discount = checkout.discountAmount;
     final deliveryFee = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
     final total = (subtotal - discount).clamp(0, double.infinity) + deliveryFee;
-    final itemsCount = cartItemCount(qty, extra);
+    final itemsCount = cartItemCount(qty, [], fulfillment.pricedItems);
+    final addresses = ref.watch(profileProvider.select((s) => s.addresses));
     final address = schedule.isCurrentLocation
         ? Address(label: 'Current location', line: schedule.currentLocation.isEmpty ? 'Current location' : schedule.currentLocation)
-        : kAddresses[schedule.addrIndex];
-    final day = kDays[schedule.dayIndex];
+        : addresses.isNotEmpty
+            ? addresses[schedule.addrIndex.clamp(0, addresses.length - 1)]
+            : Address(label: 'Pickup', line: fulfillment.shop);
+    final days = upcomingDays();
+    final day = days[schedule.dayIndex.clamp(0, days.length - 1)];
     final pickupSummary = '${day.dow} ${day.num}, ${kTimeSlots[schedule.slotIndex]}';
 
     return Scaffold(
@@ -119,7 +125,7 @@ class CheckoutScreen extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '${clientLabel('Driver', 'Dereva', language)}: ${fulfillment.driver} · ${formatMoney(deliveryFee.toDouble())}',
+                            '${clientLabel('Driver', 'Dereva', language)}: ${fulfillment.driver} Â· ${formatMoney(deliveryFee.toDouble())}',
                             style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.cream.withValues(alpha: 0.8)),
                           ),
                         ),
@@ -133,7 +139,7 @@ class CheckoutScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$itemsCount ${clientLabel('items', 'vitu', language)} · ${fulfillment.shop}',
+                          '$itemsCount ${clientLabel('items', 'vitu', language)} Â· ${fulfillment.shop}',
                           style: AppText.sans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -174,7 +180,7 @@ class CheckoutScreen extends ConsumerWidget {
                     leading: const SizedBox(
                       width: 44,
                       height: 44,
-                      child: RemoteImage(url: kCardPhotoUrl, fallback: 'Card', borderRadius: 10),
+                      child: RemoteImage(url: kCardArtUrl, fallback: 'Card', borderRadius: 10),
                     ),
                     onTap: () => _openCardPay(
                       context,
@@ -187,7 +193,7 @@ class CheckoutScreen extends ConsumerWidget {
                   RadioOptionCard(
                     label: clientLabel('Mobile Money', 'Lipa kwa simu', language),
                     sub: checkout.selectedMobileProvider != null
-                        ? '${checkout.selectedMobileProvider} · ${checkout.mobileMoneyPhone}'
+                        ? '${checkout.selectedMobileProvider} Â· ${checkout.mobileMoneyPhone}'
                         : clientLabel('Choose a provider', 'Chagua mtoa huduma', language),
                     selected: checkout.payIndex == 1,
                     leading: checkout.selectedMobileProvider != null
@@ -219,7 +225,7 @@ class CheckoutScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                          color: AppColors.clientSurface(context),
                          border: Border.all(
-                           color: checkout.appliedPromoId != null
+                           color: checkout.appliedPromoCode != null
                                ? AppColors.teal
                                : checkout.promoError.isNotEmpty
                                    ? AppColors.danger
@@ -230,34 +236,34 @@ class CheckoutScreen extends ConsumerWidget {
                       alignment: Alignment.centerLeft,
                       child: TextField(
                         onChanged: checkoutNotifier.setPromo,
-                        enabled: checkout.appliedPromoId == null,
+                        enabled: checkout.appliedPromoCode == null,
                         style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
                         decoration: InputDecoration.collapsed(
-                          hintText: checkout.appliedPromoId != null ? 'Promo applied!' : 'Promo code',
-                          hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: checkout.appliedPromoId != null ? AppColors.teal : AppColors.muted),
+                          hintText: checkout.appliedPromoCode != null ? 'Promo applied!' : 'Promo code',
+                          hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: checkout.appliedPromoCode != null ? AppColors.teal : AppColors.muted),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Material(
-                    color: checkout.appliedPromoId != null ? AppColors.dangerLight : AppColors.amberLight,
+                    color: checkout.appliedPromoCode != null ? AppColors.dangerLight : AppColors.amberLight,
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: checkout.appliedPromoId != null
+                      onTap: checkout.appliedPromoCode != null
                           ? () => checkoutNotifier.removePromo()
-                          : () => checkoutNotifier.applyPromo(subtotal.toDouble()),
+                           : () => checkoutNotifier.applyPromo(subtotal.toDouble(), ''),
                       child: Container(
                         height: 48,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         alignment: Alignment.center,
                         child: Text(
-                          checkout.appliedPromoId != null ? 'Remove' : 'Apply',
+                          checkout.appliedPromoCode != null ? 'Remove' : 'Apply',
                           style: AppText.sans(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
-                            color: checkout.appliedPromoId != null ? AppColors.danger : AppColors.amber,
+                            color: checkout.appliedPromoCode != null ? AppColors.danger : AppColors.amber,
                           ),
                         ),
                       ),
@@ -286,14 +292,14 @@ class CheckoutScreen extends ConsumerWidget {
                     const SizedBox(height: 9),
                     _Line(
                       label: clientLabel('Discount', 'Punguzo', language),
-                      value: discount > 0 ? '−${formatMoney(discount)}' : '—',
+                      value: discount > 0 ? 'âˆ’${formatMoney(discount)}' : 'â€”',
                       valueColor: AppColors.amber,
                     ),
                     const SizedBox(height: 9),
                     if (fulfillment.isDelivery)
                       _Line(
                         label: clientLabel('Pickup & delivery', 'Kuchukua na usafirishaji', language),
-                        value: deliveryFee > 0 ? formatMoney(deliveryFee.toDouble()) : '—',
+                        value: deliveryFee > 0 ? formatMoney(deliveryFee.toDouble()) : 'â€”',
                         valueColor: AppColors.teal,
                       )
                     else
@@ -322,7 +328,7 @@ class CheckoutScreen extends ConsumerWidget {
         label: clientLabel('Place order', 'Weka oda', language),
         hint: formatMoney(total.toDouble()),
         onPressed: () {
-          if (gateGuest(ref, context, 'Log in to place your order — guests can browse everything else.')) return;
+          if (gateGuest(ref, context, 'Log in to place your order â€” guests can browse everything else.')) return;
           final order = placeCurrentOrder(
             ref,
             paymentMethod: _paymentLabel(checkout, selectedCard, fulfillment.isDelivery),
@@ -381,10 +387,10 @@ class _ProgressStep extends StatelessWidget {
 String _paymentLabel(CheckoutState checkout, SavedCard? selectedCard, [bool isDelivery = true]) {
   switch (checkout.payIndex) {
     case 0:
-      return selectedCard != null ? 'Card · ${selectedCard.label}' : 'Card';
+      return selectedCard != null ? 'Card Â· ${selectedCard.label}' : 'Card';
     case 1:
       final p = checkout.selectedMobileProvider;
-      return p != null ? 'Mobile money · $p' : 'Mobile money';
+      return p != null ? 'Mobile money Â· $p' : 'Mobile money';
     default:
       return isDelivery ? 'Cash on delivery' : 'Cash at shop';
   }
@@ -511,7 +517,7 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
     if (savedId != null) {
       ref.read(checkoutProvider.notifier).selectCard(savedId);
       final saved = ref.read(savedCardsProvider).cast<SavedCard?>().firstWhere((c) => c?.id == savedId, orElse: () => null);
-      paymentMethod = 'Card · ${saved?.label ?? 'Card'}';
+      paymentMethod = 'Card Â· ${saved?.label ?? 'Card'}';
     } else {
       final digits = _cardDigits(_numberCtrl.text);
       final card = SavedCard(
@@ -521,9 +527,9 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
         expiry: _expiryCtrl.text.trim(),
         brand: detectCardBrand(digits),
       );
-      ref.read(savedCardsProvider.notifier).add(card);
+      ref.read(savedCardsProvider.notifier).addLocal(card);
       ref.read(checkoutProvider.notifier).selectCard(card.id);
-      paymentMethod = 'Card · ${brandLabel(card.brand)} •••• ${card.last4}';
+      paymentMethod = 'Card Â· ${brandLabel(card.brand)} â€¢â€¢â€¢â€¢ ${card.last4}';
     }
 
     final navigator = Navigator.of(context);
@@ -575,7 +581,7 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
     final savedCards = ref.watch(savedCardsProvider);
     final selected = savedCards.cast<SavedCard?>().firstWhere((c) => c?.id == _selectedSavedCardId, orElse: () => null);
     final brand = selected?.brand ?? _brand;
-    final number = selected != null ? '•••• ${selected.last4}' : _numberCtrl.text;
+    final number = selected != null ? 'â€¢â€¢â€¢â€¢ ${selected.last4}' : _numberCtrl.text;
     final name = selected?.holderName ?? _nameCtrl.text;
     final expiry = selected?.expiry ?? _expiryCtrl.text;
 
@@ -595,7 +601,7 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
           for (var i = 0; i < savedCards.length; i++) ...[
             RadioOptionCard(
               label: savedCards[i].label,
-              sub: '${savedCards[i].holderName} · Expires ${savedCards[i].expiry}',
+              sub: '${savedCards[i].holderName} Â· Expires ${savedCards[i].expiry}',
               selected: _selectedSavedCardId == savedCards[i].id,
               leading: CardBrandTag(brand: savedCards[i].brand),
               onTap: () => _selectSaved(savedCards[i].id),
@@ -657,7 +663,7 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
         _sheetHandle(),
         const SizedBox(height: 16),
         PaymentProcessing(
-          title: 'Processing payment…',
+          title: 'Processing paymentâ€¦',
           subtitle: 'Approving ${widget.total} with your card',
           center: const Icon(Icons.credit_card, color: AppColors.cream, size: 30),
         ),
@@ -689,7 +695,7 @@ class _CardSheetState extends ConsumerState<_CardSheet> {
         Text('Payment approved', style: AppText.serif(fontSize: 21), textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(
-          'Confirming your order…',
+          'Confirming your orderâ€¦',
           style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
           textAlign: TextAlign.center,
         ),
@@ -831,7 +837,7 @@ class _MobileMoneySheetState extends ConsumerState<_MobileMoneySheet> {
 
 final order = placeCurrentOrder(
       ref,
-      paymentMethod: 'Mobile money · ${provider.name}',
+      paymentMethod: 'Mobile money Â· ${provider.name}',
       pickup: widget.pickup,
       address: widget.address,
       total: widget.total,
@@ -946,7 +952,7 @@ final order = placeCurrentOrder(
         _sheetHandle(),
         const SizedBox(height: 16),
         PaymentProcessing(
-          title: 'Processing payment…',
+          title: 'Processing paymentâ€¦',
           subtitle: provider == null ? 'Approving your payment' : 'Approving ${widget.total} with ${provider.name}',
           center: provider == null ? null : MobileMoneyLogo(provider: provider, size: 60),
         ),
@@ -978,7 +984,7 @@ final order = placeCurrentOrder(
         Text('Payment approved', style: AppText.serif(fontSize: 21), textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(
-          'Confirming your order…',
+          'Confirming your orderâ€¦',
           style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
           textAlign: TextAlign.center,
         ),
@@ -998,7 +1004,7 @@ class _DetectedProviderCard extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       child: provider == null
           ? Text(
-              "Enter your number — we'll detect your provider automatically",
+              "Enter your number â€” we'll detect your provider automatically",
               style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
             )
           : Container(

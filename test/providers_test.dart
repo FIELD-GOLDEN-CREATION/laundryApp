@@ -1,12 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:laundry_app/models/order.dart';
 import 'package:laundry_app/state/cart_state.dart';
 import 'package:laundry_app/state/chat_state.dart';
-import 'package:laundry_app/models/order.dart';
-import 'package:laundry_app/state/checkout_state.dart';
 import 'package:laundry_app/state/orders_state.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
   test('CartNotifier.setQty increments and clamps at zero', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -16,6 +20,18 @@ void main() {
 
     container.read(cartProvider.notifier).setQty('bed', -5);
     expect(container.read(cartProvider)['bed'], 0);
+  });
+
+  test('CartNotifier.setQty applies deltas and clamps at zero', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final notifier = container.read(cartProvider.notifier);
+    notifier.setQty('shirt', 5);
+    expect(container.read(cartProvider)['shirt'], 5);
+
+    notifier.setQty('shirt', -100);
+    expect(container.read(cartProvider)['shirt'], 0);
   });
 
   test('OrdersNotifier.placeOrder inserts an unpicked-up order at the top', () {
@@ -52,12 +68,12 @@ void main() {
     expect(current().trackStep, kOrderPlacedStep);
   });
 
-  test('ChatNotifier.send appends a message and clears the draft', () {
+  test('ChatNotifier.send appends a message and clears the draft', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
     container.read(chatProvider.notifier).setDraft('  Thanks!  ');
-    container.read(chatProvider.notifier).send('Marina Fresh Laundry');
+    await container.read(chatProvider.notifier).send('Marina Fresh Laundry');
 
     final state = container.read(chatProvider);
     expect(state.draft, '');
@@ -65,19 +81,14 @@ void main() {
     expect(state.messagesFor('Marina Fresh Laundry').last.isMe, isTrue);
   });
 
-  test('ChatNotifier.send ignores an empty draft', () {
+  test('ChatNotifier.send ignores an empty draft', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
     final before = container.read(chatProvider).messagesFor('Marina Fresh Laundry').length;
     container.read(chatProvider.notifier).setDraft('   ');
-    container.read(chatProvider.notifier).send('Marina Fresh Laundry');
+    await container.read(chatProvider.notifier).send('Marina Fresh Laundry');
 
     expect(container.read(chatProvider).messagesFor('Marina Fresh Laundry').length, before);
-  });
-
-  test('discountFor only applies once a promo code is entered', () {
-    expect(discountFor(''), 0.0);
-    expect(discountFor('SAVE4'), 10400.0);
   });
 }

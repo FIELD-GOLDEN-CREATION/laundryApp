@@ -1,11 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/laundry_categories_data.dart';
-import '../../data/mock_data.dart';
 import '../../models/laundry_category.dart';
 import '../../models/service_package.dart';
+import '../../state/catalog_state.dart';
 import '../../state/vendor_catalog_state.dart';
 import '../../state/vendor_packages_state.dart';
 import '../../theme/colors.dart';
@@ -15,17 +16,47 @@ import '../../widgets/package_form_sheet.dart';
 import '../../widgets/toggle_switch.dart';
 import '../../widgets/remote_image.dart';
 
-class VendorCatalogScreen extends ConsumerWidget {
+/// Display cap mirrored from the shop page's package carousel.
+const _kMaxShopPackages = 4;
+
+class VendorCatalogScreen extends ConsumerStatefulWidget {
   const VendorCatalogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VendorCatalogScreen> createState() => _VendorCatalogScreenState();
+}
+
+class _VendorCatalogScreenState extends ConsumerState<VendorCatalogScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Global catalog gives the structure; /vendor/catalog overlays the
+    // vendor's own prices and availability on top of it.
+    Future.microtask(() {
+      ref.read(categoriesProvider.notifier).load(withItems: true);
+      ref.read(vendorCatalogProvider.notifier).loadCatalog();
+      ref.read(vendorPackagesProvider.notifier).loadPackages();
+      ref.read(vendorCatalogProvider.notifier).loadAddons();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(vendorCatalogProvider);
     final notifier = ref.read(vendorCatalogProvider.notifier);
     final packages = ref.watch(vendorPackagesProvider);
     final packagesNotifier = ref.read(vendorPackagesProvider.notifier);
+    final categories = ref.watch(categoriesProvider);
     final liveCount = packages.where((p) => p.active).length;
-    final displayedCount = liveCount < kMaxShopPackages ? liveCount : kMaxShopPackages;
+    final displayedCount = liveCount < _kMaxShopPackages ? liveCount : _kMaxShopPackages;
+
+    if (categories.items.isEmpty && categories.isLoading) {
+      return const Scaffold(
+        body: SafeArea(
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -39,15 +70,13 @@ class VendorCatalogScreen extends ConsumerWidget {
               style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
             ),
             const _SectionLabel('Categories & Items'),
-            ...List.generate(kLaundryCategories.length, (i) {
-              final category = kLaundryCategories[i];
-              final isCategoryOn = state.categoriesOn[i];
+            ...List.generate(categories.items.length, (i) {
+              final category = categories.items[i];
               return _CategoryExpansionTile(
                 category: category,
-                isCategoryOn: isCategoryOn,
-                onToggleCategory: () => notifier.toggleCategory(i),
+                isCategoryOn: notifier.isCategoryEnabled(category.id),
+                onToggleCategory: () => notifier.toggleCategory(category.id),
                 items: category.items,
-                state: state,
                 notifier: notifier,
                 categoryId: category.id,
               );
@@ -102,7 +131,7 @@ class VendorCatalogScreen extends ConsumerWidget {
                 _AddPackageButton(
                   onTap: () async {
                     final created = await showPackageFormSheet(context);
-                    if (created != null) packagesNotifier.addPackage(created);
+                    if (created != null) packagesNotifier.createPackage(created);
                   },
                 ),
               ],
@@ -133,7 +162,6 @@ class _CategoryExpansionTile extends StatelessWidget {
     required this.isCategoryOn,
     required this.onToggleCategory,
     required this.items,
-    required this.state,
     required this.notifier,
     required this.categoryId,
   });
@@ -142,21 +170,21 @@ class _CategoryExpansionTile extends StatelessWidget {
   final bool isCategoryOn;
   final VoidCallback onToggleCategory;
   final List<LaundryItem> items;
-  final VendorCatalogState state;
   final VendorCatalogNotifier notifier;
   final String categoryId;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.creamDark),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         leading: ClipRRect(
@@ -184,14 +212,19 @@ class _CategoryExpansionTile extends StatelessWidget {
           style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
         ),
         trailing: ToggleSwitch(on: isCategoryOn, onTap: onToggleCategory),
-        children: items.map((item) => _ItemCheckboxRow(
-          item: item,
-          isChecked: notifier.isItemEnabled(categoryId, item.id),
-          onToggle: () => notifier.toggleItem(categoryId, item.id),
-          price: notifier.getItemPrice(item.id),
-          onPriceChanged: (price) => notifier.setItemPrice(item.id, price),
-        )).toList(),
+        children: items.map((item) {
+          // Vendor's own price wins; fall back to the global catalog price.
+          final vendorPrice = notifier.effectiveItemPrice(item.id);
+          return _ItemCheckboxRow(
+            item: item,
+            isChecked: notifier.isItemEnabled(categoryId, item.id),
+            onToggle: () => notifier.toggleItem(categoryId, item.id),
+            price: vendorPrice > 0 ? vendorPrice : item.priceTzs,
+            onPriceChanged: (price) => notifier.setItemPrice(item.id, price),
+          );
+        }).toList(),
       ),
+        ),
     );
   }
 }

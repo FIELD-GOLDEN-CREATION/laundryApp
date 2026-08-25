@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/vendor_mock_data.dart';
 import '../../models/track_step_def.dart';
 import '../../state/vendor_catalog_state.dart';
 import '../../state/vendor_order_detail_state.dart';
+import '../../state/vendor_orders_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/currency.dart';
@@ -13,14 +13,35 @@ import '../../widgets/placeholder_image.dart';
 import '../../widgets/round_back_button.dart';
 import '../../widgets/selectable_chip.dart';
 
-class VendorOrderDetailScreen extends ConsumerWidget {
+class VendorOrderDetailScreen extends ConsumerStatefulWidget {
   const VendorOrderDetailScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VendorOrderDetailScreen> createState() => _VendorOrderDetailScreenState();
+}
+
+class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      // Which order to show: the one tapped in the list, else the oldest
+      // open one so deep links straight to the route still render data.
+      final orders = ref.read(vendorOrdersProvider);
+      final id = orders.selectedId ??
+          (orders.wipOrders.isNotEmpty
+              ? orders.wipOrders.first.id
+              : orders.newOrders.isNotEmpty ? orders.newOrders.first.id : '');
+      ref.read(vendorOrderDetailProvider.notifier).load(normalizeVendorOrderId(id));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(vendorOrderDetailProvider);
     final notifier = ref.read(vendorOrderDetailProvider.notifier);
     final vendorAddons = ref.watch(vendorCatalogProvider.select((s) => s.addons));
+    final lines = state.lines;
 
     return Scaffold(
       body: SafeArea(
@@ -31,16 +52,24 @@ class VendorOrderDetailScreen extends ConsumerWidget {
               children: [
                 RoundBackButton(onPressed: () => Navigator.of(context).pop()),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Order #LD-2481', style: AppText.serif(fontSize: 23)),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Amara Reed · 8 items',
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.hasOrder ? 'Order #LD-${state.orderId}' : 'Order',
+                        style: AppText.serif(fontSize: 23),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          if (state.customerName.isNotEmpty) state.customerName,
+                          if (state.itemsSummary.isNotEmpty) state.itemsSummary,
+                        ].join(' · '),
+                        style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -52,33 +81,45 @@ class VendorOrderDetailScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < kOrderLineItems.length; i++)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: i == kOrderLineItems.length - 1 ? Colors.transparent : AppColors.cream),
-                        ),
+              child: lines.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: state.isLoading
+                            ? const CircularProgressIndicator(strokeWidth: 2)
+                            : Text(
+                                'No line items on this order.',
+                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                              ),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${kOrderLineItems[i].qty}× ${kOrderLineItems[i].name}',
-                              style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < lines.length; i++)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: i == lines.length - 1 ? Colors.transparent : AppColors.cream),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${lines[i].qty}× ${lines[i].name}',
+                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                                Text(
+                                  formatTzs(lines[i].total),
+                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            formatTzs(kOrderLineItems[i].total),
-                            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
-                ],
-              ),
             ),
             if (vendorAddons.isNotEmpty) ...[
               const _SectionLabel('Add-on services requested'),
@@ -287,16 +328,26 @@ class VendorOrderDetailScreen extends ConsumerWidget {
                 border: Border.all(color: AppColors.creamDark),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Column(
-                children: [
-                  for (var i = 0; i < kProcessingSteps.length; i++)
-                    _ProcessStepRow(
-                      step: kProcessingSteps[i],
-                      done: i <= state.step,
-                      onTap: () => notifier.pickStep(i),
+              child: state.timeline.isNotEmpty
+                  ? Column(
+                      children: [
+                        for (var i = 0; i < state.timeline.length; i++)
+                          _ProcessStepRow(
+                            step: state.timeline[i],
+                            done: true,
+                          ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < kProcessingSteps.length; i++)
+                          _ProcessStepRow(
+                            step: kProcessingSteps[i],
+                            done: i <= state.step,
+                            onTap: () => notifier.pickStep(i),
+                          ),
+                      ],
                     ),
-                ],
-              ),
             ),
           ],
         ),
@@ -338,11 +389,11 @@ class _DamageCheckbox extends StatelessWidget {
 }
 
 class _ProcessStepRow extends StatelessWidget {
-  const _ProcessStepRow({required this.step, required this.done, required this.onTap});
+  const _ProcessStepRow({required this.step, required this.done, this.onTap});
 
   final TrackStepDef step;
   final bool done;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

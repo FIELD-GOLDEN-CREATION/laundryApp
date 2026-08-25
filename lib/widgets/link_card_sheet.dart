@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/mock_data.dart';
+import 'card_preview.dart' show kCardArtUrl;
 import '../models/saved_card.dart';
 import '../state/saved_cards_state.dart';
 import '../theme/colors.dart';
@@ -83,7 +83,7 @@ class _LinkCardSheetState extends State<_LinkCardSheet> {
       expiry: expiry,
       brand: detectCardBrand(digits),
     );
-    widget.ref.read(savedCardsProvider.notifier).add(card);
+    widget.ref.read(savedCardsProvider.notifier).addLocal(card);
     Navigator.of(context).pop();
     widget.onSaved?.call(card);
   }
@@ -229,7 +229,7 @@ class _CardVisual extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const RemoteImage(url: kCardPhotoUrl, fallback: 'Card', placeholder: ColoredBox(color: Color(0xFF2C3E50))),
+            const RemoteImage(url: kCardArtUrl, fallback: 'Card', placeholder: ColoredBox(color: Color(0xFF2C3E50))),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -256,7 +256,7 @@ class _CardVisual extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '•••• •••• •••• ••••',
+                    'â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢',
                     style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 2),
                   ),
                 ],

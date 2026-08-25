@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../services/api_service.dart';
 import '../../../state/profile_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
@@ -136,13 +137,33 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
       return;
     }
     setState(() => _submitting = true);
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() {
-      _submitting = false;
-      _step = 2;
-    });
+    try {
+      await api.submitVendorApplication(
+        officeName: _bizNameCtrl.text.trim(),
+        plan: _selectedPlan,
+        officeLocation: _bizLocationCtrl.text.trim(),
+        contactPhone: _contactPhoneCtrl.text.trim(),
+        contactWhatsapp: _whatsappCtrl.text.trim().isEmpty ? null : _whatsappCtrl.text.trim(),
+        businessDescription: _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _step = 2;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: AppColors.danger),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to submit application. Please try again.')),
+      );
+    }
   }
 
   @override

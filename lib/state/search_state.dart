@@ -2,6 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/shop.dart';
 
+/// Search filter chips — UI configuration, not business data.
+const kFilterOptions = [
+  'Within 5 km',
+  'Within 10 km',
+  'Within 20 km',
+  'Within 25 km',
+  'Within 30 km',
+  'Fast turnaround',
+  'Open now',
+  'Top rated',
+];
+
 class SearchState {
   const SearchState({this.query = '', this.filter = 'Nearby'});
 

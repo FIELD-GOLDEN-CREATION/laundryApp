@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../screens/customer/cart/cart_screen.dart';
-import '../../data/mock_data.dart';
 import '../../models/shop.dart';
 import '../../models/laundry_category.dart';
+import '../../state/catalog_state.dart';
 import '../../screens/customer/checkout/checkout_screen.dart';
 import '../../screens/customer/checkout/order_confirmation_screen.dart';
 import '../../screens/customer/home/home_screen.dart';
@@ -83,7 +83,15 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/detail',
-      builder: (_, state) => ShopDetailScreen(shop: (state.extra as Shop?) ?? kShops.first),
+      builder: (_, state) => Consumer(builder: (_, ref, _) {
+        final extra = state.extra as Shop?;
+        if (extra != null) return ShopDetailScreen(shop: extra);
+        // No explicit shop (e.g. an offer claim) — open the top-ranked one.
+        final shops = ref.watch(shopsProvider).items;
+        return shops.isNotEmpty
+            ? ShopDetailScreen(shop: shops.first)
+            : const Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+      }),
     ),
     GoRoute(
       path: '/category-detail',

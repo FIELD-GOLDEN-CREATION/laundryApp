@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
 import '../../../state/auth_state.dart';
-import '../../../state/search_state.dart';
+import '../../../state/catalog_state.dart';
+import '../../../state/search_state.dart' show kFilterOptions, filteredShops, searchProvider;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../home/widgets/shop_card.dart';
@@ -24,7 +24,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 550), () {
+    Future.microtask(() async {
+      await ref.read(shopsProvider.notifier).load();
       if (mounted) setState(() => _loading = false);
     });
   }
@@ -34,7 +35,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final ref = this.ref;
     final search = ref.watch(searchProvider);
     final notifier = ref.read(searchProvider.notifier);
-    final shops = filteredShops(kShops, search);
+    final allShops = ref.watch(shopsProvider).items;
+    final shops = filteredShops(allShops, search);
 
     return Scaffold(
       body: SafeArea(
@@ -95,7 +97,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 20, 22, 12),
               child: Text(
-                '${shops.length} shops near 12 Chole Road, Masaki',
+                '${shops.length} shops near you',
                 style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
               ),
             ),

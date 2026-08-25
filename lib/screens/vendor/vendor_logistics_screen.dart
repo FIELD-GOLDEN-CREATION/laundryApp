@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/vendor_mock_data.dart';
+import '../../models/day_option.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_logistics_state.dart';
 import '../../theme/colors.dart';
@@ -11,6 +11,15 @@ import '../../theme/text_styles.dart';
 import '../../widgets/barcode_strip.dart';
 import '../../widgets/placeholder_image.dart';
 import '../../widgets/thin_progress_bar.dart';
+
+/// Pure UI config — the return-delivery day strip has no API backing.
+const _kReturnDays = [
+  DayOption(dow: 'Thu', num: '13'),
+  DayOption(dow: 'Fri', num: '14'),
+  DayOption(dow: 'Sat', num: '15'),
+  DayOption(dow: 'Sun', num: '16'),
+  DayOption(dow: 'Mon', num: '17'),
+];
 
 class VendorLogisticsScreen extends ConsumerWidget {
   const VendorLogisticsScreen({super.key});
@@ -156,13 +165,13 @@ class VendorLogisticsScreen extends ConsumerWidget {
               height: 62,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: kReturnDays.length,
+                itemCount: _kReturnDays.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 9),
                 itemBuilder: (_, i) {
                   final active = state.returnDay == i;
                   return _DayChip(
-                    dow: kReturnDays[i].dow,
-                    num: kReturnDays[i].num,
+                    dow: _kReturnDays[i].dow,
+                    num: _kReturnDays[i].num,
                     active: active,
                     onTap: () => notifier.pickReturnDay(i),
                   );

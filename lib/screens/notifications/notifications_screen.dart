@@ -1,17 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock_data.dart';
 import '../../models/notification_item.dart';
+import '../../state/notifications_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/round_back_button.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(notificationsProvider.notifier).loadNotifications());
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final items = ref.watch(notificationsProvider).items;
+    final isLoading = ref.watch(notificationsProvider.select((s) => s.isLoading));
+
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -25,10 +40,26 @@ class NotificationsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            for (var i = 0; i < kNotifications.length; i++) ...[
-              _NotificationCard(item: kNotifications[i]),
-              if (i != kNotifications.length - 1) const SizedBox(height: 11),
-            ],
+            if (isLoading && items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Text(
+                    'No notifications yet',
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+                  ),
+                ),
+              )
+            else
+              for (var i = 0; i < items.length; i++) ...[
+                _NotificationCard(item: items[i]),
+                if (i != items.length - 1) const SizedBox(height: 11),
+              ],
           ],
         ),
       ),

@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:laundry_app/data/mock_data.dart';
 import 'package:laundry_app/models/menu_item.dart';
 import 'package:laundry_app/models/service_package.dart';
 import 'package:laundry_app/state/basket_helper.dart';
 import 'package:laundry_app/state/cart_state.dart';
 import 'package:laundry_app/state/fulfillment_state.dart';
+import 'package:laundry_app/utils/cart_math.dart';
 import 'package:laundry_app/state/vendor_packages_state.dart';
 
 ServicePackage _package({
@@ -26,6 +26,11 @@ ServicePackage _package({
   serviceTags: serviceTags,
   active: active,
 );
+
+/// Inline per-piece catalog — the live catalog comes from the API.
+const _catalog = [
+  MenuItem(key: 'shirt', name: 'Shirts', unit: 'per piece', initial: 'S', price: 9100),
+];
 
 void main() {
   group('ServicePackage', () {
@@ -59,37 +64,6 @@ void main() {
     });
   });
 
-  group('packagesFor', () {
-    test('only offers packages the shop actually services', () {
-      final crispCorner = kShops.firstWhere((s) => s.name == 'Crisp Corner');
-      final ids = packagesFor(crispCorner).map((p) => p.id);
-
-      // Dry clean and suits only — no wash-based bags or bedding.
-      expect(ids, contains('suit-care'));
-      expect(ids, isNot(contains('student-bag')));
-      expect(ids, isNot(contains('bedding-refresh')));
-    });
-
-    test('universal packages reach every shop', () {
-      for (final shop in kShops) {
-        expect(packagesFor(shop).map((p) => p.id), contains('family-monthly'));
-      }
-    });
-
-    test('never returns more than the display cap', () {
-      for (final shop in kShops) {
-        expect(packagesFor(shop).length, lessThanOrEqualTo(kMaxShopPackages));
-      }
-    });
-
-    test('every seeded compare-at total actually beats the bundle price', () {
-      for (final package in kServicePackages) {
-        if (package.compareAtTzs == null) continue;
-        expect(package.compareAtTzs, greaterThan(package.priceTzs), reason: package.id);
-      }
-    });
-  });
-
   group('package in the basket', () {
     test('prices as an extra line alongside the per-piece menu', () {
       final package = _package(id: 'student-bag', priceTzs: 34000);
@@ -99,15 +73,15 @@ void main() {
       ];
 
       // One package plus two shirts (9,100 each).
-      expect(cartSubtotal({key: 1, 'shirt': 2}, extra), 52200.0);
-      expect(cartItemCount({key: 1, 'shirt': 2}, extra), 3);
-      expect(cartLines({key: 1}, extra).single.name, 'Test Bag');
+      expect(cartSubtotal({key: 1, 'shirt': 2}, extra, _catalog), 52200.0);
+      expect(cartItemCount({key: 1, 'shirt': 2}, extra, _catalog), 3);
+      expect(cartLines({key: 1}, extra, _catalog).single.name, 'Test Bag');
     });
 
     test('is invisible to totals that forget the extras list', () {
       // Guards the Detail screen's CTA hint, which used to drop `extra`.
       final key = _package().cartKey('ld-p1');
-      expect(cartSubtotal({key: 1}), 0.0);
+      expect(cartSubtotal({key: 1}, [], _catalog), 0.0);
     });
   });
 
@@ -155,23 +129,39 @@ void main() {
 
       expect(container.read(fulfillmentProvider).shop, 'Bright & Fold');
       expect(container.read(fulfillmentProvider).extraItems, isEmpty);
+      expect(container.read(fulfillmentProvider).catalog, isEmpty);
     });
   });
 
   group('vendor package authoring', () {
-    test('seeds from what the vendor shop already shows customers', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    // Seed the notifier locally — the live notifier loads from the API,
+    // which is out of scope for these unit tests.
+    List<ServicePackage> seeded() => [
+      _package(id: 'a', priceTzs: 34000, compareAtTzs: 45000),
+      _package(id: 'b', priceTzs: 20000),
+      _package(id: 'c', priceTzs: 50000, compareAtTzs: 60000, active: false),
+      _package(id: 'd', priceTzs: 15000),
+      _package(id: 'e', priceTzs: 25000),
+    ];
 
+    ProviderContainer seededContainer() {
+      final container = ProviderContainer(overrides: [
+        vendorPackagesProvider.overrideWith(() => _SeededVendorPackages(seeded())),
+      ]);
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('seeds from what the vendor shop already shows customers', () {
+      final container = seededContainer();
       expect(
         container.read(vendorPackagesProvider).map((p) => p.id),
-        packagesFor(kShops.first).map((p) => p.id),
+        seeded().map((p) => p.id),
       );
     });
 
     test('pausing a package pulls it off the customer shop page', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+      final container = seededContainer();
 
       final first = container.read(vendorPackagesProvider).first;
       container.read(vendorPackagesProvider.notifier).toggleActive(first.id);
@@ -181,8 +171,7 @@ void main() {
     });
 
     test('repricing moves the savings percentage with it', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+      final container = seededContainer();
 
       final notifier = container.read(vendorPackagesProvider.notifier);
       final target = container.read(vendorPackagesProvider).firstWhere((p) => p.compareAtTzs != null);
@@ -196,8 +185,7 @@ void main() {
     });
 
     test('price never goes negative', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+      final container = seededContainer();
 
       final notifier = container.read(vendorPackagesProvider.notifier);
       final id = container.read(vendorPackagesProvider).first.id;
@@ -205,18 +193,20 @@ void main() {
       expect(container.read(vendorPackagesProvider).first.priceTzs, 0);
     });
 
-    test('add and remove round-trip', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final notifier = container.read(vendorPackagesProvider.notifier);
-      final before = container.read(vendorPackagesProvider).length;
-
-      notifier.addPackage(_package(id: 'vendor-1'));
-      expect(container.read(vendorPackagesProvider).length, before + 1);
-
-      notifier.removePackage('vendor-1');
-      expect(container.read(vendorPackagesProvider).map((p) => p.id), isNot(contains('vendor-1')));
+    test('activeVendorPackages caps the customer-facing list', () {
+      final container = seededContainer();
+      expect(
+        activeVendorPackages(container.read(vendorPackagesProvider)).length,
+        lessThanOrEqualTo(4),
+      );
     });
   });
+}
+
+class _SeededVendorPackages extends VendorPackagesNotifier {
+  _SeededVendorPackages(this.initial);
+  final List<ServicePackage> initial;
+
+  @override
+  List<ServicePackage> build() => initial;
 }

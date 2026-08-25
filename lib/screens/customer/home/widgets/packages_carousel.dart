@@ -5,23 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../data/mock_data.dart';
 import '../../../../models/service_package.dart';
 import '../../../../models/user_role.dart';
 import '../../../../state/auth_state.dart';
 import '../../../../state/cart_state.dart';
+import '../../../../state/catalog_state.dart';
 import '../../../../state/fulfillment_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 
-// Storyset Shopping illustrations — https://storyset.com/shopping
+// Bundled Storyset illustrations — https://storyset.com/shopping
 const _kPackageIllustrations = {
-  'student-bag': 'https://stories.freepiklabs.com/storage/49900/Laundy-and-dry-cleaning-01.svg',
-  'corporate-weekly': 'https://stories.freepiklabs.com/storage/4070/Credit-card-amico.svg',
-  'bedding-refresh': 'https://stories.freepiklabs.com/storage/54558/Credit-card_Mesa-de-trabajo-1.svg',
-  'family-monthly': 'https://stories.freepiklabs.com/storage/36117/553-In-no-time-doing-2_Artboard-1.svg',
-  'family-bag': 'https://stories.freepiklabs.com/storage/54881/Ecommerce-web-page-01.svg',
-  'suit-care': 'https://stories.freepiklabs.com/storage/54544/Credit-card-pana-01.svg',
+  'weight': 'assets/images/Laundry and dry cleaning.svg',
+  'itemCount': 'assets/images/delivery.svg',
+  'household': 'assets/images/Select-bro.svg',
+  'subscription': 'assets/images/Laundry and dry cleaning.svg',
 };
 
 class PackagesCarousel extends ConsumerStatefulWidget {
@@ -33,47 +31,52 @@ class PackagesCarousel extends ConsumerStatefulWidget {
 
 class _PackagesCarouselState extends ConsumerState<PackagesCarousel> {
   late final PageController _pageController;
-  late Timer _autoScrollTimer;
+  Timer? _autoScrollTimer;
   int _currentPage = 0;
-
-  static final _displayPackages = [
-    kServicePackages[0], // Student Bag (weight)
-    kServicePackages[1], // Corporate Weekly (itemCount)
-    kServicePackages[2], // Bedding Refresh (household)
-    kServicePackages[3], // Family Monthly (subscription)
-    kServicePackages[4], // Family Bag (weight)
-    kServicePackages[5], // Suit Care Duo (itemCount)
-  ];
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.78);
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) return;
-      final nextPage = (_currentPage + 1) % _displayPackages.length;
-      _pageController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOutCubic,
-      );
-    });
+    Future.microtask(
+      () => ref.read(popularPackagesProvider.notifier).load(),
+    );
   }
 
   @override
   void dispose() {
-    _autoScrollTimer.cancel();
+    _autoScrollTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayPackages = ref.watch(popularPackagesProvider).items;
+
+    if (displayPackages.isEmpty) {
+      return const SizedBox(
+        height: 260,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    // Keep the auto-scroll timer in sync with the live item count.
+    _autoScrollTimer ??= Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      final nextPage = (_currentPage + 1) % displayPackages.length;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+
     return SizedBox(
       height: 260,
       child: PageView.builder(
         controller: _pageController,
-        itemCount: _displayPackages.length,
+        itemCount: displayPackages.length,
         onPageChanged: (i) => setState(() => _currentPage = i),
         itemBuilder: (_, i) {
           final distance = (_currentPage - i).abs().toDouble().clamp(0.0, 1.0);
@@ -83,7 +86,7 @@ class _PackagesCarouselState extends ConsumerState<PackagesCarousel> {
             child: AnimatedOpacity(
               opacity: 1.0 - (distance * 0.3),
               duration: const Duration(milliseconds: 300),
-              child: _PackageCard(pkg: _displayPackages[i]),
+              child: _PackageCard(pkg: displayPackages[i]),
             ),
           );
         },
@@ -117,6 +120,20 @@ class _PackageCard extends ConsumerWidget {
     PackageKind.subscription => 'Monthly',
   };
 
+  Widget _fallback() => Container(
+    width: 60,
+    height: 60,
+    decoration: BoxDecoration(
+      color: _accent.withValues(alpha: 0.08),
+      shape: BoxShape.circle,
+    ),
+    child: Icon(
+      Icons.inventory_2_outlined,
+      size: 28,
+      color: _accent,
+    ),
+  );
+
   void _onTap(BuildContext context, WidgetRef ref) {
     final auth = ref.read(authProvider);
     if (auth.role == UserRole.guest) {
@@ -147,7 +164,7 @@ class _PackageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final savings = pkg.savingsPercent;
-    final illustrationUrl = _kPackageIllustrations[pkg.id];
+    final illustrationUrl = _kPackageIllustrations[pkg.kind.name];
 
     return GestureDetector(
       onTap: () => _onTap(context, ref),
@@ -197,22 +214,11 @@ class _PackageCard extends ConsumerWidget {
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
-                        child: SvgPicture.network(
+                        child: SvgPicture.asset(
                           illustrationUrl,
                           fit: BoxFit.contain,
-                          placeholderBuilder: (_) => Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: _accent.withValues(alpha: 0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.inventory_2_outlined,
-                              size: 28,
-                              color: _accent,
-                            ),
-                          ),
+                          placeholderBuilder: (_) => _fallback(),
+                          errorBuilder: (_, _, _) => _fallback(),
                         ),
                       ),
                     ),

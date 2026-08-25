@@ -1,26 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../data/vendor_mock_data.dart';
 import '../../../../models/review_item.dart';
+import '../../../../state/catalog_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 import '../../../../state/client_preferences_state.dart';
 
-class ReviewsWidget extends ConsumerWidget {
+class ReviewsWidget extends ConsumerStatefulWidget {
   const ReviewsWidget({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReviewsWidget> createState() => _ReviewsWidgetState();
+}
+
+class _ReviewsWidgetState extends ConsumerState<ReviewsWidget> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(reviewsProvider.notifier).load());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final language = ref.watch(clientPreferencesProvider).language;
+    final reviews = ref.watch(reviewsProvider).items;
+
+    if (reviews.isEmpty) {
+      return const SizedBox(
+        height: 180,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
     return SizedBox(
       height: 180,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
-        itemCount: kReviews.length,
+        itemCount: reviews.length,
         separatorBuilder: (_, _) => const SizedBox(width: 14),
-        itemBuilder: (_, i) => _ReviewCard(review: kReviews[i], language: language),
+        itemBuilder: (_, i) => _ReviewCard(review: reviews[i], language: language),
       ),
     );
   }

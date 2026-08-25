@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
 import '../../../models/chat_message.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/chat_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -36,7 +36,13 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
   Widget build(BuildContext context) {
     final messages = ref.watch(chatProvider.select((state) => state.messagesFor(widget.shop)));
     final notifier = ref.read(chatProvider.notifier);
-    final image = shopByName(widget.shop)?.imageUrl ?? '';
+    String image = '';
+    for (final s in ref.watch(shopsProvider).items) {
+      if (s.name == widget.shop) {
+        image = s.imageUrl;
+        break;
+      }
+    }
 
     return FractionallySizedBox(
       heightFactor: 0.84,

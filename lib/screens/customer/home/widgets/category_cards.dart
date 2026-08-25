@@ -3,32 +3,56 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../data/laundry_categories_data.dart';
 import '../../../../models/laundry_category.dart';
+import '../../../../state/catalog_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 import '../../../../state/client_preferences_state.dart';
 import '../../../../widgets/remote_image.dart';
 
-class CategoryCardsWidget extends ConsumerWidget {
+class CategoryCardsWidget extends ConsumerStatefulWidget {
   const CategoryCardsWidget({super.key, required this.onCategoryTap});
 
   final ValueChanged<LaundryCategory> onCategoryTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoryCardsWidget> createState() => _CategoryCardsWidgetState();
+}
+
+class _CategoryCardsWidgetState extends ConsumerState<CategoryCardsWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // Items are needed for the card's photo slideshow and item count.
+    Future.microtask(
+      () => ref.read(categoriesProvider.notifier).load(withItems: true),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final language = ref.watch(clientPreferencesProvider).language;
+    final categories = ref.watch(categoriesProvider).items;
+    final visible = categories.take(5).toList();
+
+    if (visible.isEmpty) {
+      return const SizedBox(
+        height: 220,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
     return SizedBox(
       height: 220,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
-        itemCount: kLaundryCategories.length,
+        itemCount: visible.length,
         separatorBuilder: (_, _) => const SizedBox(width: 14),
         itemBuilder: (_, i) => _CategoryCard(
-          category: kLaundryCategories[i],
+          category: visible[i],
           language: language,
-          onTap: () => onCategoryTap(kLaundryCategories[i]),
+          onTap: () => widget.onCategoryTap(visible[i]),
         ),
       ),
     );

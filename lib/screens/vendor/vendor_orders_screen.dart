@@ -3,28 +3,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icons.dart';
-import '../../data/vendor_mock_data.dart';
 import '../../models/vendor_order.dart';
+import '../../state/vendor_order_detail_state.dart' show normalizeVendorOrderId;
 import '../../state/vendor_orders_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
-import '../../utils/currency.dart';
 import 'vendor_chat_screen.dart';
 
 const _kTabLabels = ['Incoming', 'In progress', 'Ready'];
 
-class VendorOrdersScreen extends ConsumerWidget {
+class VendorOrdersScreen extends ConsumerStatefulWidget {
   const VendorOrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VendorOrdersScreen> createState() => _VendorOrdersScreenState();
+}
+
+class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(vendorOrdersProvider.notifier).loadOrders());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(vendorOrdersProvider);
     final notifier = ref.read(vendorOrdersProvider.notifier);
     final orders = switch (state.tab) {
-      0 => kVendorOrdersNew,
-      1 => kVendorOrdersWip,
-      _ => kVendorOrdersReady,
+      0 => state.newOrders,
+      1 => state.wipOrders,
+      _ => state.readyOrders,
     };
+    final loading = state.isLoading && state.orders.isEmpty;
 
     return Scaffold(
       body: SafeArea(
@@ -50,27 +61,42 @@ class VendorOrdersScreen extends ConsumerWidget {
               const _IncomingBanner(),
             ],
             const SizedBox(height: 16),
-            for (var i = 0; i < orders.length; i++) ...[
-              _OrderCard(
-                order: orders[i],
-                accepted: state.accepted[orders[i].id] ?? false,
-                deliveryFees: state.deliveryFees,
-                onToggle: () {
-                  if (orders[i].stage != 'new') {
-                    context.push('/vendor/order-detail');
-                  } else if (!(state.accepted[orders[i].id] ?? false)) {
-                    _showAcceptDialog(context, ref, orders[i]);
-                  }
-                },
-                onOpen: () => context.push('/vendor/order-detail'),
-                onChat: orders[i].stage == 'wip' ? () => showVendorChatPanel(context, orders[i].customer) : null,
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else if (orders.isEmpty) ...[
+              Text(
+                'No orders here right now.',
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
               ),
-              if (i != orders.length - 1) const SizedBox(height: 12),
+            ] else ...[
+              for (var i = 0; i < orders.length; i++) ...[
+                _OrderCard(
+                  order: orders[i],
+                  onToggle: () {
+                    if (orders[i].stage != 'new') {
+                      openDetail(orders[i]);
+                    } else {
+                      _showAcceptDialog(context, ref, orders[i]);
+                    }
+                  },
+                  onOpen: () => openDetail(orders[i]),
+                  onChat: orders[i].stage == 'wip' ? () => showVendorChatPanel(context, orders[i].customer) : null,
+                ),
+                if (i != orders.length - 1) const SizedBox(height: 12),
+              ],
             ],
           ],
         ),
       ),
     );
+  }
+
+  void openDetail(VendorOrder order) {
+    ref.read(vendorOrdersProvider.notifier).openOrder(order);
+    context.push('/vendor/order-detail');
   }
 
   void _showAcceptDialog(BuildContext context, WidgetRef ref, VendorOrder order) {
@@ -113,14 +139,14 @@ class _SegmentTab extends StatelessWidget {
   }
 }
 
-class _IncomingBanner extends StatefulWidget {
+class _IncomingBanner extends ConsumerStatefulWidget {
   const _IncomingBanner();
 
   @override
-  State<_IncomingBanner> createState() => _IncomingBannerState();
+  ConsumerState<_IncomingBanner> createState() => _IncomingBannerState();
 }
 
-class _IncomingBannerState extends State<_IncomingBanner> with SingleTickerProviderStateMixin {
+class _IncomingBannerState extends ConsumerState<_IncomingBanner> with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat();
 
   @override
@@ -131,6 +157,9 @@ class _IncomingBannerState extends State<_IncomingBanner> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
+    final newCount = ref.watch(vendorOrdersProvider.select((s) => s.newOrders.length));
+    if (newCount == 0) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(18)),
@@ -162,7 +191,7 @@ class _IncomingBannerState extends State<_IncomingBanner> with SingleTickerProvi
           const SizedBox(width: 11),
           Expanded(
             child: Text(
-              '3 new requests in the last 10 minutes',
+              '$newCount new request${newCount == 1 ? '' : 's'} waiting for your response',
               style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.cream),
             ),
           ),
@@ -175,27 +204,22 @@ class _IncomingBannerState extends State<_IncomingBanner> with SingleTickerProvi
 class _OrderCard extends StatelessWidget {
   const _OrderCard({
     required this.order,
-    required this.accepted,
     required this.onToggle,
     required this.onOpen,
-    required this.deliveryFees,
     this.onChat,
   });
 
   final VendorOrder order;
-  final bool accepted;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
-  final Map<String, int> deliveryFees;
   final VoidCallback? onChat;
 
   @override
   Widget build(BuildContext context) {
     final isNew = order.stage == 'new';
-    final active = accepted || !isNew;
+    final active = !isNew;
     final tagFg = order.priority == 'Express' ? AppColors.amber : AppColors.muted;
     final tagBg = order.priority == 'Express' ? AppColors.amberLight : AppColors.creamDark;
-    final deliveryFee = deliveryFees[order.id] ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -270,10 +294,6 @@ class _OrderCard extends StatelessWidget {
                     children: [
                       TextSpan(text: '${order.when} · '),
                       TextSpan(text: order.total, style: const TextStyle(color: AppColors.teal, fontWeight: FontWeight.w800)),
-                      if (deliveryFee > 0) ...[
-                        const TextSpan(text: ' + '),
-                        TextSpan(text: formatTzs(deliveryFee), style: const TextStyle(color: AppColors.amber, fontWeight: FontWeight.w800)),
-                      ],
                     ],
                   ),
                 ),
@@ -309,7 +329,7 @@ class _OrderCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              isNew ? (accepted ? 'Accepted' : 'Accept') : 'Update status',
+                              isNew ? 'Accept' : 'Update status',
                               style: AppText.sans(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w800,
@@ -528,7 +548,7 @@ class _AcceptOrderSheetState extends ConsumerState<_AcceptOrderSheet> {
                   final fee = widget.isDelivery && !_freeDelivery
                       ? (int.tryParse(_feeController.text) ?? 0)
                       : 0;
-                  ref.read(vendorOrdersProvider.notifier).acceptOrder(order.id, deliveryFeeTzs: fee);
+                  ref.read(vendorOrdersProvider.notifier).acceptOrder(normalizeVendorOrderId(order.id), deliveryFeeTzs: fee);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

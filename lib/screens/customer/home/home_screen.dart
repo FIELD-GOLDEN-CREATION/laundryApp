@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
-import '../../../data/promo_mock_data.dart';
+import '../../../models/order.dart';
 import '../../../models/user_role.dart';
 import '../../../state/auth_state.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
+import '../../../state/orders_state.dart';
+import '../../../state/profile_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/section_header.dart';
@@ -20,13 +22,44 @@ import 'widgets/shop_card.dart';
 import 'widgets/packages_carousel.dart';
 import 'widgets/vendor_banner.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(shopsProvider.notifier).load();
+      ref.read(offersProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isGuest = ref.watch(authProvider.select((s) => s.role == UserRole.guest));
     final language = ref.watch(clientPreferencesProvider).language;
+    final shops = ref.watch(shopsProvider).items;
+    final offers = ref.watch(offersProvider).items;
+
+    // Latest in-progress order for the tracking banner.
+    final orders = ref.watch(ordersProvider);
+    Order? activeOrder;
+    for (final o in orders) {
+      if (o.trackStep >= 0 && o.trackStep < 3) {
+        activeOrder = o;
+        break;
+      }
+    }
+
+    // Default pickup address: first saved address for this customer.
+    final addresses = ref.watch(profileProvider.select((s) => s.addresses));
+    final addressLine = addresses.isNotEmpty ? addresses.first.line : '';
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -37,13 +70,8 @@ class HomeScreen extends ConsumerWidget {
               _Header(
                  isGuest: isGuest,
                  language: language,
+                 addressLine: addressLine,
                 onProfile: () {
-                  // Ports the source's `goProfile:()=>gate('profile', reason)`
-                  // — always gated, unlike the tab bar's Profile tab which
-                  // only gates for guests. Authed customers land on the
-                  // Profile tab (a simplification of the source's literal
-                  // stack-push there, same category of deliberate deviation
-                  // as this app's StatefulShellRoute tab-stack choice).
                   if (gateGuest(ref, context, 'Log in to see your profile, addresses and saved shops.')) return;
                   context.go('/profile');
                 },
@@ -51,36 +79,37 @@ class HomeScreen extends ConsumerWidget {
                 onSearch: () => context.push('/search'),
               ),
               const SizedBox(height: 14),
-              // Guests have no orders yet, so there's nothing to track.
-              if (!isGuest)
+              if (!isGuest && activeOrder != null)
                 ActiveOrderBanner(
-                   title: clientLabel('Order #LD-2481 is being washed', 'Oda #LD-2481 inafuliwa', language),
-                   subtitle: clientLabel('Back at your door by Thu, 6:00 PM', 'Itarudi mlangoni Alhamisi, saa 12:00 jioni', language),
-                  onTap: () => context.push('/track'),
+                   title: clientLabel('Order ${activeOrder.id} is being washed', 'Oda ${activeOrder.id} inafuliwa', language),
+                   subtitle: clientLabel('Tap to track your laundry in real time', 'Bofya kufuatilia oda yako moja kwa moja', language),
+                  onTap: () => context.push('/track', extra: activeOrder!.id),
                 ),
-               SectionHeader(title: clientLabel('Just for you', 'Kwa ajili yako', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
+              SectionHeader(title: clientLabel('Just for you', 'Kwa ajili yako', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 190,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
-                  itemCount: kPromoOffers.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 14),
-                  itemBuilder: (_, i) => OfferCard(
-                    offer: kPromoOffers[i],
-                    onClaim: () {
-                      if (gateGuest(
-                        ref,
-                        context,
-                        'Log in as a customer to claim this offer.',
-                        redirectPath: '/detail',
-                      )) {
-                        return;
-                      }
-                      context.push('/detail');
-                    },
-                  ),
-                ),
+                child: offers.isEmpty
+                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
+                        itemCount: offers.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 14),
+                        itemBuilder: (_, i) => OfferCard(
+                          offer: offers[i],
+                          onClaim: () {
+                            if (gateGuest(
+                              ref,
+                              context,
+                              'Log in as a customer to claim this offer.',
+                              redirectPath: '/detail',
+                            )) {
+                              return;
+                            }
+                            context.push('/detail');
+                          },
+                        ),
+                      ),
               ),
               SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
               const PackagesCarousel(),
@@ -111,27 +140,29 @@ class HomeScreen extends ConsumerWidget {
                SectionHeader(title: clientLabel('Nearby shops', 'Maduka yaliyo karibu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 250,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-                  itemCount: kShops.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 14),
-                  itemBuilder: (_, i) => ShopCard(
-                    shop: kShops[i],
-                    onTap: () {
-                      if (gateGuest(
-                        ref,
-                        context,
-                        'Log in as a customer to view ${kShops[i].name}.',
-                        redirectPath: '/detail',
-                        redirectExtra: kShops[i],
-                      )) {
-                        return;
-                      }
-                      context.push('/detail', extra: kShops[i]);
-                    },
-                  ),
-                ),
+                child: shops.isEmpty
+                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                        itemCount: shops.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 14),
+                        itemBuilder: (_, i) => ShopCard(
+                          shop: shops[i],
+                          onTap: () {
+                            if (gateGuest(
+                              ref,
+                              context,
+                              'Log in as a customer to view ${shops[i].name}.',
+                              redirectPath: '/detail',
+                              redirectExtra: shops[i],
+                            )) {
+                              return;
+                            }
+                            context.push('/detail', extra: shops[i]);
+                          },
+                        ),
+                      ),
               ),
               const SizedBox(height: 12),
             ],
@@ -143,10 +174,11 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.isGuest, required this.language, required this.onProfile, required this.onNotifs, required this.onSearch});
+  const _Header({required this.isGuest, required this.language, required this.addressLine, required this.onProfile, required this.onNotifs, required this.onSearch});
 
   final bool isGuest;
   final String language;
+  final String addressLine;
   final VoidCallback onProfile;
   final VoidCallback onNotifs;
   final VoidCallback onSearch;
@@ -206,10 +238,10 @@ class _Header extends StatelessWidget {
                               children: [
                                 const AppIcon(AppIcons.locationPin, size: 15),
                                 const SizedBox(width: 7),
-                                Text(
-                                  '12 Chole Road, Masaki',
-                                  style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cream),
-                                ),
+                                 Text(
+                                   addressLine.isNotEmpty ? addressLine : clientLabel('Set pickup address', 'Weka mahali pa kuchukua', language),
+                                   style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cream),
+                                 ),
                                 const SizedBox(width: 7),
                                 AppIcon(AppIcons.chevronDownSmall, size: 11, color: AppColors.cream.withValues(alpha: 0.7)),
                               ],

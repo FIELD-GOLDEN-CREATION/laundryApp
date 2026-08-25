@@ -1,15 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
+import '../../../utils/cart_math.dart';
+import '../../../utils/schedule_options.dart';
 import '../../../models/address.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/cart_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/fulfillment_state.dart';
 import '../../../state/place_order_helper.dart';
+import '../../../state/profile_state.dart';
 import '../../../state/schedule_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -29,6 +31,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   bool _locating = false;
   bool _quotingLocal = false;
+  bool _addressesRequested = false;
   int? _lastQuotedSeed;
 
   @override
@@ -61,7 +64,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     }
   }
 
-  /// Auto-runs the delivery quote whenever the pickup location changes —
+  /// Auto-runs the delivery quote whenever the pickup location changes â€”
   /// Home, Office or "Locate me". Only skips when the exact same seed was
   /// already quoted (so rebuilds don't re-show the sheet).
   void _maybeQuote() {
@@ -75,22 +78,24 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     _runQuote(seed);
   }
 
-  /// Places the order straight from scheduling — the client no longer pays
+  /// Places the order straight from scheduling â€” the client no longer pays
   /// up front, so there's nothing left for a separate checkout step to
   /// collect. `checkout_screen.dart` still exists but nothing routes to it.
   Future<void> _continueToConfirmation() async {
-    if (gateGuest(ref, context, 'Log in to place your order — guests can browse everything else.')) return;
+    if (gateGuest(ref, context, 'Log in to place your order â€” guests can browse everything else.')) return;
     final schedule = ref.read(scheduleProvider);
     final fulfillment = ref.read(fulfillmentProvider);
     final qty = ref.read(cartProvider);
-    final extra = fulfillment.extraItems.values.toList();
-    final subtotal = cartSubtotal(qty, extra);
+    final priced = ref.read(fulfillmentProvider).pricedItems;
+    final subtotal = cartSubtotal(qty, priced);
     final deliveryFee = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
     final total = subtotal + deliveryFee;
+    final addresses = ref.read(profileProvider).addresses;
     final address = schedule.isCurrentLocation
         ? Address(label: 'Current location', line: schedule.currentLocation.isEmpty ? 'Current location' : schedule.currentLocation)
-        : kAddresses[schedule.addrIndex];
-    final day = kDays[schedule.dayIndex];
+        : addresses[schedule.addrIndex.clamp(0, addresses.length - 1)];
+    final days = upcomingDays();
+    final day = days[schedule.dayIndex.clamp(0, days.length - 1)];
     final pickupSummary = '${day.dow} ${day.num}, ${kTimeSlots[schedule.slotIndex]}';
 
     final order = placeCurrentOrder(
@@ -104,9 +109,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     context.go('/order-confirmation', extra: order.id);
   }
 
-  /// Quietly resolves the delivery fee/driver in the background — no modal
+  /// Quietly resolves the delivery fee/driver in the background â€” no modal
   /// or snackbar theatrics, since driver assignment is no longer surfaced at
-  /// scheduling time. The CTA's "Finding your driver…" label already covers
+  /// scheduling time. The CTA's "Finding your driverâ€¦" label already covers
   /// the `quoting` state, so this just needs to fill in the fee for the
   /// order total.
   Future<void> _runQuote(int seed) async {
@@ -134,18 +139,28 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final isDelivery = fulfillment.isDelivery;
     final quoting = fulfillment.quoting;
 
+    // Saved addresses come from the customer profile (API-backed).
+    final addresses = ref.watch(profileProvider.select((s) => s.addresses));
+    final days = upcomingDays();
+
+    // Ensure addresses are loaded once.
+    if (addresses.isEmpty && !_addressesRequested) {
+      _addressesRequested = true;
+      Future.microtask(() => ref.read(profileProvider.notifier).loadAddresses());
+    }
+
     ref.listen(scheduleProvider, (prev, next) {
       if (prev?.addrIndex != next.addrIndex) _maybeQuote();
     });
 
     final mapLabel = schedule.isCurrentLocation
         ? schedule.currentLocation
-        : kAddresses[schedule.addrIndex].line;
+        : addresses.isNotEmpty ? addresses[schedule.addrIndex.clamp(0, addresses.length - 1)].line : schedule.currentLocation;
 
     final quoteReady = fulfillment.deliveryFeeTzs > 0;
     final ctaLabel = () {
       if (!isDelivery) return clientLabel('Place order', 'Weka oda', language);
-      if (quoting || !quoteReady) return clientLabel('Finding your driver…', 'Kumtafuta dereva wako…', language);
+      if (quoting || !quoteReady) return clientLabel('Finding your driverâ€¦', 'Kumtafuta dereva wakoâ€¦', language);
       return clientLabel('Place order', 'Weka oda', language);
     }();
 
@@ -174,15 +189,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                 _SectionLabel(clientLabel('Pickup address', 'Anwani ya mzigo', language)),
                 Column(
                   children: [
-                    for (var i = 0; i < kAddresses.length; i++) ...[
+                    for (var i = 0; i < addresses.length; i++) ...[
                       RadioOptionCard(
-                        label: kAddresses[i].label,
-                        sub: kAddresses[i].line,
+                        label: addresses[i].label,
+                        sub: addresses[i].line,
                         selected: schedule.addrIndex == i,
                         leading: _AddressIcon(icon: i == 0 ? AppIcons.home : AppIcons.office),
                         onTap: () => notifier.pickAddress(i),
                       ),
-                      if (i != kAddresses.length - 1) const SizedBox(height: 10),
+                      if (i != addresses.length - 1) const SizedBox(height: 10),
                     ],
                     const SizedBox(height: 10),
                     RadioOptionCard(
@@ -200,13 +215,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                 height: 62,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: kDays.length,
+                  itemCount: days.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 9),
                   itemBuilder: (_, i) {
                     final active = schedule.dayIndex == i;
                     return _DayChip(
-                      dow: kDays[i].dow,
-                      num: kDays[i].num,
+                      dow: days[i].dow,
+                      num: days[i].num,
                       active: active,
                       onTap: () => notifier.pickDay(i),
                     );
@@ -306,7 +321,7 @@ class _ShopDropOffCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(shop, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                 const SizedBox(height: 2),
-                Text(clientLabel('Pay at the shop — no delivery fee', 'Ulipa dukani — hakuna nauli', language), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.teal)),
+                Text(clientLabel('Pay at the shop â€” no delivery fee', 'Ulipa dukani â€” hakuna nauli', language), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.teal)),
               ],
             ),
           ),
@@ -316,7 +331,7 @@ class _ShopDropOffCard extends StatelessWidget {
   }
 }
 
-/// A stylised map preview of the pickup area — a fixed-height, properly
+/// A stylised map preview of the pickup area â€” a fixed-height, properly
 /// sized tile with a location pin and the selected address, so the location
 /// reads visually instead of as a bare list row.
 class _MapPreview extends StatelessWidget {
@@ -362,7 +377,7 @@ class _MapPreview extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  locating ? 'Finding your location…' : label,
+                  locating ? 'Finding your locationâ€¦' : label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800),

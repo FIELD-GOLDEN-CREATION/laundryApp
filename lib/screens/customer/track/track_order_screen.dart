@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
 import '../chat/chat_screen.dart';
 import '../../../models/order.dart';
 import '../../../models/track_step_def.dart';
@@ -14,45 +15,83 @@ import '../../../theme/text_styles.dart';
 import '../../../widgets/placeholder_image.dart';
 import '../../../widgets/round_back_button.dart';
 
-/// The order shown when Track is opened with no specific order in mind
-/// (e.g. Home's "being washed" banner) — the long-running demo order.
-const _kDefaultOrderId = '#LD-2481';
+/// Timeline labels — display configuration. Times are estimates; live
+/// timestamps come from the order's tracking rows once the backend exposes
+/// them per step.
+const _kTrackSteps = [
+  TrackStepDef(title: 'Picked up', time: ''),
+  TrackStepDef(title: 'Sorted & counted', time: ''),
+  TrackStepDef(title: 'Washing in progress', time: ''),
+  TrackStepDef(title: 'Out for delivery', time: ''),
+];
 
-class TrackOrderScreen extends ConsumerWidget {
+const _kSelfTrackSteps = [
+  TrackStepDef(title: 'Dropped at shop', time: 'Promise arrival window'),
+  TrackStepDef(title: 'Sorted & counted', time: 'On arrival'),
+  TrackStepDef(title: 'Washing in progress', time: 'After drop-off'),
+  TrackStepDef(title: 'Ready for collection', time: ''),
+];
+
+class TrackOrderScreen extends ConsumerStatefulWidget {
   const TrackOrderScreen({super.key, this.orderId});
 
-  /// Which order to show. Null falls back to the default demo order.
+  /// Which order to show. Null falls back to the first active order.
   final String? orderId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrackOrderScreen> createState() => _TrackOrderScreenState();
+}
+
+class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(ordersProvider.notifier).loadOrders();
+      ref.read(completedOrdersProvider.notifier).loadOrders();
+    });
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.read(ordersProvider.notifier).loadOrders();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final activeOrders = ref.watch(ordersProvider);
-    final targetId = orderId ?? _kDefaultOrderId;
+    final completed = ref.watch(completedOrdersProvider);
+    final targetId = widget.orderId;
 
     Order? order;
     var isActive = false;
-    for (final o in activeOrders) {
-      if (o.id == targetId) {
-        order = o;
-        isActive = true;
-        break;
-      }
-    }
-    if (order == null) {
-      for (final o in kCompletedOrders) {
+    if (targetId != null) {
+      for (final o in [...activeOrders, ...completed]) {
         if (o.id == targetId) {
           order = o;
+          isActive = activeOrders.contains(o);
           break;
         }
       }
     }
-    order ??= activeOrders.isNotEmpty ? activeOrders.first : kCompletedOrders.first;
+    order ??= activeOrders.isNotEmpty ? activeOrders.first : (completed.isNotEmpty ? completed.first : null);
+
+    if (order == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+
     final language = ref.watch(clientPreferencesProvider).language;
     final step = order.trackStep;
     final awaitingPickup = step == kOrderPlacedStep;
     final isSelf = order.fulfillment == 'self';
-    final steps = isSelf ? kSelfTrackSteps : kTrackSteps;
-    final driverName = order.driver.isNotEmpty ? order.driver : 'Daniel O.';
+    final steps = isSelf ? _kSelfTrackSteps : _kTrackSteps;
+    final driverName = order.driver.isNotEmpty ? order.driver : '';
 
     return Scaffold(
       body: SingleChildScrollView(

@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
 import '../../../models/order.dart';
+import '../../../models/shop.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/orders_state.dart';
 import '../../../state/orders_tab_state.dart';
 import '../../../state/client_preferences_state.dart';
@@ -13,15 +14,32 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../widgets/remote_image.dart';
 
-class OrdersScreen extends ConsumerWidget {
+class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends ConsumerState<OrdersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(ordersProvider.notifier).loadOrders();
+      ref.read(completedOrdersProvider.notifier).loadOrders();
+      ref.read(shopsProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tab = ref.watch(ordersTabProvider);
     final notifier = ref.read(ordersTabProvider.notifier);
     final activeOrders = ref.watch(ordersProvider);
-    final orders = tab == 0 ? activeOrders : kCompletedOrders;
+    final completed = ref.watch(completedOrdersProvider);
+    final orders = tab == 0 ? activeOrders : completed;
+    final shops = ref.watch(shopsProvider).items;
     final language = ref.watch(clientPreferencesProvider).language;
 
     return Scaffold(
@@ -45,9 +63,10 @@ class OrdersScreen extends ConsumerWidget {
             for (var i = 0; i < orders.length; i++) ...[
               _OrderCard(
                 order: orders[i],
+                shop: _shopFor(shops, orders[i].shop),
                 showContact: tab == 0,
                 language: language,
-                         onTap: () => context.push('/order-detail', extra: orders[i].id),
+                          onTap: () => context.push('/order-detail', extra: orders[i].id),
               ),
               if (i != orders.length - 1) const SizedBox(height: 12),
             ],
@@ -56,6 +75,15 @@ class OrdersScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Shop? _shopFor(List<Shop> shops, String nameOrId) {
+  for (final s in shops) {
+    if (s.name == nameOrId || s.slotId == nameOrId || '#${s.slotId}' == nameOrId || s.listSlotId == nameOrId) {
+      return s;
+    }
+  }
+  return null;
 }
 
 class _TabButton extends StatelessWidget {
@@ -92,19 +120,19 @@ class _TabButton extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onTap, required this.language, this.showContact = false});
+  const _OrderCard({required this.order, required this.shop, required this.onTap, required this.language, this.showContact = false});
 
   final Order order;
+  final Shop? shop;
   final VoidCallback onTap;
   final String language;
 
-  /// Whether to show the WhatsApp/call buttons — only for active orders (a
+  /// Whether to show the WhatsApp/call buttons â€” only for active orders (a
   /// customer only needs to reach the vendor while an order is in progress).
   final bool showContact;
 
   @override
   Widget build(BuildContext context) {
-    final shop = shopByName(order.shop);
     return Material(
        color: AppColors.clientSurface(context),
       borderRadius: BorderRadius.circular(22),
@@ -132,7 +160,7 @@ class _OrderCard extends StatelessWidget {
                         Text(order.shop, style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                         const SizedBox(height: 3),
                         Text(
-                          '${order.id} · ${order.items}',
+                          '${order.id} Â· ${order.items}',
                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                         ),
                       ],
@@ -169,7 +197,7 @@ class _OrderCard extends StatelessWidget {
                           bg: AppColors.tealMuted,
                           iconColor: AppColors.teal,
                           onTap: () async {
-                            final ok = await launchWhatsAppChat(shop.phone);
+                            final ok = await launchWhatsAppChat(shop?.phone ?? "");
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text(clientLabel("Couldn't open WhatsApp.", 'Imeshindwa kufungua WhatsApp.', language))),
@@ -183,7 +211,7 @@ class _OrderCard extends StatelessWidget {
                           bg: AppColors.teal,
                           iconColor: AppColors.cream,
                           onTap: () async {
-                            final ok = await launchPhoneCall(shop.phone);
+                            final ok = await launchPhoneCall(shop?.phone ?? "");
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text(clientLabel("Couldn't start the call.", 'Imeshindwa kupiga simu.', language))),

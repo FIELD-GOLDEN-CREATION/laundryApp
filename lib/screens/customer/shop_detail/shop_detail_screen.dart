@@ -2,20 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/mock_data.dart';
 import '../../../models/menu_item.dart';
 import '../../../models/service_package.dart';
 import '../../../models/shop.dart';
 import '../../../state/cart_state.dart';
+import '../../../state/catalog_state.dart';
 import '../../../state/fulfillment_state.dart';
 import '../../../state/profile_state.dart';
-import '../../../state/vendor_packages_state.dart';
-import '../../../state/vendor_profile_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/cart_math.dart';
 import '../../../widgets/basket_shop_guard.dart';
 import '../../../widgets/remote_image.dart';
-import '../../../widgets/shop_photo_slideshow.dart';
 import 'widgets/package_card.dart';
 
 const _kTabLabels = ['About', 'Packages', 'Price list'];
@@ -31,24 +29,47 @@ class ShopDetailScreen extends ConsumerStatefulWidget {
 
 class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
   int _tab = 0;
+  bool _catalogRegistered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(shopDetailProvider(widget.shop.listSlotId).future));
+  }
 
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
     final qty = ref.watch(cartProvider);
     final fav = ref.watch(profileProvider.select((s) => s.fav));
-    final extraItems = ref.watch(fulfillmentProvider).extraItems.values.toList();
+    final fulfillment = ref.watch(fulfillmentProvider);
+    final extraItems = fulfillment.extraItems.values.toList();
 
-    final isVendorShop = shop.slotId == kShops.first.slotId;
-    final vendorProfile = ref.watch(vendorProfileProvider);
-    final displayName = isVendorShop ? vendorProfile.shopTitle : shop.name;
-    final displayDescription = isVendorShop ? vendorProfile.bio : shop.description;
-    final displayHours = isVendorShop
-        ? (vendorProfile.isOpen ? 'Open till ${vendorProfile.closeTime}' : 'Closed now')
-        : shop.hours;
-    final displayHoursColor = isVendorShop && !vendorProfile.isOpen ? AppColors.danger : AppColors.teal;
+    final displayName = shop.name;
+    final displayDescription = shop.description;
+    final displayHours = shop.isOpenNow ? (shop.hours.isNotEmpty ? shop.hours : 'Open') : 'Closed now';
+    final displayHoursColor = shop.isOpenNow ? AppColors.teal : AppColors.danger;
 
-    final packages = isVendorShop ? activeVendorPackages(ref.watch(vendorPackagesProvider)) : packagesFor(shop);
+    final detailAsync = ref.watch(shopDetailProvider(shop.listSlotId));
+    final packagesAsync = ref.watch(shopPackagesProvider(shop.slotId));
+    final loading = detailAsync.isLoading || packagesAsync.isLoading;
+    final packages = packagesAsync.asData?.value ?? const <ServicePackage>[];
+    final priceList = detailAsync.asData?.value ?? const <MenuItem>[];
+
+    // Register this shop's price list with the basket only when the basket
+    // is empty or already belongs to this shop.
+    if (!_catalogRegistered && priceList.isNotEmpty) {
+      _catalogRegistered = true;
+      if (fulfillment.catalog.isEmpty || fulfillment.shop == shop.name) {
+        Future.microtask(() => ref.read(fulfillmentProvider.notifier).setShopCatalog(
+              shopId: shop.slotId,
+              shopName: shop.name,
+              items: priceList,
+            ));
+      }
+    }
+
+    final pricedItems = fulfillment.pricedItems;
 
     return Scaffold(
       backgroundColor: AppColors.clientSurface(context),
@@ -107,43 +128,59 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                         _AboutSection(
                           description: displayDescription,
                           shop: shop,
-                          isVendorShop: isVendorShop,
-                          vendorProfile: vendorProfile,
                         )
                       else if (_tab == 1)
-                        packages.isEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Text(
-                                  'This shop hasn\'t listed any packages yet.',
-                                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
-                                ),
+                        loading
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 40),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                               )
-                            : Column(
-                                children: [
-                                  for (final package in packages) ...[
-                                    PackageCard(
-                                      package: package,
-                                      inBasket: (qty[package.cartKey(shop.slotId)] ?? 0) > 0,
-                                      onSelect: () => _selectPackage(context, package, displayName),
+                            : packages.isEmpty
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Text(
+                                      'This shop hasn\'t listed any packages yet.',
+                                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
                                     ),
-                                    if (package != packages.last) const SizedBox(height: 10),
-                                  ],
-                                ],
-                              )
+                                  )
+                                : Column(
+                                    children: [
+                                      for (final package in packages) ...[
+                                        PackageCard(
+                                          package: package,
+                                          inBasket: (qty[package.cartKey(shop.slotId)] ?? 0) > 0,
+                                          onSelect: () => _selectPackage(context, package, displayName),
+                                        ),
+                                        if (package != packages.last) const SizedBox(height: 10),
+                                      ],
+                                    ],
+                                  )
                       else
-                        Column(
-                          children: [
-                            for (final item in kMenuItems) ...[
-                              _MenuRow(
-                                item: item,
-                                checked: (qty[item.key] ?? 0) > 0,
-                                onToggle: () => _toggleMenuItem(context, item, displayName),
-                              ),
-                              if (item != kMenuItems.last) const SizedBox(height: 10),
-                            ],
-                          ],
-                        ),
+                        loading
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 40),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              )
+                            : priceList.isEmpty
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Text(
+                                      'No price list available yet.',
+                                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
+                                    ),
+                                  )
+                                : Column(
+                                    children: [
+                                      for (final item in priceList) ...[
+                                        _MenuRow(
+                                          item: item,
+                                          checked: (qty[item.key] ?? 0) > 0,
+                                          onToggle: () => _toggleMenuItem(context, item, displayName),
+                                        ),
+                                        if (item != priceList.last) const SizedBox(height: 10),
+                                      ],
+                                    ],
+                                  ),
                       const SizedBox(height: 100),
                     ],
                   ),
@@ -157,8 +194,6 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
             right: 0,
             child: _EdgedHeroImage(
               shop: shop,
-              isVendorShop: isVendorShop,
-              vendorProfile: vendorProfile,
               fav: fav,
               onFavToggle: () => ref.read(profileProvider.notifier).toggleFav(),
               onBack: () => context.pop(),
@@ -167,10 +202,9 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
         ],
       ),
       bottomNavigationBar: _BottomBar(
-        shop: shop,
-        isVendorShop: isVendorShop,
-        vendorProfile: vendorProfile,
-        cartTotal: formatMoney(cartSubtotal(qty, extraItems)),
+        shopName: displayName,
+        imageUrl: shop.imageUrl,
+        cartTotal: formatMoney(cartSubtotal(qty, extraItems, pricedItems)),
         onViewBasket: () => context.push('/cart'),
       ),
     );
@@ -211,16 +245,12 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
 class _EdgedHeroImage extends StatelessWidget {
   const _EdgedHeroImage({
     required this.shop,
-    required this.isVendorShop,
-    required this.vendorProfile,
     required this.fav,
     required this.onFavToggle,
     required this.onBack,
   });
 
   final Shop shop;
-  final bool isVendorShop;
-  final dynamic vendorProfile;
   final bool fav;
   final VoidCallback onFavToggle;
   final VoidCallback onBack;
@@ -232,10 +262,7 @@ class _EdgedHeroImage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (isVendorShop && vendorProfile.shopPhotoLabels.isNotEmpty)
-            ShopPhotoSlideshow(labels: vendorProfile.shopPhotoLabels)
-          else
-            RemoteImage(url: shop.imageUrl, fallback: 'Shop storefront photo', fit: BoxFit.cover),
+          RemoteImage(url: shop.imageUrl, fallback: shop.name, fit: BoxFit.cover),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -465,14 +492,10 @@ class _AboutSection extends StatelessWidget {
   const _AboutSection({
     required this.description,
     required this.shop,
-    required this.isVendorShop,
-    required this.vendorProfile,
   });
 
   final String description;
   final Shop shop;
-  final bool isVendorShop;
-  final dynamic vendorProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -506,13 +529,13 @@ class _AboutSection extends StatelessWidget {
             ),
         ],
         const SizedBox(height: 16),
-        if (isVendorShop) ...[
+        if (shop.hours.isNotEmpty) ...[
           Row(
             children: [
               Icon(Icons.schedule_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
               const SizedBox(width: 8),
               Text(
-                vendorProfile.scheduleSummary,
+                shop.hours,
                 style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
               ),
             ],
@@ -525,7 +548,7 @@ class _AboutSection extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                shop.distance,
+                shop.distance.isNotEmpty ? '${shop.distance} km away' : shop.meta,
                 style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
               ),
             ),
@@ -679,23 +702,26 @@ class _ItemCheckbox extends StatelessWidget {
 
 class _BottomBar extends StatelessWidget {
   const _BottomBar({
-    required this.shop,
-    required this.isVendorShop,
-    required this.vendorProfile,
+    required this.shopName,
+    required this.imageUrl,
     required this.cartTotal,
     required this.onViewBasket,
   });
 
-  final Shop shop;
-  final bool isVendorShop;
-  final dynamic vendorProfile;
+  final String shopName;
+  final String imageUrl;
   final String cartTotal;
   final VoidCallback onViewBasket;
 
   @override
   Widget build(BuildContext context) {
-    final displayName = isVendorShop ? vendorProfile.shopTitle : shop.name;
-    final initials = displayName.split(' ').map((w) => w[0]).take(2).join().toUpperCase();
+    final initials = shopName
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0])
+        .join()
+        .toUpperCase();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
@@ -728,11 +754,11 @@ class _BottomBar extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    displayName,
-                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
-                  ),
+                 children: [
+                   Text(
+                     shopName,
+                     style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
+                   ),
                   Text(
                     cartTotal,
                     style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),

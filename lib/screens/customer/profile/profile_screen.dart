@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
-import '../../../data/mock_data.dart';
 import '../../../models/saved_card.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/profile_state.dart';
@@ -19,6 +18,9 @@ import '../../../widgets/toggle_switch.dart';
 
 const _kProfileImage = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=85';
 
+/// Notification preference rows — display configuration.
+const _kPreferenceLabels = ['Push notifications', 'Eco detergent by default', 'Contactless pickup'];
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -27,7 +29,9 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider);
     final notifier = ref.read(profileProvider.notifier);
     final savedCards = ref.watch(savedCardsProvider);
-    final language = ref.watch(clientPreferencesProvider).language;
+    final clientPrefs = ref.watch(clientPreferencesProvider);
+    final language = clientPrefs.language;
+    final authEmail = ref.watch(authProvider.select((s) => s.authEmail));
 
     return Scaffold(
       body: SafeArea(
@@ -57,7 +61,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 11),
                    Text(profile.name, style: AppText.serif(fontSize: 23, color: AppColors.cream)),
                   const SizedBox(height: 3),
-                  Text('amara.reed@mail.com', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.66))),
+                   Text(authEmail.isNotEmpty ? authEmail : profile.phone, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.66))),
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -178,7 +182,7 @@ class ProfileScreen extends ConsumerWidget {
                   for (var i = 0; i < savedCards.length; i++) ...[
                     _SavedCardRow(
                       card: savedCards[i],
-                      onRemove: () => ref.read(savedCardsProvider.notifier).remove(savedCards[i].id),
+                      onRemove: () => ref.read(savedCardsProvider.notifier).removeCard(savedCards[i].id),
                     ),
                     if (i != savedCards.length - 1) const SizedBox(height: 10),
                   ],
@@ -217,13 +221,13 @@ class ProfileScreen extends ConsumerWidget {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (var i = 0; i < kPreferenceLabels.length; i++)
+                  for (var i = 0; i < _kPreferenceLabels.length; i++)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                             color: i == kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.clientBorder(context),
+                             color: i == _kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.clientBorder(context),
                           ),
                         ),
                       ),
@@ -231,11 +235,11 @@ class ProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                               clientLabel(kPreferenceLabels[i], ['Arifa za oda', 'Ofa na matangazo', 'Vidokezo vya utunzaji'][i], language),
+                               clientLabel(_kPreferenceLabels[i], ['Arifa za oda', 'Ofa na matangazo', 'Vidokezo vya utunzaji'][i], language),
                                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
                             ),
                           ),
-                          ToggleSwitch(on: profile.prefsOn[i], onTap: () => notifier.togglePref(i)),
+                          ToggleSwitch(on: clientPrefs.prefsOn[i], onTap: () => ref.read(clientPreferencesProvider.notifier).togglePref(i)),
                         ],
                       ),
                     ),
@@ -362,7 +366,7 @@ class _AddressRowState extends State<_AddressRow> {
   }
 
   void _useCurrentLocation() {
-    // Placeholder — wire up to Google Maps' location picker later.
+    // Placeholder â€” wire up to Google Maps' location picker later.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Google Maps location picker coming soon')),
     );
@@ -515,10 +519,10 @@ class _SavedCardRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('•••• ${card.last4}', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                Text('â€¢â€¢â€¢â€¢ ${card.last4}', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(
-                  '${card.holderName} · Expires ${card.expiry}',
+                  '${card.holderName} Â· Expires ${card.expiry}',
                   style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
                 ),
               ],

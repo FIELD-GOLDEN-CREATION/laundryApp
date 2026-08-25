@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../core/services/api_client.dart';
 import '../models/user_role.dart';
+import '../services/api_service.dart';
 import 'login_form_state.dart';
 
 class AuthState {
@@ -31,7 +31,6 @@ class AuthNotifier extends Notifier<AuthState> {
   UserRole _parseRole(String role) {
     return switch (role) {
       'vendor' => UserRole.vendor,
-      'driver' => UserRole.driver,
       _ => UserRole.customer,
     };
   }
@@ -52,14 +51,11 @@ class AuthNotifier extends Notifier<AuthState> {
         return 'Failed to get authentication token.';
       }
 
-      final response = await ApiClient.post('/auth/login', body: {
-        'id_token': idToken,
-      });
+      final response = await api.login(idToken);
 
       if (response['success'] == true) {
         final userData = response['user'] as Map<String, dynamic>;
         final role = _parseRole(userData['role'] as String);
-        ApiClient.setToken(response['token'] as String);
         state = AuthState(
           role: role,
           authEmail: e,
@@ -75,6 +71,9 @@ class AuthNotifier extends Notifier<AuthState> {
     } on FirebaseAuthException catch (e) {
       state = const AuthState();
       return _firebaseAuthErrorMessage(e);
+    } on ApiException catch (e) {
+      state = const AuthState();
+      return e.message;
     } catch (e) {
       state = const AuthState();
       return 'Unable to connect to server. Please try again.';
@@ -105,14 +104,11 @@ class AuthNotifier extends Notifier<AuthState> {
         return 'Failed to get authentication token.';
       }
 
-      final response = await ApiClient.post('/auth/login', body: {
-        'id_token': idToken,
-      });
+      final response = await api.login(idToken);
 
       if (response['success'] == true) {
         final userData = response['user'] as Map<String, dynamic>;
         final role = _parseRole(userData['role'] as String);
-        ApiClient.setToken(response['token'] as String);
         state = AuthState(
           role: role,
           authEmail: userData['email'] as String? ?? '',
@@ -128,6 +124,9 @@ class AuthNotifier extends Notifier<AuthState> {
     } on FirebaseAuthException catch (e) {
       state = const AuthState();
       return _firebaseAuthErrorMessage(e);
+    } on ApiException catch (e) {
+      state = const AuthState();
+      return e.message;
     } catch (e) {
       state = const AuthState();
       return 'Google sign-in failed. Please try again.';
@@ -165,15 +164,11 @@ class AuthNotifier extends Notifier<AuthState> {
         return 'Failed to get authentication token.';
       }
 
-      final response = await ApiClient.post('/auth/register', body: {
-        'id_token': idToken,
-        'phone': phone,
-      });
+      final response = await api.register(idToken, phone: phone);
 
       if (response['success'] == true) {
         final userData = response['user'] as Map<String, dynamic>;
         final role = _parseRole(userData['role'] as String);
-        ApiClient.setToken(response['token'] as String);
         state = AuthState(
           role: role,
           authEmail: e,
@@ -188,6 +183,9 @@ class AuthNotifier extends Notifier<AuthState> {
     } on FirebaseAuthException catch (e) {
       state = const AuthState();
       return _firebaseAuthErrorMessage(e);
+    } on ApiException catch (e) {
+      state = const AuthState();
+      return e.message;
     } catch (e) {
       state = const AuthState();
       return 'Unable to connect to server. Please try again.';
@@ -199,7 +197,7 @@ class AuthNotifier extends Notifier<AuthState> {
       await FirebaseAuth.instance.signOut();
       await GoogleSignIn().signOut();
     } catch (_) {}
-    ApiClient.setToken(null);
+    await api.clearToken();
     state = const AuthState();
   }
 
@@ -231,7 +229,6 @@ final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new)
 
 String roleHomePath(UserRole role) => switch (role) {
   UserRole.vendor => '/vendor/dashboard',
-  UserRole.driver => '/vendor/dashboard',
   UserRole.customer || UserRole.guest => '/home',
 };
 

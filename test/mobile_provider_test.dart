@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:laundry_app/data/mock_data.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:laundry_app/utils/mobile_money.dart';
 
 void main() {
   test('detectMobileProvider maps each Tanzanian prefix to its network', () {
