@@ -129,31 +129,48 @@ class OrdersNotifier extends Notifier<List<Order>> {
 
 Order orderFromJson(Map<String, dynamic> j) {
   final statusStr = j['status'] as String? ?? 'placed';
-  final step = stepFromStatus(statusStr, j['fulfillment'] as String? ?? 'delivery');
+  final fulfillment = j['fulfillment'] as String? ?? 'delivery';
+  final step = stepFromStatus(statusStr, fulfillment);
   final colors = orderStatusForStep(step);
-  final lines = (j['items'] as List?)?.map((l) => OrderLine(
+
+  // Backend returns 'lines' (not 'items') with 'qty' and 'unit_price_tzs'
+  final rawLines = j['lines'] as List? ?? j['items'] as List? ?? [];
+  final lines = rawLines.map((l) => OrderLine(
     name: l['name'] as String? ?? '',
-    qty: l['quantity'] as int? ?? 1,
-    unitPrice: parseDouble(l['price']) ?? 0,
-  )).toList() ?? [];
+    qty: (l['quantity'] ?? l['qty'] ?? 1) as int,
+    unitPrice: parseDouble(l['price'] ?? l['unit_price_tzs']) ?? 0,
+  )).toList();
+
+  // Backend nests shop as an object; extract the name
+  final shopData = j['shop'];
+  final shopName = shopData is Map<String, dynamic>
+      ? shopData['name'] as String? ?? ''
+      : j['shop_name'] as String? ?? j['shop'] as String? ?? '';
+
+  // Backend uses 'total_tzs' (decimal string), fallback to 'total'
+  final totalVal = parseDouble(j['total_tzs'] ?? j['total']) ?? 0;
+
+  // Items summary
+  final itemsSummary = j['items_summary'] as String? ??
+      (lines.isEmpty ? '0 items' : '${lines.length} item${lines.length == 1 ? '' : 's'}');
 
   return Order(
-    shop: j['shop_name'] as String? ?? j['shop'] as String? ?? '',
+    shop: shopName,
     id: j['id'] != null ? '#LD-${j['id']}' : (j['order_number'] as String? ?? ''),
-    items: j['items_summary'] as String? ?? '${lines.length} items',
+    items: itemsSummary,
     status: labelFromStatus(statusStr),
     statusFg: colors.fg,
     statusBg: colors.bg,
     date: j['created_at'] as String? ?? '',
-    total: j['total'] != null ? 'TZS ${j['total']}' : (j['total_tzs']?.toString() ?? ''),
+    total: 'TZS ${totalVal.toInt()}',
     trackStep: step,
     paymentMethod: j['payment_method'] as String? ?? '',
-    pickup: j['pickup_time'] as String? ?? '',
+    pickup: j['pickup_time'] as String? ?? j['pickup_address'] as String? ?? '',
     address: j['delivery_address'] as String? ?? '',
     lines: lines,
-    fulfillment: j['fulfillment'] as String? ?? 'delivery',
+    fulfillment: fulfillment,
     driver: j['driver_name'] as String? ?? '',
-    deliveryFeeTzs: parseInt(j['delivery_fee']) ?? 0,
+    deliveryFeeTzs: parseInt(j['delivery_fee'] ?? j['delivery_fee_tzs']) ?? 0,
     customerName: j['customer_name'] as String? ?? '',
     customerPhone: j['customer_phone'] as String? ?? '',
   );
