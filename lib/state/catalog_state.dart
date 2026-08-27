@@ -130,8 +130,12 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
     _ => PackageKind.weight,
   };
 
+  final shop = j['shop'] as Map<String, dynamic>?;
+
   return ServicePackage(
     id: '${j['id']}',
+    shopId: '${j['shop_id'] ?? shop?['id'] ?? ''}',
+    shopName: shop?['name'] as String? ?? '',
     name: j['name'] as String? ?? '',
     tagline: j['tagline'] as String? ?? '',
     kind: kind,
@@ -347,6 +351,43 @@ class ItemOffersNotifier extends Notifier<Map<String, ItemOffer>> {
 
 final itemOffersProvider =
     NotifierProvider<ItemOffersNotifier, Map<String, ItemOffer>>(ItemOffersNotifier.new);
+
+/// One vendor's real starting price for items in a given category, from
+/// GET /categories/{id}/shops — the mirror image of [ItemOffer].
+class CategoryShopOffer {
+  const CategoryShopOffer({
+    required this.shopId,
+    required this.itemId,
+    required this.itemName,
+    required this.itemUnit,
+    required this.startingPriceTzs,
+  });
+
+  final String shopId;
+
+  /// The specific item this price is for — added to the cart as a real,
+  /// catalogued line rather than a synthetic key.
+  final String itemId;
+  final String itemName;
+  final String itemUnit;
+  final double startingPriceTzs;
+}
+
+/// Active shops carrying [categoryId], each with their cheapest item.
+final categoryShopsProvider = FutureProvider.family<List<CategoryShopOffer>, String>((ref, categoryId) async {
+  final data = await api.getCategoryShops(categoryId);
+  final body = (data['data'] ?? data) as Map<String, dynamic>;
+  final shops = (body['shops'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  return shops
+      .map((j) => CategoryShopOffer(
+            shopId: '${j['shop_id'] ?? ''}',
+            itemId: '${j['item_id'] ?? ''}',
+            itemName: j['item_name'] as String? ?? '',
+            itemUnit: j['item_unit'] as String? ?? 'per piece',
+            startingPriceTzs: parseDouble(j['starting_price_tzs']) ?? 0,
+          ))
+      .toList();
+});
 
 /// Active packages for one shop (by backend shop id).
 final shopPackagesProvider = FutureProvider.family<List<ServicePackage>, String>((ref, shopId) async {

@@ -58,10 +58,21 @@ class ServicePackage {
     this.serviceTags = const [],
     this.active = true,
     this.packageItems = const [],
+    this.shopId = '',
+    this.shopName = '',
   });
 
   /// Stable slug, unique within a vendor's package list.
   final String id;
+
+  /// Backend id of the vendor this package belongs to. Empty for
+  /// vendor-side contexts that don't need to name their own shop.
+  final String shopId;
+
+  /// Vendor display name — used to point the basket at the right shop
+  /// when a package is added from a cross-vendor listing (e.g. the home
+  /// carousel), same as any other add-to-cart flow.
+  final String shopName;
 
   final String name;
 
@@ -163,6 +174,8 @@ class ServicePackage {
     List<PackageItem>? packageItems,
   }) => ServicePackage(
     id: id,
+    shopId: shopId,
+    shopName: shopName,
     name: name ?? this.name,
     tagline: tagline ?? this.tagline,
     kind: kind ?? this.kind,

@@ -316,13 +316,13 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
             _FormField(
               label: clientLabel('Email Address', 'Anwani ya Barua Pepe', lang),
               hint: clientLabel('Enter your email', 'Weka barua pepe yako', lang),
-              controller: TextEditingController(text: 'amara.reed@mail.com'),
+              controller: TextEditingController(text: profile.email),
               readOnly: true,
             ),
             _FormField(
               label: clientLabel('Phone Number', 'Nambari ya Simu', lang),
               hint: clientLabel('Enter your phone number', 'Weka nambari yako ya simu', lang),
-              controller: TextEditingController(text: '+255 723 456 789'),
+              controller: TextEditingController(text: profile.phone),
               readOnly: true,
             ),
           ],

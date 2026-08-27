@@ -118,19 +118,6 @@ class CheckoutScreen extends ConsumerWidget {
                         color: AppColors.cream.withValues(alpha: 0.72),
                       ),
                     ),
-                    if (fulfillment.isDelivery && fulfillment.driver.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        const Icon(Icons.person_pin_circle_outlined, size: 15, color: AppColors.mint),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${clientLabel('Driver', 'Dereva', language)}: ${fulfillment.driver} Â· ${formatMoney(deliveryFee.toDouble())}',
-                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.cream.withValues(alpha: 0.8)),
-                          ),
-                        ),
-                      ]),
-                    ],
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Divider(height: 1, color: AppColors.cream.withValues(alpha: 0.18)),

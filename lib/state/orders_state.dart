@@ -106,25 +106,6 @@ class OrdersNotifier extends Notifier<List<Order>> {
     ];
   }
 
-  void advanceStep(String id) {
-    state = [
-      for (final o in state)
-        if (o.id == id) _withNextStep(o) else o,
-    ];
-  }
-
-  Order _withNextStep(Order o) {
-    final next = o.trackStep >= 3 ? kOrderPlacedStep : o.trackStep + 1;
-    final status = o.fulfillment == 'self'
-        ? selfOrderStatusForStep(next)
-        : orderStatusForStep(next);
-    return o.copyWith(
-      trackStep: next,
-      status: status.label,
-      statusFg: status.fg,
-      statusBg: status.bg,
-    );
-  }
 }
 
 Order orderFromJson(Map<String, dynamic> j) {

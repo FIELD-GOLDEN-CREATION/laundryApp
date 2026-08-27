@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
+import '../../../services/api_service.dart';
 import '../../../utils/cart_math.dart';
+import '../../../utils/num_helper.dart';
 import '../../../utils/schedule_options.dart';
 import '../../../models/address.dart';
 import '../../../state/auth_state.dart';
@@ -52,7 +54,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     setState(() => _locating = true);
     try {
       final point = await locateUser();
-      ref.read(scheduleProvider.notifier).setCurrentLocation(point.label);
+      ref.read(scheduleProvider.notifier).setCurrentLocation(
+            point.label,
+            lat: point.latitude,
+            lng: point.longitude,
+          );
     } on LocationException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
@@ -75,7 +81,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final seed = schedule.addrIndex < 0 ? 0 : schedule.addrIndex;
     if (_lastQuotedSeed == seed && fulfillment.deliveryFeeTzs > 0) return;
     _lastQuotedSeed = seed;
-    _runQuote(seed);
+    _runQuote();
   }
 
   /// Places the order straight from scheduling â€” the client no longer pays
@@ -109,21 +115,36 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     context.go('/order-confirmation', extra: order.id);
   }
 
-  /// Quietly resolves the delivery fee/driver in the background â€” no modal
-  /// or snackbar theatrics, since driver assignment is no longer surfaced at
-  /// scheduling time. The CTA's "Finding your driverâ€¦" label already covers
-  /// the `quoting` state, so this just needs to fill in the fee for the
-  /// order total.
-  Future<void> _runQuote(int seed) async {
+  /// Quietly resolves the real delivery fee in the background â€” no modal or
+  /// snackbar theatrics. The CTA's "Finding your driverâ€¦" label already
+  /// covers the `quoting` state, so this just needs to fill in the fee for
+  /// the order total.
+  Future<void> _runQuote() async {
     if (_quotingLocal) return;
     _quotingLocal = true;
+    final fulfillmentState = ref.read(fulfillmentProvider);
     final fulfillment = ref.read(fulfillmentProvider.notifier);
-    final fee = deliveryFeeFor(seed);
-    final driver = nearestDriverFor(seed);
+    final schedule = ref.read(scheduleProvider);
+    final addresses = ref.read(profileProvider).addresses;
+
+    double? lat;
+    double? lng;
+    if (schedule.isCurrentLocation) {
+      lat = schedule.currentLat;
+      lng = schedule.currentLng;
+    } else if (addresses.isNotEmpty) {
+      final address = addresses[schedule.addrIndex.clamp(0, addresses.length - 1)];
+      lat = address.latitude;
+      lng = address.longitude;
+    }
+
     fulfillment.setQuoting(true);
     try {
-      await Future.delayed(const Duration(milliseconds: 900));
-      fulfillment.finishQuote(fee: fee, driver: driver);
+      final data = await api.getDeliveryFee(fulfillmentState.shopId, lat: lat, lng: lng);
+      final fee = parseInt((data['data'] ?? data)['delivery_fee_tzs']) ?? 1800;
+      fulfillment.finishQuote(fee: fee);
+    } on ApiException {
+      fulfillment.finishQuote(fee: 1800);
     } finally {
       _quotingLocal = false;
       if (mounted) fulfillment.setQuoting(false);

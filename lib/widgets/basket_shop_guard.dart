@@ -11,14 +11,18 @@ import '../theme/text_styles.dart';
 /// is safely pointed at [shop] — either it already was, or it was empty, or
 /// the customer agreed to start a fresh one.
 ///
+/// [shopId] is the vendor's backend id — pass it whenever it's known so the
+/// basket (and the order it becomes) references a real shop; order placement
+/// silently falls back to local-only when it's missing.
+///
 /// Returns false if they backed out, in which case the caller must not add
 /// the item and must not navigate.
-Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop) async {
+Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop, {String shopId = ''}) async {
   final fulfillment = ref.read(fulfillmentProvider);
   if (!basketBelongsToOtherShop(ref.read(cartProvider), fulfillment, shop)) {
     // Nothing at stake — claim the empty basket for this vendor so the cart
     // banner, chat thread and placed order all name the right shop.
-    if (fulfillment.shop != shop) ref.read(fulfillmentProvider.notifier).startBasketFor(shop);
+    if (fulfillment.shop != shop) ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId);
     return true;
   }
 
@@ -26,7 +30,7 @@ Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop) 
   if (!confirmed) return false;
 
   ref.read(cartProvider.notifier).clear();
-  ref.read(fulfillmentProvider.notifier).startBasketFor(shop);
+  ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId);
   return true;
 }
 

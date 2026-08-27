@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../state/auth_state.dart';
 import '../../../../state/client_preferences_state.dart';
+import '../../../../state/platform_stats_state.dart';
 import '../../../../models/user_role.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
+import '../../../../utils/cart_math.dart';
 
 class VendorBannerWidget extends ConsumerWidget {
   const VendorBannerWidget({super.key});
@@ -15,6 +17,7 @@ class VendorBannerWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final language = ref.watch(clientPreferencesProvider).language;
     final isGuest = ref.watch(authProvider.select((s) => s.role == UserRole.guest));
+    final stats = ref.watch(platformStatsProvider).valueOrNull;
 
     // Don't show to guests — they haven't even signed up yet
     if (isGuest) return const SizedBox.shrink();
@@ -99,8 +102,8 @@ class VendorBannerWidget extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Text(
                   language == 'Swahili'
-                      ? 'Jiunge na wauzaji 120+ wanaopata mapato kupitia FreshFold. Viwango vya juu, malipo ya haraka, na msaada wa moja kwa moja.'
-                      : 'Join 120+ vendors earning through FreshFold. Top-rated service, fast payouts, and dedicated support.',
+                      ? 'Jiunge na wauzaji wanaopata mapato kupitia FreshFold. Viwango vya juu, malipo ya haraka, na msaada wa moja kwa moja.'
+                      : 'Join the vendors earning through FreshFold. Top-rated service, fast payouts, and dedicated support.',
                   style: AppText.sans(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -114,17 +117,17 @@ class VendorBannerWidget extends ConsumerWidget {
                   children: [
                     _StatChip(
                       label: language == 'Swahili' ? 'Wauzaji' : 'Vendors',
-                      value: '120+',
+                      value: stats != null && stats.vendorCount > 0 ? '${stats.vendorCount}+' : '—',
                     ),
                     const SizedBox(width: 10),
                     _StatChip(
                       label: language == 'Swahili' ? 'Mapato/Mwezi' : 'Earnings/Mo',
-                      value: 'TZS 2M+',
+                      value: stats != null ? formatMoney(stats.monthlyEarningsTzs.toDouble()) : '—',
                     ),
                     const SizedBox(width: 10),
                     _StatChip(
                       label: language == 'Swahili' ? 'Ukadiriaji' : 'Rating',
-                      value: '4.8 ★',
+                      value: stats?.avgRating != null ? '${stats!.avgRating!.toStringAsFixed(1)} ★' : '—',
                     ),
                   ],
                 ),
