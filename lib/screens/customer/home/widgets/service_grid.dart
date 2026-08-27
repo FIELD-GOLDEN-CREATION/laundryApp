@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/icons/app_icons.dart';
+import '../../../../state/catalog_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 import '../../../../state/client_preferences_state.dart';
@@ -13,6 +14,8 @@ class ServiceItem {
   final String swahili;
 }
 
+// Retained only for `service_vendors_screen.dart`, which still matches
+// against this fixed list until it's rewired to real per-category pricing.
 const kServiceItems = [
   ServiceItem(AppIcons.serviceWashFold, 'Wash & Fold', 'Osha na kunja'),
   ServiceItem(AppIcons.serviceIroning, 'Ironing', 'Kupiga pasi'),
@@ -31,17 +34,62 @@ const kServiceItems = [
 const _kTileWidth = 80.0;
 const _kGridHeight = 132.0;
 
-/// The service icon row on Home. Every entry in [kServiceItems] is reachable
-/// by swiping horizontally — there's no "see all" toggle and no visible
-/// scrollbar affordance, so it reads as one continuous strip of cards.
-class ServiceGrid extends ConsumerWidget {
+// Best-effort icon for a real backend category name — categories are
+// broader groupings than the old per-service mock list, so this maps by
+// keyword rather than exact name.
+String _iconForCategory(String name) {
+  final n = name.toLowerCase();
+  if (n.contains('foot') || n.contains('shoe') || n.contains('bag')) {
+    return AppIcons.serviceShoeCare;
+  }
+  if (n.contains('formal') || n.contains('wool') || n.contains('outerwear') || n.contains('suit')) {
+    return AppIcons.serviceSuits;
+  }
+  if (n.contains('bedding') || n.contains('household') || n.contains('heavy')) {
+    return AppIcons.serviceBedding;
+  }
+  if (n.contains('bulk') || n.contains('add-on') || n.contains('addon')) {
+    return AppIcons.serviceIroning;
+  }
+  return AppIcons.serviceWashFold;
+}
+
+/// The service icon row on Home, driven by real backend categories
+/// (`categoriesProvider`) — every entry is reachable by swiping
+/// horizontally, with no "see all" toggle and no visible scrollbar
+/// affordance, so it reads as one continuous strip of cards.
+class ServiceGrid extends ConsumerStatefulWidget {
   const ServiceGrid({super.key, required this.onTap});
 
   final ValueChanged<ServiceItem> onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ServiceGrid> createState() => _ServiceGridState();
+}
+
+class _ServiceGridState extends ConsumerState<ServiceGrid> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(categoriesProvider.notifier).load());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final language = ref.watch(clientPreferencesProvider).language;
+    final categories = ref.watch(categoriesProvider).items;
+
+    if (categories.isEmpty) {
+      return const SizedBox(
+        height: _kGridHeight,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    final items = categories
+        .map((c) => ServiceItem(_iconForCategory(c.name), c.name, c.nameSwahili))
+        .toList();
+
     return SizedBox(
       height: _kGridHeight,
       child: ScrollConfiguration(
@@ -49,11 +97,11 @@ class ServiceGrid extends ConsumerWidget {
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 22),
-          itemCount: kServiceItems.length,
+          itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(width: 12),
           itemBuilder: (_, i) => SizedBox(
             width: _kTileWidth,
-           child: _ServiceTile(item: kServiceItems[i], language: language, onTap: onTap),
+            child: _ServiceTile(item: items[i], language: language, onTap: widget.onTap),
           ),
         ),
       ),

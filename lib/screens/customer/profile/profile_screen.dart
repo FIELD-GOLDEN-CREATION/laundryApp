@@ -16,16 +16,25 @@ import '../../../widgets/profile_action_tile.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/toggle_switch.dart';
 
-const _kProfileImage = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=85';
-
 /// Notification preference rows — display configuration.
 const _kPreferenceLabels = ['Push notifications', 'Eco detergent by default', 'Contactless pickup'];
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(profileProvider.notifier).loadProfile());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profile = ref.watch(profileProvider);
     final notifier = ref.read(profileProvider.notifier);
     final savedCards = ref.watch(savedCardsProvider);
@@ -49,7 +58,7 @@ class ProfileScreen extends ConsumerWidget {
                    Positioned.fill(
                      child: Opacity(
                        opacity: 0.13,
-                       child: RemoteImage(url: _kProfileImage, fallback: profile.photoLabel, fit: BoxFit.cover),
+                       child: RemoteImage(url: profile.photoUrl ?? '', fallback: profile.photoLabel, fit: BoxFit.cover),
                      ),
                    ),
                    Positioned.fill(child: Container(color: AppColors.slate.withValues(alpha: 0.84))),
@@ -57,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
                      children: [
                    Row(children: [Expanded(child: Text(clientLabel('Profile', 'Wasifu', language), style: AppText.serif(fontSize: 24, color: AppColors.cream))), _HeroIcon(icon: AppIcons.bell, onTap: () => context.push('/notifs'))]),
                   const SizedBox(height: 18),
-                   SizedBox(width: 82, height: 82, child: RemoteImage(url: _kProfileImage, fallback: profile.photoLabel, circle: true, borderRadius: 41)),
+                   SizedBox(width: 82, height: 82, child: RemoteImage(url: profile.photoUrl ?? '', fallback: profile.photoLabel, circle: true, borderRadius: 41)),
                   const SizedBox(height: 11),
                    Text(profile.name, style: AppText.serif(fontSize: 23, color: AppColors.cream)),
                   const SizedBox(height: 3),

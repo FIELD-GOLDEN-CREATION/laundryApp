@@ -7,7 +7,6 @@ class FulfillmentState {
     this.mode = 'delivery',
     this.quoting = false,
     this.deliveryFeeTzs = 0,
-    this.driver = '',
     this.shop = '',
     this.extraItems = const {},
     this.catalog = const {},
@@ -17,7 +16,6 @@ class FulfillmentState {
   final String mode;
   final bool quoting;
   final int deliveryFeeTzs;
-  final String driver;
   final String shop;
 
   /// Package/addon lines contributed by the shop screen.
@@ -40,7 +38,6 @@ class FulfillmentState {
     String? mode,
     bool? quoting,
     int? deliveryFeeTzs,
-    String? driver,
     String? shop,
     Map<String, MenuItem>? extraItems,
     Map<String, MenuItem>? catalog,
@@ -50,7 +47,6 @@ class FulfillmentState {
         mode: mode ?? this.mode,
         quoting: quoting ?? this.quoting,
         deliveryFeeTzs: deliveryFeeTzs ?? this.deliveryFeeTzs,
-        driver: driver ?? this.driver,
         shop: shop ?? this.shop,
         extraItems: extraItems ?? this.extraItems,
         catalog: catalog ?? this.catalog,
@@ -65,16 +61,20 @@ class FulfillmentNotifier extends Notifier<FulfillmentState> {
   void setMode(String mode) => state = state.copyWith(
         mode: mode,
         deliveryFeeTzs: mode == 'delivery' ? state.deliveryFeeTzs : 0,
-        driver: mode == 'delivery' ? state.driver : '',
       );
 
   void setShop(String shop) => state = state.copyWith(shop: shop);
 
-  /// Points the basket at [shop] and drops any non-catalog lines the
-  /// previous vendor contributed. Callers are responsible for clearing
-  /// `cartProvider` alongside it — `ensureBasketShop` does both.
-  void startBasketFor(String shop) =>
-      state = state.copyWith(shop: shop, extraItems: const {}, catalog: const {});
+  /// Points the basket at [shop] (backend id [shopId], when known) and drops
+  /// any non-catalog lines the previous vendor contributed. Callers are
+  /// responsible for clearing `cartProvider` alongside it — `ensureBasketShop`
+  /// does both.
+  void startBasketFor(String shop, {String shopId = ''}) => state = state.copyWith(
+        shop: shop,
+        shopId: shopId,
+        extraItems: const {},
+        catalog: const {},
+      );
 
   /// Registers the current basket's shop and its full price list (API data).
   void setShopCatalog({
@@ -95,14 +95,7 @@ class FulfillmentNotifier extends Notifier<FulfillmentState> {
 
   void setQuoting(bool quoting) => state = state.copyWith(quoting: quoting);
 
-  void finishQuote({required int fee, required String driver}) =>
-      state = state.copyWith(quoting: false, deliveryFeeTzs: fee, driver: driver);
+  void finishQuote({required int fee}) => state = state.copyWith(quoting: false, deliveryFeeTzs: fee);
 }
 
 final fulfillmentProvider = NotifierProvider<FulfillmentNotifier, FulfillmentState>(FulfillmentNotifier.new);
-
-const kNearbyDrivers = ['Daniel O.', 'Kofi A.', 'Grace M.', 'Nadia H.'];
-
-int deliveryFeeFor(int seed) => 1800 + (seed % 4) * 900;
-
-String nearestDriverFor(int seed) => kNearbyDrivers[seed % kNearbyDrivers.length];

@@ -62,7 +62,6 @@ Future<Order> placeCurrentOrder(
     address: address,
     lines: cartLines(qty, [], priced),
     fulfillment: fulfillment.mode,
-    driver: fulfillment.driver,
     deliveryFeeTzs: fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0,
   );
   ref.read(cartProvider.notifier).clear();

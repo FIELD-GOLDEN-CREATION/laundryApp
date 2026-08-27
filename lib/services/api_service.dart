@@ -217,10 +217,10 @@ class ApiService {
     return data;
   }
 
-  Future<Map<String, dynamic>> getProfile() => get('/auth/profile');
+  Future<Map<String, dynamic>> getProfile() => get('/customer/profile');
 
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) =>
-      put('/auth/profile', body: body);
+      put('/customer/profile', body: body);
 
   // =========================================================================
   // SHOPS
@@ -234,6 +234,12 @@ class ApiService {
   Future<Map<String, dynamic>> getShop(String slug) => get('/shops/$slug');
 
   // =========================================================================
+  // PLATFORM
+  // =========================================================================
+
+  Future<Map<String, dynamic>> getPlatformStats() => get('/platform/stats');
+
+  // =========================================================================
   // CATEGORIES
   // =========================================================================
 
@@ -243,6 +249,10 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getCategory(String id) => get('/categories/$id');
+
+  /// Active shops carrying this category, each with their cheapest matching
+  /// item — powers the per-category vendor list.
+  Future<Map<String, dynamic>> getCategoryShops(String categoryId) => get('/categories/$categoryId/shops');
 
   // =========================================================================
   // ITEMS
@@ -638,8 +648,12 @@ class ApiService {
   // CART / CHECKOUT
   // =========================================================================
 
-  Future<Map<String, dynamic>> getDeliveryFee(String shopId, String address) =>
-      post('/checkout/delivery-fee', body: {'shop_id': shopId, 'address': address});
+  Future<Map<String, dynamic>> getDeliveryFee(String shopId, {double? lat, double? lng}) =>
+      post('/checkout/delivery-fee', body: {
+        'shop_id': shopId,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+      });
 
   Future<Map<String, dynamic>> createPaymentIntent(Map<String, dynamic> body) =>
       post('/checkout/payment-intent', body: body);

@@ -10,9 +10,9 @@ import '../../../../models/user_role.dart';
 import '../../../../state/auth_state.dart';
 import '../../../../state/cart_state.dart';
 import '../../../../state/catalog_state.dart';
-import '../../../../state/fulfillment_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
+import '../../../../widgets/basket_shop_guard.dart';
 
 // Bundled Storyset illustrations — https://storyset.com/shopping
 const _kPackageIllustrations = {
@@ -134,7 +134,7 @@ class _PackageCard extends ConsumerWidget {
     ),
   );
 
-  void _onTap(BuildContext context, WidgetRef ref) {
+  Future<void> _onTap(BuildContext context, WidgetRef ref) async {
     final auth = ref.read(authProvider);
     if (auth.role == UserRole.guest) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,10 +148,10 @@ class _PackageCard extends ConsumerWidget {
       );
       return;
     }
+    if (!await ensureBasketShop(context, ref, pkg.shopName, shopId: pkg.shopId)) return;
+    if (!context.mounted) return;
     final cart = ref.read(cartProvider.notifier);
     final cartPkg = ref.read(cartPackageProvider.notifier);
-    final fulfillment = ref.read(fulfillmentProvider.notifier);
-    fulfillment.setShop('Marina Fresh Laundry');
     cartPkg.addPackage(pkg, cart);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

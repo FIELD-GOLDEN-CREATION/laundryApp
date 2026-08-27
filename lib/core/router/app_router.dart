@@ -101,7 +101,13 @@ final appRouter = GoRouter(
       path: '/direction',
       builder: (_, state) => DirectionScreen(shop: state.extra as Shop),
     ),
-    GoRoute(path: '/service-vendors', builder: (_, state) => ServiceVendorsScreen(service: (state.extra as String?) ?? 'Ironing')),
+    GoRoute(
+      path: '/service-vendors',
+      builder: (_, state) {
+        final category = state.extra as LaundryCategory?;
+        return ServiceVendorsScreen(categoryId: category?.id ?? '', categoryName: category?.name ?? '');
+      },
+    ),
     GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
     GoRoute(path: '/schedule', builder: (_, _) => const ScheduleScreen()),
     GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),

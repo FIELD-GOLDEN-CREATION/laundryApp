@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/address.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
 
 class ProfileState {
   const ProfileState({
@@ -9,6 +10,7 @@ class ProfileState {
     this.fav = false,
     this.name = '',
     this.phone = '',
+    this.email = '',
     this.photoLabel = 'You',
     this.photoUrl,
     this.isLoading = false,
@@ -18,6 +20,7 @@ class ProfileState {
   final bool fav;
   final String name;
   final String phone;
+  final String email;
   final String photoLabel;
   final String? photoUrl;
   final bool isLoading;
@@ -27,6 +30,7 @@ class ProfileState {
     bool? fav,
     String? name,
     String? phone,
+    String? email,
     String? photoLabel,
     String? photoUrl,
     bool? isLoading,
@@ -36,6 +40,7 @@ class ProfileState {
         fav: fav ?? this.fav,
         name: name ?? this.name,
         phone: phone ?? this.phone,
+        email: email ?? this.email,
         photoLabel: photoLabel ?? this.photoLabel,
         photoUrl: photoUrl ?? this.photoUrl,
         isLoading: isLoading ?? this.isLoading,
@@ -54,6 +59,7 @@ class ProfileNotifier extends Notifier<ProfileState> {
       state = state.copyWith(
         name: user['name'] as String? ?? '',
         phone: user['phone'] as String? ?? '',
+        email: user['email'] as String? ?? '',
         photoUrl: user['photo_url'] as String?,
         isLoading: false,
       );
@@ -68,6 +74,8 @@ class ProfileNotifier extends Notifier<ProfileState> {
       final addresses = data.map((j) => Address(
         label: j['label'] as String? ?? '',
         line: j['line'] as String? ?? j['address'] as String? ?? '',
+        latitude: parseDouble(j['latitude']),
+        longitude: parseDouble(j['longitude']),
       )).toList();
       state = state.copyWith(addresses: addresses);
     } on ApiException {

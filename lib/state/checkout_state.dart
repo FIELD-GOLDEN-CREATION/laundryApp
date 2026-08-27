@@ -105,15 +105,6 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
     );
   }
 
-  Future<void> loadDeliveryFee(String shopId, String address) async {
-    try {
-      final data = await api.getDeliveryFee(shopId, address);
-      final fee = parseDouble(data['fee']) ?? 0;
-      state = state.copyWith(deliveryFee: fee);
-    } on ApiException {
-      // Keep default
-    }
-  }
 }
 
 final checkoutProvider = NotifierProvider<CheckoutNotifier, CheckoutState>(CheckoutNotifier.new);

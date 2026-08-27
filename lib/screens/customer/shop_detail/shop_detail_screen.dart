@@ -216,7 +216,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
       context.push('/cart');
       return;
     }
-    if (!await ensureBasketShop(context, ref, shopName)) return;
+    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId)) return;
     if (!context.mounted) return;
     ref.read(fulfillmentProvider.notifier).addServiceItem(
       MenuItem(
@@ -236,7 +236,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
       ref.read(cartProvider.notifier).setQty(item.key, -currentQty);
       return;
     }
-    if (!await ensureBasketShop(context, ref, shopName)) return;
+    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId)) return;
     if (!context.mounted) return;
     ref.read(cartProvider.notifier).setQty(item.key, 1);
   }

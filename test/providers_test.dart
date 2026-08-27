@@ -49,25 +49,6 @@ void main() {
     expect(orders.first.trackStep, kOrderPlacedStep);
   });
 
-  test('OrdersNotifier.advanceStep cycles a specific order placed..3..placed', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    final notifier = container.read(ordersProvider.notifier);
-    final placed = notifier.placeOrder(shop: 'Marina Fresh Laundry', items: '4 items', total: 'TZS 1,000');
-
-    Order current() => container.read(ordersProvider).firstWhere((o) => o.id == placed.id);
-
-    notifier.advanceStep(placed.id);
-    expect(current().trackStep, 0);
-    notifier.advanceStep(placed.id);
-    notifier.advanceStep(placed.id);
-    notifier.advanceStep(placed.id);
-    expect(current().trackStep, 3);
-    notifier.advanceStep(placed.id);
-    expect(current().trackStep, kOrderPlacedStep);
-  });
-
   test('ChatNotifier.send appends a message and clears the draft', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);

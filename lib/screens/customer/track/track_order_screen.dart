@@ -8,6 +8,7 @@ import '../../../core/icons/app_icons.dart';
 import '../chat/chat_screen.dart';
 import '../../../models/order.dart';
 import '../../../models/track_step_def.dart';
+import '../../../services/api_service.dart';
 import '../../../state/orders_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
@@ -236,28 +237,6 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                             ),
                           ),
                         ),
-                      // Demo advance button
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap: () => ref.read(ordersProvider.notifier).advanceStep(order!.id),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(13),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.clientBorder(context), width: 1.5),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Center(
-                              child: Text(
-                                clientLabel('Demo: advance status', 'Demo: songesha hali', language),
-                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context)),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -374,14 +353,37 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
                         onTap: rating > 0
-                            ? () {
+                            ? () async {
+                                try {
+                                  await api.createReview(
+                                    order.id,
+                                    rating: rating,
+                                    comment: commentController.text.trim(),
+                                  );
+                                } on ApiException {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(clientLabel(
+                                          'Could not submit your review. Try again.',
+                                          'Imeshindikana kuwasilisha maoni. Jaribu tena.',
+                                          language,
+                                        )),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                if (!ctx.mounted) return;
                                 Navigator.of(ctx).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(clientLabel('Thanks for your feedback!', 'Asante kwa maoni yako!', language)),
-                                    backgroundColor: AppColors.teal,
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(clientLabel('Thanks for your feedback!', 'Asante kwa maoni yako!', language)),
+                                      backgroundColor: AppColors.teal,
+                                    ),
+                                  );
+                                }
                               }
                             : null,
                         child: Container(
