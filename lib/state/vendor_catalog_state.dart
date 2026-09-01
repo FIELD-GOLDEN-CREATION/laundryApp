@@ -199,8 +199,12 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
     state = state.copyWith(prices: next);
   }
 
-  void toggleItem(String categoryId, String itemId) {
-    final currentPrice = effectiveItemPrice(itemId);
+  /// [fallbackPrice] is the item's global catalog price — used only when
+  /// the vendor has never set their own price, so enabling an item for the
+  /// first time doesn't silently persist it at price_tzs: 0.
+  void toggleItem(String categoryId, String itemId, {double fallbackPrice = 0}) {
+    final ownPrice = effectiveItemPrice(itemId);
+    final currentPrice = ownPrice > 0 ? ownPrice : fallbackPrice;
     final currentlyOn = isItemEnabled(categoryId, itemId);
 
     final nextItemsOn = Map<String, List<String>>.from(state.itemsOn);
@@ -236,11 +240,18 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
   bool isCategoryEnabled(String categoryId) =>
       state.categoriesOn[categoryId] ?? true;
 
+  /// Whether the item is actually live on the shop's customer-facing price
+  /// list. `itemAvailability` only ever contains an entry once a real
+  /// `vendor_items` row exists (GET /vendor/catalog only reports
+  /// `vendor_available` for rows it can join to) — so an item with no entry
+  /// has never been persisted and must default to "not live", not "on".
+  /// Defaulting to true here used to make every item appear pre-checked
+  /// with nothing behind it, so tapping it actually turned it off.
   bool isItemEnabled(String categoryId, String itemId) {
     if (state.itemsOn.containsKey(categoryId)) {
       return state.itemsOn[categoryId]!.contains(itemId);
     }
-    return state.itemAvailability[itemId] ?? true;
+    return state.itemAvailability[itemId] ?? false;
   }
 
   bool isItemAvailable(String itemId) => state.itemAvailability[itemId] ?? true;

@@ -218,7 +218,7 @@ class _CategoryExpansionTile extends StatelessWidget {
           return _ItemCheckboxRow(
             item: item,
             isChecked: notifier.isItemEnabled(categoryId, item.id),
-            onToggle: () => notifier.toggleItem(categoryId, item.id),
+            onToggle: () => notifier.toggleItem(categoryId, item.id, fallbackPrice: item.priceTzs),
             price: vendorPrice > 0 ? vendorPrice : item.priceTzs,
             onPriceChanged: (price) => notifier.setItemPrice(item.id, price),
           );

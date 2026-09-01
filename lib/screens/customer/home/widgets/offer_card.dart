@@ -1,23 +1,27 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../models/promo_offer.dart';
+import '../../../../models/shop.dart';
+import '../../../../state/catalog_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 import '../../../../widgets/remote_image.dart';
 
-class OfferCard extends StatefulWidget {
-  const OfferCard({super.key, required this.offer, required this.onClaim});
+class OfferCard extends ConsumerStatefulWidget {
+  const OfferCard({super.key, required this.offer});
 
   final PromoOffer offer;
-  final VoidCallback onClaim;
 
   @override
-  State<OfferCard> createState() => _OfferCardState();
+  ConsumerState<OfferCard> createState() => _OfferCardState();
 }
 
-class _OfferCardState extends State<OfferCard> {
+class _OfferCardState extends ConsumerState<OfferCard> {
   late Timer _timer;
   Duration _remaining = Duration.zero;
 
@@ -47,12 +51,28 @@ class _OfferCardState extends State<OfferCard> {
     return '${m}m left';
   }
 
+  /// The offer's vendor, resolved from the already-loaded shop list by id —
+  /// null when that shop isn't in the current list (e.g. still loading).
+  Shop? _resolveShop() {
+    final vendorId = widget.offer.vendorId;
+    if (vendorId == null || vendorId.isEmpty) return null;
+    final shops = ref.read(shopsProvider).items;
+    for (final s in shops) {
+      if (s.slotId == vendorId) return s;
+    }
+    return null;
+  }
+
   void _showPromoPopup() {
+    final shop = _resolveShop();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _PromoPopupSheet(offer: widget.offer),
+      builder: (_) => _PromoPopupSheet(
+        offer: widget.offer,
+        onShopNow: shop == null ? null : () => context.push('/detail', extra: shop),
+      ),
     );
   }
 
@@ -130,6 +150,22 @@ class _OfferCardState extends State<OfferCard> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (widget.offer.vendorName.isNotEmpty) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.storefront_rounded, size: 12, color: AppColors.cream.withValues(alpha: 0.7)),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.offer.vendorName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.cream.withValues(alpha: 0.7)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
                       SizedBox(
                         width: 170,
                         child: Text(
@@ -180,9 +216,13 @@ class _OfferCardState extends State<OfferCard> {
 }
 
 class _PromoPopupSheet extends StatelessWidget {
-  const _PromoPopupSheet({required this.offer});
+  const _PromoPopupSheet({required this.offer, this.onShopNow});
 
   final PromoOffer offer;
+
+  /// Opens the offer's vendor shop page; null when the vendor couldn't be
+  /// resolved from the currently loaded shop list.
+  final VoidCallback? onShopNow;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +253,14 @@ class _PromoPopupSheet extends StatelessWidget {
                 child: const Icon(Icons.local_offer_rounded, color: AppColors.teal, size: 24),
               ),
               const SizedBox(height: 12),
+              if (offer.vendorName.isNotEmpty) ...[
+                Text(
+                  'Valid at ${offer.vendorName}',
+                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.teal, letterSpacing: 0.3),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+              ],
               Text(offer.title, style: AppText.serif(fontSize: 18), textAlign: TextAlign.center),
               const SizedBox(height: 4),
               Text(
@@ -251,7 +299,9 @@ class _PromoPopupSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        onTap: () {
+                        onTap: () async {
+                          await Clipboard.setData(ClipboardData(text: offer.code));
+                          if (!context.mounted) return;
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -290,6 +340,34 @@ class _PromoPopupSheet extends StatelessWidget {
                   ),
                 ],
               ),
+              if (onShopNow != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onShopNow!();
+                      },
+                      child: Container(
+                        height: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.teal.withValues(alpha: 0.4)),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          'Shop now',
+                          style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

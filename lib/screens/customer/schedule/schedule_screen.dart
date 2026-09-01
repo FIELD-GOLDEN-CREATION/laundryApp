@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
+import '../../../models/promo_offer.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/cart_math.dart';
 import '../../../utils/num_helper.dart';
@@ -10,6 +11,7 @@ import '../../../utils/schedule_options.dart';
 import '../../../models/address.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/cart_addons_state.dart';
+import '../../../state/cart_promo_state.dart';
 import '../../../state/cart_state.dart';
 import '../../../state/catalog_state.dart' show shopAddonsProvider;
 import '../../../state/client_preferences_state.dart';
@@ -87,6 +89,23 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     _runQuote();
   }
 
+  /// The destination coordinates for a delivery quote/order — GPS location
+  /// or whichever saved address is picked. Shared by `_runQuote` (the
+  /// pre-order quote) and `_continueToConfirmation` (the real order) so
+  /// both ask the backend the exact same question and get the same fee.
+  (double?, double?) _deliveryLatLng() {
+    final schedule = ref.read(scheduleProvider);
+    final addresses = ref.read(profileProvider).addresses;
+    if (schedule.isCurrentLocation) {
+      return (schedule.currentLat, schedule.currentLng);
+    }
+    if (addresses.isNotEmpty) {
+      final address = addresses[schedule.addrIndex.clamp(0, addresses.length - 1)];
+      return (address.latitude, address.longitude);
+    }
+    return (null, null);
+  }
+
   /// Places the order straight from scheduling â€” the client no longer pays
   /// up front, so there's nothing left for a separate checkout step to
   /// collect. `checkout_screen.dart` still exists but nothing routes to it.
@@ -102,7 +121,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         ? const <VendorAddon>[]
         : ref.read(shopAddonsProvider(fulfillment.shopSlug)).asData?.value ?? const <VendorAddon>[];
     final addonTotal = ref.read(cartAddonsProvider.notifier).totalFor(vendorAddons);
-    final total = subtotal + deliveryFee + addonTotal;
+    // A promo only ever discounts the entity it's scoped to — mirrors the
+    // same bucketing cart_screen.dart's summary panel does, so the total
+    // shown here doesn't drift from what the customer already saw.
+    final promoState = ref.read(cartPromoProvider);
+    final discount = promoState.discountAmount;
+    final isDeliveryDiscount = promoState.appliedPromo?.appliesTo == PromoAppliesTo.delivery;
+    final discountedSubtotal = isDeliveryDiscount ? subtotal : (subtotal - discount).clamp(0.0, double.infinity);
+    final discountedDelivery = isDeliveryDiscount ? (deliveryFee - discount).clamp(0.0, double.infinity) : deliveryFee.toDouble();
+    final total = discountedSubtotal + discountedDelivery + addonTotal;
     final addresses = ref.read(profileProvider).addresses;
     final address = schedule.isCurrentLocation
         ? Address(label: 'Current location', line: schedule.currentLocation.isEmpty ? 'Current location' : schedule.currentLocation)
@@ -110,6 +137,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final days = upcomingDays();
     final day = days[schedule.dayIndex.clamp(0, days.length - 1)];
     final pickupSummary = '${day.dow} ${day.num}, ${kTimeSlots[schedule.slotIndex]}';
+    final (deliveryLat, deliveryLng) = fulfillment.isDelivery ? _deliveryLatLng() : (null, null);
 
     final order = await placeCurrentOrder(
       ref,
@@ -117,9 +145,40 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       pickup: pickupSummary,
       address: address.line,
       total: formatMoney(total),
+      promoCode: promoState.appliedPromoId,
+      deliveryLat: deliveryLat,
+      deliveryLng: deliveryLng,
     );
     if (!mounted) return;
     context.go('/order-confirmation', extra: order.id);
+  }
+
+  /// Re-resolves a `pending` delivery-scoped promo now that the real fee is
+  /// known — Cart couldn't compute this (no address there), so it applied
+  /// the code without an amount; this fills it in before the order is placed.
+  Future<void> _refreshPendingDeliveryPromo(int feeTzs) async {
+    final promoState = ref.read(cartPromoProvider);
+    if (promoState.appliedPromo?.appliesTo != PromoAppliesTo.delivery) return;
+
+    final fulfillmentState = ref.read(fulfillmentProvider);
+    final qty = ref.read(cartProvider);
+    final priced = fulfillmentState.pricedItems;
+    final subtotal = cartSubtotal(qty, [], priced);
+    final pkg = ref.read(cartPackageProvider);
+    final cartItems = {
+      for (final item in priced)
+        if ((qty[item.key] ?? 0) > 0)
+          if (int.tryParse(item.key) case final id?) id: qty[item.key] ?? 0,
+    };
+
+    await ref.read(cartPromoProvider.notifier).refreshPromo(
+      subtotal,
+      fulfillmentState.shopId,
+      cartItems: cartItems,
+      packageId: pkg?.id,
+      isDelivery: true,
+      deliveryFeeTzs: feeTzs,
+    );
   }
 
   /// Quietly resolves the real delivery fee in the background â€” no modal or
@@ -131,31 +190,21 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     _quotingLocal = true;
     final fulfillmentState = ref.read(fulfillmentProvider);
     final fulfillment = ref.read(fulfillmentProvider.notifier);
-    final schedule = ref.read(scheduleProvider);
-    final addresses = ref.read(profileProvider).addresses;
-
-    double? lat;
-    double? lng;
-    if (schedule.isCurrentLocation) {
-      lat = schedule.currentLat;
-      lng = schedule.currentLng;
-    } else if (addresses.isNotEmpty) {
-      final address = addresses[schedule.addrIndex.clamp(0, addresses.length - 1)];
-      lat = address.latitude;
-      lng = address.longitude;
-    }
+    final (lat, lng) = _deliveryLatLng();
 
     fulfillment.setQuoting(true);
+    var fee = 1800;
     try {
       final data = await api.getDeliveryFee(fulfillmentState.shopId, lat: lat, lng: lng);
-      final fee = parseInt((data['data'] ?? data)['delivery_fee_tzs']) ?? 1800;
-      fulfillment.finishQuote(fee: fee);
+      fee = parseInt((data['data'] ?? data)['delivery_fee_tzs']) ?? 1800;
     } on ApiException {
-      fulfillment.finishQuote(fee: 1800);
+      fee = 1800;
     } finally {
+      fulfillment.finishQuote(fee: fee);
       _quotingLocal = false;
       if (mounted) fulfillment.setQuoting(false);
     }
+    await _refreshPendingDeliveryPromo(fee);
   }
 
   @override

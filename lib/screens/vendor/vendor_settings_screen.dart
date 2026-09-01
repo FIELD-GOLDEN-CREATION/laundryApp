@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -142,7 +140,7 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
   /// Runs the OS image picker for [source], surfacing a permission/access
   /// failure (denied camera/gallery access, no camera present, etc.) as a
   /// snackbar instead of letting it vanish as an uncaught exception.
-  Future<File?> _pickFile(_ImagePickSource source) async {
+  Future<XFile?> _pickFile(_ImagePickSource source) async {
     final language = ref.read(vendorProfileProvider).language;
     try {
       final xfile = await _imagePicker.pickImage(
@@ -150,8 +148,7 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
         maxWidth: 1600,
         imageQuality: 85,
       );
-      if (xfile == null) return null;
-      return File(xfile.path);
+      return xfile;
     } catch (_) {
       if (!mounted) return null;
       final isCamera = source == _ImagePickSource.camera;

@@ -1,8 +1,10 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../models/menu_item.dart';
+import '../../../models/promo_offer.dart';
 import '../../../models/service_package.dart';
 import '../../../models/shop.dart';
 import '../../../state/cart_addons_state.dart';
@@ -35,6 +37,12 @@ class CartScreen extends ConsumerWidget {
     final delivery = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
     final promoState = ref.watch(cartPromoProvider);
     final discount = promoState.discountAmount;
+    // A promo discounts whichever entity it's actually scoped to — a
+    // delivery-scoped discount must come off the delivery fee, not the item
+    // subtotal, or it silently "acts on" the wrong line of the basket.
+    final isDeliveryDiscount = promoState.appliedPromo?.appliesTo == PromoAppliesTo.delivery;
+    final discountedSubtotal = isDeliveryDiscount ? subtotal : (subtotal - discount).clamp(0.0, double.infinity);
+    final discountedDelivery = isDeliveryDiscount ? (delivery - discount).clamp(0.0, double.infinity) : delivery.toDouble();
     // Add-ons belong to the basket's shop specifically — sourced from the
     // public shop-detail payload (keyed by slug), not `/vendor/addons`,
     // which is scoped to whichever vendor is logged in on this device and
@@ -45,7 +53,7 @@ class CartScreen extends ConsumerWidget {
     final cartAddons = ref.watch(cartAddonsProvider);
     final cartAddonsNotifier = ref.read(cartAddonsProvider.notifier);
     final addonTotal = cartAddonsNotifier.totalFor(vendorAddons);
-    final total = (subtotal - discount).clamp(0.0, double.infinity) + delivery + addonTotal;
+    final total = discountedSubtotal + discountedDelivery + addonTotal;
 
     // Back to the shop the basket already belongs to â€” resolved from the
     // live shop list by name.
@@ -166,6 +174,9 @@ class CartScreen extends ConsumerWidget {
                           subtotal: subtotal,
                           language: language,
                           shopId: fulfillment.shopId,
+                          packageId: pkg?.id,
+                          isDelivery: fulfillment.isDelivery,
+                          deliveryFeeTzs: delivery,
                           cartItems: {
                             for (final line in lines)
                               if (!line.key.startsWith('pkg:'))
@@ -499,10 +510,21 @@ class _StepButton extends StatelessWidget {
 }
 
 class _PromoCodeSection extends ConsumerStatefulWidget {
-  const _PromoCodeSection({required this.subtotal, required this.language, required this.shopId, required this.cartItems});
+  const _PromoCodeSection({
+    required this.subtotal,
+    required this.language,
+    required this.shopId,
+    required this.cartItems,
+    this.packageId,
+    this.isDelivery = false,
+    this.deliveryFeeTzs = 0,
+  });
   final double subtotal;
   final String shopId;
   final Map<int, int> cartItems;
+  final String? packageId;
+  final bool isDelivery;
+  final int deliveryFeeTzs;
   final String language;
 
   @override
@@ -512,6 +534,25 @@ class _PromoCodeSection extends ConsumerStatefulWidget {
 class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  static final _looksLikeCode = RegExp(r'^[A-Z0-9-]{4,20}$');
+
+  @override
+  void initState() {
+    super.initState();
+    // If the customer just claimed a promo on the home screen, its code is
+    // sitting in the clipboard — save them retyping it here. Only a prefill,
+    // never an auto-apply, and only when they haven't already typed/applied
+    // something themselves.
+    Future.microtask(() async {
+      if (!mounted || _controller.text.isNotEmpty || ref.read(cartPromoProvider).hasPromo) return;
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim().toUpperCase() ?? '';
+      if (!mounted || text.isEmpty || !_looksLikeCode.hasMatch(text)) return;
+      if (_controller.text.isNotEmpty || ref.read(cartPromoProvider).hasPromo) return;
+      _controller.text = text;
+      ref.read(cartPromoProvider.notifier).setPromo(text);
+    });
+  }
 
   @override
   void dispose() {
@@ -661,7 +702,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                       ),
                       onChanged: (v) => notifier.setPromo(v),
-                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems),
+                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems, packageId: widget.packageId, isDelivery: widget.isDelivery, deliveryFeeTzs: widget.deliveryFeeTzs),
                     ),
                   ),
                   Container(
@@ -673,7 +714,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                       child: InkWell(
                         onTap: () {
                           _focusNode.unfocus();
-                          notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems);
+                          notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems, packageId: widget.packageId, isDelivery: widget.isDelivery, deliveryFeeTzs: widget.deliveryFeeTzs);
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -713,6 +754,13 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
 
   String _discountLabel(CartPromoState state, String lang) {
     if (state.appliedPromo == null) return '';
+    if (state.pending) {
+      return clientLabel(
+        'Applied — discount will show once delivery is set',
+        'Imetumika — punguzo litaonekana baada ya kuweka usafirishaji',
+        lang,
+      );
+    }
     final promo = state.appliedPromo!;
     if (promo.isPercentage) {
       return clientLabel(
@@ -744,6 +792,9 @@ class _SummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = AppColors.isClientDark(context);
+    // A promo only ever discounts the entity it's actually scoped to — a
+    // delivery-scoped one is shown against the Delivery line, not Subtotal.
+    final isDeliveryDiscount = promoState.appliedPromo?.appliesTo == PromoAppliesTo.delivery;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(17, 18, 17, 17),
@@ -756,7 +807,7 @@ class _SummaryPanel extends StatelessWidget {
         Text(clientLabel('ORDER SUMMARY', 'MUHTASARI WA ODA', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
         const SizedBox(height: 12),
         _SummaryLine(label: clientLabel('Subtotal', 'Jumla ndogo', language), value: formatMoney(subtotal), context: context),
-        if (discount > 0) ...[
+        if (discount > 0 && !isDeliveryDiscount) ...[
           const SizedBox(height: 9),
           _SummaryLine(
             label: clientLabel('Discount', 'Punguzo', language),
@@ -770,6 +821,23 @@ class _SummaryPanel extends StatelessWidget {
           _SummaryLine(label: clientLabel('Delivery', 'Usafirishaji', language), value: delivery > 0 ? formatMoney(delivery.toDouble()) : clientLabel('Quoted at schedule', 'Itakadiriwa kwenye ratiba', language), valueColor: AppColors.teal, context: context)
         else
           _SummaryLine(label: clientLabel('Self drop-off', 'Unapeleka mwenyewe', language), value: clientLabel('Free', 'Bure', language), valueColor: AppColors.teal, context: context),
+        if (isDeliveryDiscount && promoState.pending) ...[
+          const SizedBox(height: 9),
+          _SummaryLine(
+            label: clientLabel('Delivery discount', 'Punguzo la usafirishaji', language),
+            value: clientLabel('Applied at checkout', 'Itatumika wakati wa malipo', language),
+            valueColor: AppColors.teal,
+            context: context,
+          ),
+        ] else if (isDeliveryDiscount && discount > 0) ...[
+          const SizedBox(height: 9),
+          _SummaryLine(
+            label: clientLabel('Delivery discount', 'Punguzo la usafirishaji', language),
+            value: '-${formatMoney(discount)}',
+            valueColor: AppColors.teal,
+            context: context,
+          ),
+        ],
         if (addonTotal > 0) ...[
           const SizedBox(height: 9),
           _SummaryLine(
