@@ -1,12 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/icons/app_icons.dart';
 import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import '../../utils/location.dart';
 import '../../widgets/placeholder_image.dart';
+import '../../widgets/remote_image.dart';
 import '../../widgets/round_back_button.dart';
 import '../../widgets/toggle_switch.dart';
 
@@ -16,6 +21,8 @@ const _kVendorTimeOptions = [
   '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM',
   '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM',
 ];
+
+enum _ImagePickSource { camera, gallery, url }
 
 /// The vendor-facing settings hub, reached from the account sheet's
 /// "Settings" button. Mirrors the layout/design language of
@@ -32,6 +39,9 @@ class VendorSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
+  final _imagePicker = ImagePicker();
+  bool _locating = false;
+
   void _chooseTime(String sheetTitle, String value, ValueChanged<String> onChanged) {
     showModalBottomSheet<void>(
       context: context,
@@ -69,57 +79,258 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
     );
   }
 
+  /// Bottom sheet offering Camera / Gallery / (optionally) a pasted URL.
+  Future<_ImagePickSource?> _chooseImageSource({required bool allowUrl}) {
+    final language = ref.read(vendorProfileProvider).language;
+    return showModalBottomSheet<_ImagePickSource>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.teal),
+              title: Text(vendorLabel('Take photo', 'Piga picha', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+              onTap: () => Navigator.pop(sheetContext, _ImagePickSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: AppColors.teal),
+              title: Text(vendorLabel('Choose from gallery', 'Chagua kwenye picha zako', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+              onTap: () => Navigator.pop(sheetContext, _ImagePickSource.gallery),
+            ),
+            if (allowUrl)
+              ListTile(
+                leading: const Icon(Icons.link_rounded, color: AppColors.teal),
+                title: Text(vendorLabel('Paste image URL', 'Bandika kiungo cha picha', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+                onTap: () => Navigator.pop(sheetContext, _ImagePickSource.url),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _promptImageUrl() {
+    final language = ref.read(vendorProfileProvider).language;
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cream,
+        title: Text(vendorLabel('Image URL', 'Kiungo cha picha', language), style: AppText.serif(fontSize: 18)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          decoration: InputDecoration(hintText: 'https://example.com/photo.jpg'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(vendorLabel('Cancel', 'Ghairi', language)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(vendorLabel('Add', 'Ongeza', language)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Runs the OS image picker for [source], surfacing a permission/access
+  /// failure (denied camera/gallery access, no camera present, etc.) as a
+  /// snackbar instead of letting it vanish as an uncaught exception.
+  Future<File?> _pickFile(_ImagePickSource source) async {
+    final language = ref.read(vendorProfileProvider).language;
+    try {
+      final xfile = await _imagePicker.pickImage(
+        source: source == _ImagePickSource.camera ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (xfile == null) return null;
+      return File(xfile.path);
+    } catch (_) {
+      if (!mounted) return null;
+      final isCamera = source == _ImagePickSource.camera;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(vendorLabel(
+            'Could not access the ${isCamera ? 'camera' : 'gallery'}. Check app permissions in your phone settings.',
+            'Imeshindwa kufikia ${isCamera ? 'kamera' : 'picha zako'}. Angalia ruhusa za programu kwenye mipangilio ya simu.',
+            language,
+          )),
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<void> _editProfilePhoto() async {
+    final source = await _chooseImageSource(allowUrl: false);
+    if (source == null || !mounted) return;
+    final file = await _pickFile(source);
+    if (file == null || !mounted) return;
+    final language = ref.read(vendorProfileProvider).language;
+    final ok = await ref.read(vendorProfileProvider.notifier).uploadProfilePhoto(file);
+    if (!mounted || ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(vendorLabel('Could not upload photo. Please try again.', 'Imeshindwa kupakia picha. Jaribu tena.', language))),
+    );
+  }
+
+  Future<void> _addShopPhoto() async {
+    final source = await _chooseImageSource(allowUrl: true);
+    if (source == null || !mounted) return;
+    final notifier = ref.read(vendorProfileProvider.notifier);
+    final language = ref.read(vendorProfileProvider).language;
+    bool ok;
+    if (source == _ImagePickSource.url) {
+      final url = await _promptImageUrl();
+      if (url == null || url.isEmpty || !mounted) return;
+      ok = await notifier.addShopPhotoFromUrl(url);
+    } else {
+      final file = await _pickFile(source);
+      if (file == null || !mounted) return;
+      ok = await notifier.addShopPhotoFromFile(file);
+    }
+    if (!mounted || ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(vendorLabel('Could not add photo. Please try again.', 'Imeshindwa kuongeza picha. Jaribu tena.', language))),
+    );
+  }
+
+  Future<void> _removeShopPhoto(int i) async {
+    final language = ref.read(vendorProfileProvider).language;
+    final ok = await ref.read(vendorProfileProvider.notifier).removeShopPhoto(i);
+    if (!mounted || ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(vendorLabel('Could not remove photo. Please try again.', 'Imeshindwa kuondoa picha. Jaribu tena.', language))),
+    );
+  }
+
+  /// GPS fix → reverse-geocoded street address → saved as the office
+  /// address, mirroring the customer app's "use my current location" flow
+  /// in `schedule_screen.dart` (same [locateUserWithAddress] helper).
+  Future<void> _useCurrentLocation() async {
+    if (_locating) return;
+    final notifier = ref.read(vendorProfileProvider.notifier);
+    final language = ref.read(vendorProfileProvider).language;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _locating = true);
+    try {
+      final resolved = await locateUserWithAddress();
+      notifier.setLocationFromGps(
+        address: resolved.displayLabel,
+        lat: resolved.point.latitude,
+        lng: resolved.point.longitude,
+      );
+    } on LocationException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(vendorLabel('Could not get your location.', 'Imeshindwa kupata mahali ulipo.', language))),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _chooseLanguage() {
+    final notifier = ref.read(vendorProfileProvider.notifier);
+    final current = ref.read(vendorProfileProvider).language;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final lang in kVendorLanguageOptions)
+              ListTile(
+                title: Text(lang, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+                trailing: lang == current ? const Icon(Icons.check_rounded, color: AppColors.teal) : null,
+                onTap: () {
+                  notifier.updateLanguage(lang);
+                  Navigator.pop(sheetContext);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final vendor = ref.watch(vendorProfileProvider);
     final notifier = ref.read(vendorProfileProvider.notifier);
+    final language = vendor.language;
 
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.only(bottom: 30),
           children: [
-            _Hero(vendor: vendor, onEditPhoto: notifier.cyclePhotoLabel),
+            _Hero(vendor: vendor, onEditPhoto: _editProfilePhoto),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionLabel('Shop details'),
+                  _SectionLabel(vendorLabel('Shop details', 'Maelezo ya duka', language)),
                   _EditableInfoCard(
                     icon: const Icon(Icons.storefront_outlined, size: 17, color: AppColors.teal),
-                    label: 'Shop name',
+                    label: vendorLabel('Shop name', 'Jina la duka', language),
                     value: vendor.shopTitle,
-                    hint: 'Enter shop name',
+                    hint: vendorLabel('Enter shop name', 'Weka jina la duka', language),
+                    editLabel: vendorLabel('Edit', 'Hariri', language),
+                    saveLabel: vendorLabel('Save', 'Hifadhi', language),
+                    cancelLabel: vendorLabel('Cancel', 'Ghairi', language),
                     onSave: notifier.updateShopTitle,
                   ),
                   _EditableInfoCard(
                     icon: const Icon(Icons.notes_rounded, size: 17, color: AppColors.teal),
-                    label: 'Bio',
+                    label: vendorLabel('Bio', 'Maelezo mafupi', language),
                     value: vendor.bio,
-                    hint: 'Tell customers about your shop',
+                    hint: vendorLabel('Tell customers about your shop', 'Waambie wateja kuhusu duka lako', language),
+                    editLabel: vendorLabel('Edit', 'Hariri', language),
+                    saveLabel: vendorLabel('Save', 'Hifadhi', language),
+                    cancelLabel: vendorLabel('Cancel', 'Ghairi', language),
                     maxLines: 4,
                     onSave: notifier.updateBio,
                   ),
 
-                  const _SectionLabel('Location'),
+                  _SectionLabel(vendorLabel('Location', 'Mahali', language)),
                   _EditableInfoCard(
                     icon: const AppIcon(AppIcons.office, size: 16, color: AppColors.teal),
-                    label: 'Office address',
+                    label: vendorLabel('Office address', 'Anwani ya ofisi', language),
                     value: vendor.officeAddress,
-                    hint: 'Enter office address',
+                    hint: vendorLabel('Enter office address', 'Weka anwani ya ofisi', language),
+                    editLabel: vendorLabel('Edit', 'Hariri', language),
+                    saveLabel: vendorLabel('Save', 'Hifadhi', language),
+                    cancelLabel: vendorLabel('Cancel', 'Ghairi', language),
                     onSave: notifier.updateOfficeAddress,
                     footer: InkWell(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Google Maps location picker coming soon')),
-                      ),
+                      onTap: _locating ? null : _useCurrentLocation,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
+                          if (_locating)
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal),
+                            )
+                          else
+                            const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
                           const SizedBox(width: 6),
                           Text(
-                            'Use current location',
+                            _locating
+                                ? vendorLabel('Locating…', 'Inatafuta mahali…', language)
+                                : vendorLabel('Use current location', 'Tumia mahali pa sasa', language),
                             style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
                           ),
                         ],
@@ -127,21 +338,21 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
                     ),
                   ),
 
-                  const _SectionLabel('Working schedule'),
+                  _SectionLabel(vendorLabel('Working schedule', 'Ratiba ya kazi', language)),
                   _WeekdayPicker(days: vendor.workingDays, onToggle: notifier.toggleWorkingDay),
                   const SizedBox(height: 10),
                   _TimeRow(
                     icon: Icons.wb_sunny_outlined,
-                    label: 'Opens at',
+                    label: vendorLabel('Opens at', 'Inafunguliwa saa', language),
                     value: vendor.openTime,
-                    onTap: () => _chooseTime('Opening time', vendor.openTime, notifier.updateOpenTime),
+                    onTap: () => _chooseTime(vendorLabel('Opening time', 'Muda wa kufungua', language), vendor.openTime, notifier.updateOpenTime),
                   ),
                   const SizedBox(height: 8),
                   _TimeRow(
                     icon: Icons.nights_stay_outlined,
-                    label: 'Closes at',
+                    label: vendorLabel('Closes at', 'Inafungwa saa', language),
                     value: vendor.closeTime,
-                    onTap: () => _chooseTime('Closing time', vendor.closeTime, notifier.updateCloseTime),
+                    onTap: () => _chooseTime(vendorLabel('Closing time', 'Muda wa kufunga', language), vendor.closeTime, notifier.updateCloseTime),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -149,35 +360,38 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
                     style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted),
                   ),
 
-                  const _SectionLabel('Shop status'),
-                  _StatusCard(isOpen: vendor.isOpen, onToggle: notifier.toggleOpen),
+                  _SectionLabel(vendorLabel('Shop status', 'Hali ya duka', language)),
+                  _StatusCard(isOpen: vendor.isOpen, onToggle: notifier.toggleOpen, language: language),
 
-                  _SectionLabel('Shop photos (${vendor.shopPhotoLabels.length}/6)'),
+                  _SectionLabel('${vendorLabel('Shop photos', 'Picha za duka', language)} (${vendor.shopPhotos.length}/6)'),
                   _ShopPhotosStrip(
-                    labels: vendor.shopPhotoLabels,
-                    onAdd: notifier.addShopPhoto,
-                    onRemove: notifier.removeShopPhoto,
+                    photos: vendor.shopPhotos,
+                    uploading: vendor.uploadingShopPhoto,
+                    onAdd: _addShopPhoto,
+                    onRemove: _removeShopPhoto,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Shown to customers as a slideshow on your shop page, 4s per photo.',
+                    vendorLabel(
+                      'Shown to customers as a slideshow on your shop page, 4s per photo.',
+                      'Zinaonyeshwa kwa wateja kama slaidi kwenye ukurasa wa duka lako, sekunde 4 kwa kila picha.',
+                      language,
+                    ),
                     style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
                   ),
 
-                  const _SectionLabel('Preferences'),
+                  _SectionLabel(vendorLabel('Preferences', 'Mapendeleo', language)),
                   _SettingRow(
                     icon: Icons.language_rounded,
-                    label: 'Language',
+                    label: vendorLabel('Language', 'Lugha', language),
                     value: vendor.language,
-                    onTap: () => ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('Language options coming soon'))),
+                    onTap: _chooseLanguage,
                   ),
 
                   const SizedBox(height: 24),
                   Center(
                     child: Text(
-                      'Last saved ${_formatTime(vendor.lastUpdated)}',
+                      '${vendorLabel('Last saved', 'Ilihifadhiwa mara ya mwisho', language)} ${_formatTime(vendor.lastUpdated)}',
                       style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted),
                     ),
                   ),
@@ -218,7 +432,7 @@ class _Hero extends StatelessWidget {
             children: [
               RoundBackButton(onPressed: () => context.pop()),
               const SizedBox(width: 12),
-              Expanded(child: Text('Vendor settings', style: AppText.serif(fontSize: 22, color: AppColors.cream))),
+              Expanded(child: Text(vendorLabel('Vendor settings', 'Mipangilio ya muuzaji', vendor.language), style: AppText.serif(fontSize: 22, color: AppColors.cream))),
             ],
           ),
           const SizedBox(height: 18),
@@ -226,10 +440,26 @@ class _Hero extends StatelessWidget {
             child: Stack(
               alignment: Alignment.bottomRight,
               children: [
-                SizedBox(width: 96, height: 96, child: PlaceholderImage(label: vendor.photoLabel, circle: true)),
+                SizedBox(
+                  width: 96,
+                  height: 96,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      vendor.photoUrl.isEmpty
+                          ? PlaceholderImage(label: vendor.photoLabel, circle: true)
+                          : RemoteImage(url: vendor.photoUrl, fallback: vendor.photoLabel, circle: true),
+                      if (vendor.uploadingProfilePhoto)
+                        const DecoratedBox(
+                          decoration: BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cream)),
+                        ),
+                    ],
+                  ),
+                ),
                 FloatingActionButton.small(
                   backgroundColor: AppColors.teal,
-                  onPressed: onEditPhoto,
+                  onPressed: vendor.uploadingProfilePhoto ? null : onEditPhoto,
                   child: const Icon(Icons.camera_alt_outlined, color: AppColors.cream),
                 ),
               ],
@@ -239,7 +469,9 @@ class _Hero extends StatelessWidget {
           Text(vendor.shopTitle, style: AppText.serif(fontSize: 20, color: AppColors.cream)),
           const SizedBox(height: 3),
           Text(
-            vendor.isOpen ? 'Open now · ${vendor.openTime} – ${vendor.closeTime}' : 'Currently closed',
+            vendor.isOpen
+                ? '${vendorLabel('Open now', 'Wazi sasa', vendor.language)} · ${vendor.openTime} – ${vendor.closeTime}'
+                : vendorLabel('Currently closed', 'Kwa sasa imefungwa', vendor.language),
             style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.66)),
           ),
         ],
@@ -272,6 +504,9 @@ class _EditableInfoCard extends StatefulWidget {
     this.hint,
     this.maxLines = 1,
     this.footer,
+    this.editLabel = 'Edit',
+    this.saveLabel = 'Save',
+    this.cancelLabel = 'Cancel',
   });
 
   final Widget icon;
@@ -281,6 +516,9 @@ class _EditableInfoCard extends StatefulWidget {
   final String? hint;
   final int maxLines;
   final Widget? footer;
+  final String editLabel;
+  final String saveLabel;
+  final String cancelLabel;
 
   @override
   State<_EditableInfoCard> createState() => _EditableInfoCardState();
@@ -340,7 +578,7 @@ class _EditableInfoCardState extends State<_EditableInfoCard> {
               if (!_editing)
                 InkWell(
                   onTap: () => setState(() => _editing = true),
-                  child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                  child: Text(widget.editLabel, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
                 ),
             ],
           ),
@@ -373,7 +611,7 @@ class _EditableInfoCardState extends State<_EditableInfoCard> {
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
                       onTap: _cancel,
-                      child: Container(height: 44, alignment: Alignment.center, child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted))),
+                      child: Container(height: 44, alignment: Alignment.center, child: Text(widget.cancelLabel, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted))),
                     ),
                   ),
                 ),
@@ -385,7 +623,7 @@ class _EditableInfoCardState extends State<_EditableInfoCard> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
                       onTap: _save,
-                      child: Container(height: 44, alignment: Alignment.center, child: Text('Save', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.cream))),
+                      child: Container(height: 44, alignment: Alignment.center, child: Text(widget.saveLabel, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.cream))),
                     ),
                   ),
                 ),
@@ -480,10 +718,11 @@ class _TimeRow extends StatelessWidget {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.isOpen, required this.onToggle});
+  const _StatusCard({required this.isOpen, required this.onToggle, required this.language});
 
   final bool isOpen;
   final VoidCallback onToggle;
+  final String language;
 
   @override
   Widget build(BuildContext context) {
@@ -496,14 +735,16 @@ class _StatusCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(color: isOpen ? AppColors.tealMuted : AppColors.dangerLight, borderRadius: BorderRadius.circular(999)),
             child: Text(
-              isOpen ? 'Open' : 'Closed',
+              isOpen ? vendorLabel('Open', 'Wazi', language) : vendorLabel('Closed', 'Imefungwa', language),
               style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: isOpen ? AppColors.teal : AppColors.danger),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Shop is currently ${isOpen ? 'accepting' : 'not accepting'} new orders',
+              isOpen
+                  ? vendorLabel('Shop is currently accepting new orders', 'Duka kwa sasa linapokea oda mpya', language)
+                  : vendorLabel('Shop is currently not accepting new orders', 'Duka kwa sasa halipokei oda mpya', language),
               style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
@@ -515,37 +756,42 @@ class _StatusCard extends StatelessWidget {
 }
 
 class _ShopPhotosStrip extends StatelessWidget {
-  const _ShopPhotosStrip({required this.labels, required this.onAdd, required this.onRemove});
+  const _ShopPhotosStrip({required this.photos, required this.uploading, required this.onAdd, required this.onRemove});
 
-  final List<String> labels;
+  final List<VendorShopPhoto> photos;
+  final bool uploading;
   final VoidCallback onAdd;
   final ValueChanged<int> onRemove;
 
   @override
   Widget build(BuildContext context) {
+    final canAdd = photos.length < 6;
     return SizedBox(
       height: 96,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: labels.length + (labels.length < 6 ? 1 : 0),
+        itemCount: photos.length + (canAdd ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
-          if (i == labels.length) {
+          if (i == photos.length) {
             return InkWell(
-              onTap: onAdd,
+              onTap: uploading ? null : onAdd,
               borderRadius: BorderRadius.circular(16),
               child: Container(
                 width: 96,
                 height: 96,
                 decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark, width: 1.5), borderRadius: BorderRadius.circular(16)),
                 alignment: Alignment.center,
-                child: const Icon(Icons.add_photo_alternate_outlined, color: AppColors.teal, size: 26),
+                child: uploading
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal))
+                    : const Icon(Icons.add_photo_alternate_outlined, color: AppColors.teal, size: 26),
               ),
             );
           }
+          final photo = photos[i];
           return Stack(
             children: [
-              SizedBox(width: 96, height: 96, child: PlaceholderImage(label: labels[i], borderRadius: 16)),
+              SizedBox(width: 96, height: 96, child: RemoteImage(url: photo.url, fallback: 'Shop photo', borderRadius: 16)),
               Positioned(
                 top: 5,
                 right: 5,

@@ -342,6 +342,12 @@ class ApiService {
   Future<Map<String, dynamic>> updateVendorShopPartial(Map<String, dynamic> body) =>
       patch('/vendor/shop', body: body);
 
+  Future<Map<String, dynamic>> addVendorShopPhoto(Map<String, dynamic> body) =>
+      post('/vendor/shop/photos', body: body);
+
+  Future<Map<String, dynamic>> deleteVendorShopPhoto(int id) =>
+      delete('/vendor/shop/photos/$id');
+
   // =========================================================================
   // VENDOR CATALOG
   // =========================================================================
@@ -431,9 +437,6 @@ class ApiService {
   Future<Map<String, dynamic>> deleteVendorPromo(String id) =>
       delete('/vendor/promos/$id');
 
-  Future<Map<String, dynamic>> toggleVendorPromo(String id) =>
-      patch('/vendor/promos/$id/toggle');
-
   // =========================================================================
   // REVIEWS
   // =========================================================================
@@ -465,15 +468,26 @@ class ApiService {
     return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   }
 
+  /// [cartItems] are the basket's real line items (item id → quantity) —
+  /// the backend re-prices them itself from this shop's vendor_items to
+  /// compute a category/item-scoped promo's discount against just that
+  /// item's value, not the whole order. Never send prices from the client.
   Future<Map<String, dynamic>> validatePromo(
     String code,
     String shopId,
-    double subtotal,
-  ) =>
+    double subtotal, {
+    Map<int, int> cartItems = const {},
+  }) =>
+      // Backend validates `subtotal_tzs` as a required integer — the old
+      // `subtotal` key was never read, so promo codes never matched anything.
       post('/promos/validate', body: {
         'code': code,
         'shop_id': shopId,
-        'subtotal': subtotal,
+        'subtotal_tzs': subtotal.round(),
+        if (cartItems.isNotEmpty)
+          'items': [
+            for (final entry in cartItems.entries) {'item_id': entry.key, 'qty': entry.value},
+          ],
       });
 
   // =========================================================================

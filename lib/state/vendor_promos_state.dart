@@ -14,8 +14,10 @@ class VendorPromosState {
     this.discountValue = '',
     this.minSpend = '',
     this.maxRedemptions = '',
-    this.targetCategory = '',
-    this.targetItem = '',
+    this.targetCategoryId,
+    this.targetCategoryName = '',
+    this.targetItemId,
+    this.targetItemName = '',
     this.startDate,
     this.endDate,
     this.isLoading = false,
@@ -29,8 +31,14 @@ class VendorPromosState {
   final String discountValue;
   final String minSpend;
   final String maxRedemptions;
-  final String targetCategory;
-  final String targetItem;
+
+  /// Real backend category/item ids picked from the vendor's own catalog —
+  /// the backend only accepts an id matching an existing row, so this can't
+  /// be free text the way it used to be.
+  final String? targetCategoryId;
+  final String targetCategoryName;
+  final String? targetItemId;
+  final String targetItemName;
   final DateTime? startDate;
   final DateTime? endDate;
   final bool isLoading;
@@ -44,11 +52,14 @@ class VendorPromosState {
     String? discountValue,
     String? minSpend,
     String? maxRedemptions,
-    String? targetCategory,
-    String? targetItem,
+    String? targetCategoryId,
+    String? targetCategoryName,
+    String? targetItemId,
+    String? targetItemName,
     DateTime? startDate,
     DateTime? endDate,
     bool? isLoading,
+    bool clearTarget = false,
   }) =>
       VendorPromosState(
         promos: promos ?? this.promos,
@@ -59,8 +70,10 @@ class VendorPromosState {
         discountValue: discountValue ?? this.discountValue,
         minSpend: minSpend ?? this.minSpend,
         maxRedemptions: maxRedemptions ?? this.maxRedemptions,
-        targetCategory: targetCategory ?? this.targetCategory,
-        targetItem: targetItem ?? this.targetItem,
+        targetCategoryId: clearTarget ? null : (targetCategoryId ?? this.targetCategoryId),
+        targetCategoryName: clearTarget ? '' : (targetCategoryName ?? this.targetCategoryName),
+        targetItemId: clearTarget ? null : (targetItemId ?? this.targetItemId),
+        targetItemName: clearTarget ? '' : (targetItemName ?? this.targetItemName),
         startDate: startDate ?? this.startDate,
         endDate: endDate ?? this.endDate,
         isLoading: isLoading ?? this.isLoading,
@@ -86,10 +99,14 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
   void setDiscountValue(String v) => state = state.copyWith(discountValue: v);
   void setMinSpend(String v) => state = state.copyWith(minSpend: v);
   void setMaxRedemptions(String v) => state = state.copyWith(maxRedemptions: v);
-  void setTargetCategory(String v) => state = state.copyWith(targetCategory: v);
-  void setTargetItem(String v) => state = state.copyWith(targetItem: v);
+  void pickTargetCategory(String id, String name) =>
+      state = state.copyWith(targetCategoryId: id, targetCategoryName: name);
+  void pickTargetItem(String id, String name) =>
+      state = state.copyWith(targetItemId: id, targetItemName: name);
   void pickDiscountType(int i) => state = state.copyWith(selectedDiscountType: i);
-  void pickAppliesTo(int i) => state = state.copyWith(selectedAppliesTo: i);
+  // Switching scope invalidates whatever category/item was picked under the
+  // old scope, so clear it rather than leave a stale, unreachable selection.
+  void pickAppliesTo(int i) => state = state.copyWith(selectedAppliesTo: i, clearTarget: true);
   void pickAudience(int i) => state = state.copyWith(selectedAudience: i);
   void setStartDate(DateTime d) => state = state.copyWith(startDate: d);
   void setEndDate(DateTime d) => state = state.copyWith(endDate: d);
@@ -99,8 +116,7 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
     discountValue: '',
     minSpend: '',
     maxRedemptions: '',
-    targetCategory: '',
-    targetItem: '',
+    clearTarget: true,
     selectedDiscountType: 0,
     selectedAppliesTo: 0,
     selectedAudience: 0,
@@ -109,14 +125,31 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
   );
 
   String generatePromoCode() {
-    final name = state.promoName;
-    if (name.isEmpty) return 'PROMO-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(0, 4)}';
-    final prefix = name.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '').substring(0, name.length.clamp(0, 6));
     final suffix = DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(0, 4);
+    // Letters-only prefix from the promo name — e.g. "10% Off" strips down to
+    // "OFF". Clamping against the ORIGINAL name's length (before stripping)
+    // could ask for more characters than the stripped string actually has
+    // (a name like "10% Off" is 7 chars but "OFF" is only 3), which threw a
+    // RangeError on `substring` and silently aborted promo creation.
+    final letters = state.promoName.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+    if (letters.isEmpty) return 'PROMO-$suffix';
+    final prefix = letters.substring(0, letters.length.clamp(0, 6));
     return '$prefix-$suffix';
   }
 
-  Future<void> createPromo() async {
+  /// Whether the current form is complete enough to submit — mirrors the
+  /// backend's `required_if` on target_category_id/target_item_id, so the
+  /// UI can block before hitting a validation error.
+  bool get canSubmit {
+    if (state.promoName.trim().isEmpty || state.discountValue.trim().isEmpty) return false;
+    if (state.selectedAppliesTo == 1 && state.targetCategoryId == null) return false;
+    if (state.selectedAppliesTo == 2 && state.targetItemId == null) return false;
+    return true;
+  }
+
+  Future<bool> createPromo() async {
+    if (!canSubmit) return false;
+
     final code = generatePromoCode();
     final discount = double.tryParse(state.discountValue) ?? 0;
     final minSpendVal = double.tryParse(state.minSpend) ?? 0;
@@ -128,12 +161,18 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       'title': state.promoName,
       'discount_value': discount,
       'is_percentage': state.selectedDiscountType == 0,
-      'min_spend': minSpendVal,
+      // Backend column is `min_spend_tzs`, validated as an integer.
+      'min_spend_tzs': minSpendVal.round(),
       'max_redemptions': maxRedVal,
-      'target_category': state.targetCategory.isNotEmpty ? state.targetCategory : null,
-      'target_item': state.targetItem.isNotEmpty ? state.targetItem : null,
-      'applies_to': ['entire_order', 'specific_category', 'specific_item'][state.selectedAppliesTo],
-      'audience': ['all_users', 'first_time', 'returning'][state.selectedAudience],
+      // `applies_to`/`audience` are validated against these exact camelCase
+      // enum values — the backend rejects anything else outright (this was
+      // the actual reason promos never made it past creation).
+      'applies_to': ['entireOrder', 'specificCategory', 'specificItem'][state.selectedAppliesTo],
+      'audience': ['allUsers', 'firstTimeCustomers', 'returningCustomers'][state.selectedAudience],
+      if (state.selectedAppliesTo == 1 && state.targetCategoryId != null)
+        'target_category_id': int.tryParse(state.targetCategoryId!),
+      if (state.selectedAppliesTo == 2 && state.targetItemId != null)
+        'target_item_id': int.tryParse(state.targetItemId!),
       'expires_at': end.toIso8601String(),
     };
 
@@ -143,22 +182,35 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       final promo = _fromJson({...body.map((k, v) => MapEntry(k, v ?? '')), ...j});
       state = state.copyWith(promos: [...state.promos, promo]);
       resetForm();
+      return true;
     } on ApiException {
-      // Keep state, caller can handle
+      return false;
     }
   }
 
-  Future<void> togglePromoActive(String id) async {
+  Future<bool> togglePromoActive(String id) async {
+    PromoOffer? promo;
+    for (final p in state.promos) {
+      if (p.id == id) {
+        promo = p;
+        break;
+      }
+    }
+    if (promo == null) return false;
     try {
-      await api.toggleVendorPromo(id);
+      // There is no `/vendor/promos/{id}/toggle` route on the backend —
+      // only GET/POST/PUT/DELETE on `/vendor/promos` exist, so this always
+      // 404'd. Flip the flag through the update endpoint instead.
+      await api.updateVendorPromo(id, {'is_active': !promo.isActive});
       state = state.copyWith(
         promos: state.promos.map((p) {
           if (p.id == id) return p.copyWith(isActive: !p.isActive);
           return p;
         }).toList(),
       );
+      return true;
     } on ApiException {
-      // Keep state
+      return false;
     }
   }
 
@@ -173,7 +225,11 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
 
   PromoOffer _fromJson(Map<String, dynamic> j) {
     return PromoOffer(
-      id: j['id'] as String? ?? '',
+      // Backend returns `id` as an int — `as String?` throws on a type
+      // mismatch instead of returning null, which broke this parse for
+      // every real promo (not just newly-created ones), uncaught by the
+      // `on ApiException` handlers around every call site of this method.
+      id: j['id'] != null ? '${j['id']}' : '',
       code: j['code'] as String? ?? '',
       title: j['title'] as String? ?? '',
       description: j['description'] as String? ?? '',
@@ -185,27 +241,31 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       imageUrl: j['image_url'] as String? ?? '',
       vendorName: j['vendor_name'] as String? ?? '',
       vendorId: j['vendor_id'] as String?,
-      minSpend: parseDouble(j['min_spend']) ?? 0,
+      minSpend: parseDouble(j['min_spend_tzs']) ?? 0,
       appliesTo: _parseAppliesTo(j['applies_to'] as String?),
-      targetCategory: j['target_category'] as String?,
-      targetItem: j['target_item'] as String?,
+      targetCategory: j['target_category_id'] != null ? '${j['target_category_id']}' : null,
+      targetItem: j['target_item_id'] != null ? '${j['target_item_id']}' : null,
       audience: _parseAudience(j['audience'] as String?),
-      maxRedemptions: j['max_redemptions'] as int?,
-      currentRedemptions: j['current_redemptions'] as int? ?? 0,
+      maxRedemptions: parseInt(j['max_redemptions']),
+      currentRedemptions: parseInt(j['current_redemptions']) ?? 0,
       isActive: j['is_active'] as bool? ?? true,
       createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at'] as String) : null,
     );
   }
 
+  // Match the exact camelCase enum values the backend validates against
+  // (`entireOrder`/`specificCategory`/`specificItem`) — this used to check
+  // snake_case values that the API never sends, so every promo read back
+  // silently misreported as "entire order" regardless of its real scope.
   PromoAppliesTo _parseAppliesTo(String? v) => switch (v) {
-    'specific_category' => PromoAppliesTo.specificCategory,
-    'specific_item' => PromoAppliesTo.specificItem,
+    'specificCategory' => PromoAppliesTo.specificCategory,
+    'specificItem' => PromoAppliesTo.specificItem,
     _ => PromoAppliesTo.entireOrder,
   };
 
   PromoAudience _parseAudience(String? v) => switch (v) {
-    'first_time' => PromoAudience.firstTimeCustomers,
-    'returning' => PromoAudience.returningCustomers,
+    'firstTimeCustomers' => PromoAudience.firstTimeCustomers,
+    'returningCustomers' => PromoAudience.returningCustomers,
     _ => PromoAudience.allUsers,
   };
 }

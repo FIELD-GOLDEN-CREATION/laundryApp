@@ -2,6 +2,10 @@
     <!-- Required at runtime (not just debug) so the release build can reach
          the GitHub Releases API and open the browser to download an update. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- image_picker's camera capture needs this declared explicitly; the
+         gallery picker doesn't (it uses the system photo picker). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="laundry_app"
         android:name="${applicationName}"

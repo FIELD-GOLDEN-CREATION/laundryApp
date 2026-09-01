@@ -9,12 +9,15 @@ import '../../../utils/num_helper.dart';
 import '../../../utils/schedule_options.dart';
 import '../../../models/address.dart';
 import '../../../state/auth_state.dart';
+import '../../../state/cart_addons_state.dart';
 import '../../../state/cart_state.dart';
+import '../../../state/catalog_state.dart' show shopAddonsProvider;
 import '../../../state/client_preferences_state.dart';
 import '../../../state/fulfillment_state.dart';
 import '../../../state/place_order_helper.dart';
 import '../../../state/profile_state.dart';
 import '../../../state/schedule_state.dart';
+import '../../../state/vendor_catalog_state.dart' show VendorAddon;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/location.dart';
@@ -53,11 +56,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _locating = true);
     try {
-      final point = await locateUser();
+      final resolved = await locateUserWithAddress();
       ref.read(scheduleProvider.notifier).setCurrentLocation(
-            point.label,
-            lat: point.latitude,
-            lng: point.longitude,
+            resolved.displayLabel,
+            lat: resolved.point.latitude,
+            lng: resolved.point.longitude,
           );
     } on LocationException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
@@ -95,7 +98,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final priced = ref.read(fulfillmentProvider).pricedItems;
     final subtotal = cartSubtotal(qty, priced);
     final deliveryFee = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
-    final total = subtotal + deliveryFee;
+    final vendorAddons = fulfillment.shopSlug.isEmpty
+        ? const <VendorAddon>[]
+        : ref.read(shopAddonsProvider(fulfillment.shopSlug)).asData?.value ?? const <VendorAddon>[];
+    final addonTotal = ref.read(cartAddonsProvider.notifier).totalFor(vendorAddons);
+    final total = subtotal + deliveryFee + addonTotal;
     final addresses = ref.read(profileProvider).addresses;
     final address = schedule.isCurrentLocation
         ? Address(label: 'Current location', line: schedule.currentLocation.isEmpty ? 'Current location' : schedule.currentLocation)

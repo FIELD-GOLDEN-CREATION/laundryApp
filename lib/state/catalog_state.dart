@@ -9,6 +9,7 @@ import '../models/review_item.dart';
 import '../models/service_package.dart';
 import '../models/shop.dart';
 import '../services/api_service.dart';
+import '../state/vendor_catalog_state.dart' show VendorAddon;
 import '../utils/num_helper.dart';
 
 // ── JSON → model mappers shared by every catalog screen ─────────────────
@@ -50,6 +51,11 @@ Shop shopFromJson(Map<String, dynamic> j) {
     isOpenNow: j['is_open'] as bool? ?? true,
     phone: j['phone'] as String? ?? '',
     imageUrl: j['image_url'] as String? ?? '',
+    photos: (j['photos'] as List?)
+            ?.map((p) => p is Map<String, dynamic> ? p['url'] as String? ?? '' : '')
+            .where((s) => s.isNotEmpty)
+            .toList() ??
+        [],
   );
 }
 
@@ -400,6 +406,9 @@ final shopPackagesProvider = FutureProvider.family<List<ServicePackage>, String>
 final shopDetailProvider = FutureProvider.family<List<MenuItem>, String>((ref, slug) async {
   final detail = await api.getShop(slug);
   final body = (detail['data'] ?? detail) as Map<String, dynamic>;
+  // Eloquent snake_cases eager-loaded relation keys in JSON output by
+  // default, so `vendorItems()` on the Shop model comes back as
+  // `vendor_items` here, not `vendorItems`.
   final vendorItems = (body['vendor_items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   return [
     for (final vi in vendorItems)
@@ -412,6 +421,25 @@ final shopDetailProvider = FutureProvider.family<List<MenuItem>, String>((ref, s
               ? (vi['item']['name'] as String)[0].toUpperCase()
               : '?',
           price: parseDouble(vi['price_tzs']) ?? 0,
+        ),
+  ];
+});
+
+/// A shop's add-on services (by slug), read straight off the public shop
+/// detail payload — NOT `/vendor/addons`, which is scoped to whichever
+/// vendor is currently logged in and 404s for a customer session, so it
+/// can never represent the shop the customer is actually looking at.
+final shopAddonsProvider = FutureProvider.family<List<VendorAddon>, String>((ref, slug) async {
+  final detail = await api.getShop(slug);
+  final body = (detail['data'] ?? detail) as Map<String, dynamic>;
+  final vendorAddons = (body['vendor_addons'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  return [
+    for (final a in vendorAddons)
+      if (a['is_active'] as bool? ?? true)
+        VendorAddon(
+          id: a['id'] != null ? '${a['id']}' : null,
+          title: a['title'] as String? ?? '',
+          priceTzs: parseDouble(a['price_tzs']) ?? 0,
         ),
   ];
 });

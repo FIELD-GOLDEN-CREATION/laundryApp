@@ -11,7 +11,7 @@ import '../../../state/cart_promo_state.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/fulfillment_state.dart';
-import '../../../state/vendor_catalog_state.dart';
+import '../../../state/vendor_catalog_state.dart' show VendorAddon;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
@@ -35,8 +35,13 @@ class CartScreen extends ConsumerWidget {
     final delivery = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
     final promoState = ref.watch(cartPromoProvider);
     final discount = promoState.discountAmount;
-    // Add-ons from vendor catalog
-    final vendorAddons = ref.watch(vendorCatalogProvider.select((s) => s.addons));
+    // Add-ons belong to the basket's shop specifically — sourced from the
+    // public shop-detail payload (keyed by slug), not `/vendor/addons`,
+    // which is scoped to whichever vendor is logged in on this device and
+    // has nothing to do with the shop the customer is actually ordering from.
+    final vendorAddons = fulfillment.shopSlug.isEmpty
+        ? const <VendorAddon>[]
+        : ref.watch(shopAddonsProvider(fulfillment.shopSlug)).asData?.value ?? const <VendorAddon>[];
     final cartAddons = ref.watch(cartAddonsProvider);
     final cartAddonsNotifier = ref.read(cartAddonsProvider.notifier);
     final addonTotal = cartAddonsNotifier.totalFor(vendorAddons);
@@ -157,7 +162,16 @@ class CartScreen extends ConsumerWidget {
                           language: language,
                         ),
                         const SizedBox(height: 18),
-                        _PromoCodeSection(subtotal: subtotal, language: language),
+                        _PromoCodeSection(
+                          subtotal: subtotal,
+                          language: language,
+                          shopId: fulfillment.shopId,
+                          cartItems: {
+                            for (final line in lines)
+                              if (!line.key.startsWith('pkg:'))
+                                if (int.tryParse(line.key) case final id?) id: qty[line.key] ?? 0,
+                          },
+                        ),
                         const SizedBox(height: 18),
                         _SummaryPanel(
                           subtotal: subtotal,
@@ -485,8 +499,10 @@ class _StepButton extends StatelessWidget {
 }
 
 class _PromoCodeSection extends ConsumerStatefulWidget {
-  const _PromoCodeSection({required this.subtotal, required this.language});
+  const _PromoCodeSection({required this.subtotal, required this.language, required this.shopId, required this.cartItems});
   final double subtotal;
+  final String shopId;
+  final Map<int, int> cartItems;
   final String language;
 
   @override
@@ -645,7 +661,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                       ),
                       onChanged: (v) => notifier.setPromo(v),
-                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal, ''),
+                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems),
                     ),
                   ),
                   Container(
@@ -657,7 +673,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                       child: InkWell(
                         onTap: () {
                           _focusNode.unfocus();
-                          notifier.applyPromo(widget.subtotal, '');
+                          notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems);
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

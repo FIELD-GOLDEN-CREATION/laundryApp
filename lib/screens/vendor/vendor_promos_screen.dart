@@ -1,16 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/laundry_category.dart';
 import '../../models/promo_offer.dart';
+import '../../state/catalog_state.dart';
 import '../../state/vendor_promos_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 
-class VendorPromosScreen extends ConsumerWidget {
+class VendorPromosScreen extends ConsumerStatefulWidget {
   const VendorPromosScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VendorPromosScreen> createState() => _VendorPromosScreenState();
+}
+
+class _VendorPromosScreenState extends ConsumerState<VendorPromosScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // The promo list otherwise only ever reflects promos created in the
+    // current app session — nothing fetched it from the backend before.
+    Future.microtask(() => ref.read(vendorPromosProvider.notifier).loadPromos());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(vendorPromosProvider);
     final notifier = ref.read(vendorPromosProvider.notifier);
     final activePromos = state.promos.where((p) => p.isActive && !p.isExpired).toList();
@@ -287,6 +302,16 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
   final _maxRedemptionsController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (ref.read(categoriesProvider).items.isEmpty) {
+        ref.read(categoriesProvider.notifier).load(withItems: true);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _discountController.dispose();
@@ -391,17 +416,25 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
                 if (state.selectedAppliesTo == 1) ...[
                   const SizedBox(height: 12),
                   _FormLabel('CATEGORY'),
-                  _FormTextField(
-                    hint: 'e.g., Formal, Woolen & Outerwear',
-                    onChanged: notifier.setTargetCategory,
+                  _PickerRow(
+                    label: state.targetCategoryName,
+                    hint: 'Select a category',
+                    onTap: () async {
+                      final picked = await _pickCategory(context, ref);
+                      if (picked != null) notifier.pickTargetCategory(picked.$1, picked.$2);
+                    },
                   ),
                 ],
                 if (state.selectedAppliesTo == 2) ...[
                   const SizedBox(height: 12),
                   _FormLabel('ITEM'),
-                  _FormTextField(
-                    hint: 'e.g., 2-Piece Suit',
-                    onChanged: notifier.setTargetItem,
+                  _PickerRow(
+                    label: state.targetItemName,
+                    hint: 'Select an item',
+                    onTap: () async {
+                      final picked = await _pickItem(context, ref);
+                      if (picked != null) notifier.pickTargetItem(picked.$1, picked.$2);
+                    },
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -488,10 +521,32 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
                     borderRadius: BorderRadius.circular(16),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () {
-                        if (_nameController.text.isNotEmpty && _discountController.text.isNotEmpty) {
-                          notifier.createPromo();
+                      onTap: () async {
+                        if (!notifier.canSubmit) {
+                          final needsTarget = (state.selectedAppliesTo == 1 && state.targetCategoryId == null) ||
+                              (state.selectedAppliesTo == 2 && state.targetItemId == null);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                needsTarget
+                                    ? 'Pick a ${state.selectedAppliesTo == 1 ? "category" : "item"} for this promo.'
+                                    : 'Enter a promo name and discount value.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        // Wait for the actual result instead of popping
+                        // unconditionally — otherwise a failed create looks
+                        // identical to a successful one.
+                        final ok = await notifier.createPromo();
+                        if (!context.mounted) return;
+                        if (ok) {
                           Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not create promo. Please try again.')),
+                          );
                         }
                       },
                       child: Center(
@@ -507,6 +562,228 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Opens a single-select category picker, returning the chosen (id, name),
+/// or null if the vendor backed out. Sourced from the shop's real catalog —
+/// the backend only accepts a `target_category_id` matching an existing row.
+Future<(String, String)?> _pickCategory(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<(String, String)>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => Consumer(builder: (_, ref, _) {
+      return _TargetPickerSheet(
+        title: 'Select category',
+        subtitle: 'Choose which category this promo applies to.',
+        categories: ref.watch(categoriesProvider).items,
+        mode: _TargetPickerMode.category,
+      );
+    }),
+  );
+}
+
+/// Same as [_pickCategory] but for a single item, grouped by category.
+Future<(String, String)?> _pickItem(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<(String, String)>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => Consumer(builder: (_, ref, _) {
+      return _TargetPickerSheet(
+        title: 'Select item',
+        subtitle: 'Choose which item this promo applies to.',
+        categories: ref.watch(categoriesProvider).items,
+        mode: _TargetPickerMode.item,
+      );
+    }),
+  );
+}
+
+enum _TargetPickerMode { category, item }
+
+/// Single-select sheet listing the shop's real categories/items, styled
+/// after the package form's item picker. Tapping a row selects it and
+/// closes the sheet immediately — there's nothing else to configure here.
+class _TargetPickerSheet extends StatelessWidget {
+  const _TargetPickerSheet({
+    required this.title,
+    required this.subtitle,
+    required this.categories,
+    required this.mode,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<LaundryCategory> categories;
+  final _TargetPickerMode mode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+            decoration: const BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
+                  ),
+                ),
+                Text(title, style: AppText.serif(fontSize: 22)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                const SizedBox(height: 14),
+                if (categories.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        'No catalog items yet.',
+                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                      ),
+                    ),
+                  )
+                else if (mode == _TargetPickerMode.category)
+                  ...categories.map((cat) => _PickerTile(
+                    title: cat.name,
+                    subtitle: '${cat.items.length} items',
+                    onTap: () => Navigator.of(context).pop((cat.id, cat.name)),
+                  ))
+                else
+                  ...categories.map((cat) => cat.items.isEmpty
+                      ? const SizedBox.shrink()
+                      : _ItemPickerSection(category: cat)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemPickerSection extends StatelessWidget {
+  const _ItemPickerSection({required this.category});
+  final LaundryCategory category;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.creamDark),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        title: Text(category.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
+        subtitle: Text('${category.items.length} items', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+        children: category.items
+            .map((item) => _PickerTile(
+                  title: item.name,
+                  subtitle: item.description,
+                  onTap: () => Navigator.of(context).pop((item.id, item.name)),
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+class _PickerTile extends StatelessWidget {
+  const _PickerTile({required this.title, required this.subtitle, required this.onTap});
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.cream))),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted)),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Read-only field styled like [_FormTextField] that opens a picker instead
+/// of accepting typed text — shows the picked name, or [hint] when nothing
+/// is selected yet.
+class _PickerRow extends StatelessWidget {
+  const _PickerRow({required this.label, required this.hint, required this.onTap});
+  final String label;
+  final String hint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValue = label.isNotEmpty;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.creamDark),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        alignment: Alignment.centerLeft,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                hasValue ? label : hint,
+                style: AppText.sans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: hasValue ? AppColors.slate : AppColors.muted,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.muted),
+          ],
+        ),
       ),
     );
   }

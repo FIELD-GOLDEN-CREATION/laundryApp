@@ -48,7 +48,7 @@ class CartPromoNotifier extends Notifier<CartPromoState> {
 
   void setPromo(String promo) => state = state.copyWith(promo: promo, promoError: '');
 
-  Future<void> applyPromo(double subtotal, String shopId) async {
+  Future<void> applyPromo(double subtotal, String shopId, {Map<int, int> cartItems = const {}}) async {
     final code = state.promo.trim();
     if (code.isEmpty) {
       state = state.copyWith(promoError: 'Enter a promo code');
@@ -57,25 +57,24 @@ class CartPromoNotifier extends Notifier<CartPromoState> {
 
     state = state.copyWith(isValidating: true, promoError: '');
     try {
-      final data = await api.validatePromo(code, shopId, subtotal);
-      final discount = parseDouble(data['discount']) ?? 0;
-      final promoData = data['promo'] as Map<String, dynamic>?;
-      final promo = promoData != null
-          ? PromoOffer(
-              id: promoData['id'] as String? ?? '',
-              code: promoData['code'] as String? ?? code,
-              title: promoData['title'] as String? ?? '',
-              description: promoData['description'] as String? ?? '',
-              discountValue: parseDouble(promoData['discount_value']) ?? discount,
-              isPercentage: promoData['is_percentage'] as bool? ?? false,
-              expiresAt: promoData['expires_at'] != null
-                  ? DateTime.tryParse(promoData['expires_at'] as String) ?? DateTime.now().add(const Duration(days: 7))
-                  : DateTime.now().add(const Duration(days: 7)),
-              imageUrl: promoData['image_url'] as String? ?? '',
-              vendorName: promoData['vendor_name'] as String? ?? '',
-              vendorId: promoData['vendor_id'] as String?,
-            )
-          : null;
+      final data = await api.validatePromo(code, shopId, subtotal, cartItems: cartItems);
+      // The backend nests its result under `data` and names fields
+      // `promo_id`/`discount_amount_tzs` — this used to read a top-level
+      // `discount`/`promo` shape that the API never sent, so a promo could
+      // never actually apply even when the code itself was valid.
+      final promoData = data['data'] as Map<String, dynamic>? ?? data;
+      final discount = parseDouble(promoData['discount_amount_tzs']) ?? 0;
+      final promo = PromoOffer(
+        id: promoData['promo_id'] != null ? '${promoData['promo_id']}' : '',
+        code: promoData['code'] as String? ?? code,
+        title: promoData['title'] as String? ?? '',
+        description: '',
+        discountValue: parseDouble(promoData['discount_value']) ?? discount,
+        isPercentage: promoData['is_percentage'] as bool? ?? false,
+        expiresAt: DateTime.now().add(const Duration(days: 7)),
+        imageUrl: '',
+        vendorName: '',
+      );
       state = state.copyWith(
         appliedPromoId: code,
         appliedPromo: promo,
