@@ -571,6 +571,31 @@ class _AcceptOrderSheetState extends ConsumerState<_AcceptOrderSheet> {
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  ref.read(vendorOrdersProvider.notifier).rejectOrder(normalizeVendorOrderId(order.id));
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${order.id} declined'),
+                      backgroundColor: AppColors.danger,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: const BorderSide(color: AppColors.danger),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text('Decline order', style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.muted)),
