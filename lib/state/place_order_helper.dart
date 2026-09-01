@@ -4,6 +4,7 @@ import '../models/order.dart';
 import '../models/order_line.dart';
 import '../utils/cart_math.dart';
 import 'cart_addons_state.dart';
+import 'cart_promo_state.dart';
 import 'cart_state.dart';
 import 'catalog_state.dart' show shopAddonsProvider;
 import 'fulfillment_state.dart';
@@ -18,10 +19,14 @@ Future<Order> placeCurrentOrder(
   required String pickup,
   required String address,
   required String? total,
+  String? promoCode,
+  double? deliveryLat,
+  double? deliveryLng,
 }) async {
   final qty = ref.read(cartProvider);
   final fulfillment = ref.read(fulfillmentProvider);
   final priced = fulfillment.pricedItems;
+  final pkg = ref.read(cartPackageProvider);
   final amount = total ?? formatMoney(cartSubtotal(qty, priced));
 
   // Add-ons the customer toggled on in the basket — resolved against the
@@ -41,17 +46,28 @@ Future<Order> placeCurrentOrder(
       },
   ];
 
-  // Build API items payload
+  // Build API items payload. `item_id` is the real catalog id behind each
+  // line's key — needed server-side to re-price a category/item-scoped
+  // promo against just the matching line(s), the same way `/promos/validate`
+  // already does from the cart.
   final apiItems = <Map<String, dynamic>>[];
   for (final item in priced) {
     final itemQty = qty[item.key] ?? 0;
     if (itemQty <= 0) continue;
     apiItems.add({
+      'item_id': int.tryParse(item.key),
       'name': item.name,
       'qty': itemQty,
       'unit_price_tzs': item.price.toInt(),
       'line_type': 'item',
     });
+  }
+
+  void clearBasketState() {
+    ref.read(cartProvider.notifier).clear();
+    cartAddonsNotifier.clear();
+    ref.read(cartPromoProvider.notifier).clear();
+    ref.read(cartPackageProvider.notifier).clear();
   }
 
   // Try to place via API first
@@ -63,11 +79,13 @@ Future<Order> placeCurrentOrder(
         addons: apiAddons,
         fulfillment: fulfillment.mode,
         paymentMethod: paymentMethod,
+        promoCode: promoCode,
+        packageId: pkg?.id,
+        deliveryLat: deliveryLat,
+        deliveryLng: deliveryLng,
       );
       if (order != null) {
-        // Clear cart after successful order
-        ref.read(cartProvider.notifier).clear();
-        cartAddonsNotifier.clear();
+        clearBasketState();
         return order;
       }
     } catch (_) {
@@ -90,7 +108,6 @@ Future<Order> placeCurrentOrder(
     fulfillment: fulfillment.mode,
     deliveryFeeTzs: fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0,
   );
-  ref.read(cartProvider.notifier).clear();
-  cartAddonsNotifier.clear();
+  clearBasketState();
   return order;
 }

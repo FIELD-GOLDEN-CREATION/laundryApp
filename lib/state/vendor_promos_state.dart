@@ -18,6 +18,8 @@ class VendorPromosState {
     this.targetCategoryName = '',
     this.targetItemId,
     this.targetItemName = '',
+    this.targetPackageId,
+    this.targetPackageName = '',
     this.startDate,
     this.endDate,
     this.isLoading = false,
@@ -39,6 +41,8 @@ class VendorPromosState {
   final String targetCategoryName;
   final String? targetItemId;
   final String targetItemName;
+  final String? targetPackageId;
+  final String targetPackageName;
   final DateTime? startDate;
   final DateTime? endDate;
   final bool isLoading;
@@ -56,6 +60,8 @@ class VendorPromosState {
     String? targetCategoryName,
     String? targetItemId,
     String? targetItemName,
+    String? targetPackageId,
+    String? targetPackageName,
     DateTime? startDate,
     DateTime? endDate,
     bool? isLoading,
@@ -74,6 +80,8 @@ class VendorPromosState {
         targetCategoryName: clearTarget ? '' : (targetCategoryName ?? this.targetCategoryName),
         targetItemId: clearTarget ? null : (targetItemId ?? this.targetItemId),
         targetItemName: clearTarget ? '' : (targetItemName ?? this.targetItemName),
+        targetPackageId: clearTarget ? null : (targetPackageId ?? this.targetPackageId),
+        targetPackageName: clearTarget ? '' : (targetPackageName ?? this.targetPackageName),
         startDate: startDate ?? this.startDate,
         endDate: endDate ?? this.endDate,
         isLoading: isLoading ?? this.isLoading,
@@ -103,9 +111,12 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       state = state.copyWith(targetCategoryId: id, targetCategoryName: name);
   void pickTargetItem(String id, String name) =>
       state = state.copyWith(targetItemId: id, targetItemName: name);
+  void pickTargetPackage(String id, String name) =>
+      state = state.copyWith(targetPackageId: id, targetPackageName: name);
   void pickDiscountType(int i) => state = state.copyWith(selectedDiscountType: i);
-  // Switching scope invalidates whatever category/item was picked under the
-  // old scope, so clear it rather than leave a stale, unreachable selection.
+  // Switching scope invalidates whatever category/item/package was picked
+  // under the old scope, so clear it rather than leave a stale, unreachable
+  // selection.
   void pickAppliesTo(int i) => state = state.copyWith(selectedAppliesTo: i, clearTarget: true);
   void pickAudience(int i) => state = state.copyWith(selectedAudience: i);
   void setStartDate(DateTime d) => state = state.copyWith(startDate: d);
@@ -138,12 +149,14 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
   }
 
   /// Whether the current form is complete enough to submit — mirrors the
-  /// backend's `required_if` on target_category_id/target_item_id, so the
-  /// UI can block before hitting a validation error.
+  /// backend's `required_if` on target_category_id/target_item_id/
+  /// target_package_id, so the UI can block before hitting a validation
+  /// error.
   bool get canSubmit {
     if (state.promoName.trim().isEmpty || state.discountValue.trim().isEmpty) return false;
     if (state.selectedAppliesTo == 1 && state.targetCategoryId == null) return false;
     if (state.selectedAppliesTo == 2 && state.targetItemId == null) return false;
+    if (state.selectedAppliesTo == 3 && state.targetPackageId == null) return false;
     return true;
   }
 
@@ -167,12 +180,14 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       // `applies_to`/`audience` are validated against these exact camelCase
       // enum values — the backend rejects anything else outright (this was
       // the actual reason promos never made it past creation).
-      'applies_to': ['entireOrder', 'specificCategory', 'specificItem'][state.selectedAppliesTo],
+      'applies_to': ['entireOrder', 'specificCategory', 'specificItem', 'specificPackage', 'delivery'][state.selectedAppliesTo],
       'audience': ['allUsers', 'firstTimeCustomers', 'returningCustomers'][state.selectedAudience],
       if (state.selectedAppliesTo == 1 && state.targetCategoryId != null)
         'target_category_id': int.tryParse(state.targetCategoryId!),
       if (state.selectedAppliesTo == 2 && state.targetItemId != null)
         'target_item_id': int.tryParse(state.targetItemId!),
+      if (state.selectedAppliesTo == 3 && state.targetPackageId != null)
+        'target_package_id': int.tryParse(state.targetPackageId!),
       'expires_at': end.toIso8601String(),
     };
 
@@ -242,9 +257,10 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       vendorName: j['vendor_name'] as String? ?? '',
       vendorId: j['vendor_id'] as String?,
       minSpend: parseDouble(j['min_spend_tzs']) ?? 0,
-      appliesTo: _parseAppliesTo(j['applies_to'] as String?),
+      appliesTo: promoAppliesToFromJson(j['applies_to'] as String?),
       targetCategory: j['target_category_id'] != null ? '${j['target_category_id']}' : null,
       targetItem: j['target_item_id'] != null ? '${j['target_item_id']}' : null,
+      targetPackage: j['target_package_id'] != null ? '${j['target_package_id']}' : null,
       audience: _parseAudience(j['audience'] as String?),
       maxRedemptions: parseInt(j['max_redemptions']),
       currentRedemptions: parseInt(j['current_redemptions']) ?? 0,
@@ -252,16 +268,6 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
       createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at'] as String) : null,
     );
   }
-
-  // Match the exact camelCase enum values the backend validates against
-  // (`entireOrder`/`specificCategory`/`specificItem`) — this used to check
-  // snake_case values that the API never sends, so every promo read back
-  // silently misreported as "entire order" regardless of its real scope.
-  PromoAppliesTo _parseAppliesTo(String? v) => switch (v) {
-    'specificCategory' => PromoAppliesTo.specificCategory,
-    'specificItem' => PromoAppliesTo.specificItem,
-    _ => PromoAppliesTo.entireOrder,
-  };
 
   PromoAudience _parseAudience(String? v) => switch (v) {
     'firstTimeCustomers' => PromoAudience.firstTimeCustomers,

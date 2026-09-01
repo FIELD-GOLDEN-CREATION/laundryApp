@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
@@ -246,7 +245,7 @@ class VendorProfileNotifier extends Notifier<VendorProfileState> {
   /// Uploads a picked profile photo to ImgBB, then saves the resulting URL
   /// as the shop's `image_url` — this is what customers see as the shop's
   /// avatar/hero image.
-  Future<bool> uploadProfilePhoto(File file) async {
+  Future<bool> uploadProfilePhoto(XFile file) async {
     state = state.copyWith(uploadingProfilePhoto: true);
     try {
       final url = await api.uploadImage(file);
@@ -263,7 +262,7 @@ class VendorProfileNotifier extends Notifier<VendorProfileState> {
     }
   }
 
-  Future<bool> addShopPhotoFromFile(File file) async {
+  Future<bool> addShopPhotoFromFile(XFile file) async {
     if (state.shopPhotos.length >= 6) return false;
     state = state.copyWith(uploadingShopPhoto: true);
     try {

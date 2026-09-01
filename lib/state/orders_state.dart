@@ -76,6 +76,9 @@ class OrdersNotifier extends Notifier<List<Order>> {
     String? scheduledDate,
     String? scheduledTimeSlot,
     String? promoCode,
+    String? packageId,
+    double? deliveryLat,
+    double? deliveryLng,
     String? paymentMethod,
     String? paymentToken,
   }) async {
@@ -89,6 +92,12 @@ class OrdersNotifier extends Notifier<List<Order>> {
         if (scheduledDate != null) 'scheduled_date': scheduledDate,
         if (scheduledTimeSlot != null) 'scheduled_time_slot': scheduledTimeSlot,
         if (promoCode != null) 'promo_code': promoCode,
+        if (packageId != null) 'package_id': packageId,
+        // Same coordinates the pre-order quote used, so the fee charged
+        // here matches what was shown on the Schedule screen instead of
+        // silently falling back to a flat estimate.
+        if (deliveryLat != null) 'delivery_lat': deliveryLat,
+        if (deliveryLng != null) 'delivery_lng': deliveryLng,
         if (paymentMethod != null) 'payment_method': paymentMethod,
         if (paymentToken != null) 'payment_token': paymentToken,
       });

@@ -710,25 +710,27 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        title: Text(category.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
-        subtitle: Text('${category.items.length} items', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
-        children: category.items.map((item) => _ItemQtyRow(
-          item: item,
-          qty: qty[item.id] ?? 0,
-          onIncrement: () => onSetQty(item.id, 1),
-          onDecrement: () => onSetQty(item.id, -1),
-        )).toList(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.creamDark),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          title: Text(category.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
+          subtitle: Text('${category.items.length} items', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+          children: category.items.map((item) => _ItemQtyRow(
+            item: item,
+            qty: qty[item.id] ?? 0,
+            onIncrement: () => onSetQty(item.id, 1),
+            onDecrement: () => onSetQty(item.id, -1),
+          )).toList(),
+        ),
       ),
     );
   }

@@ -95,20 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
                         itemCount: offers.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (_, i) => OfferCard(
-                          offer: offers[i],
-                          onClaim: () {
-                            if (gateGuest(
-                              ref,
-                              context,
-                              'Log in as a customer to claim this offer.',
-                              redirectPath: '/detail',
-                            )) {
-                              return;
-                            }
-                            context.push('/detail');
-                          },
-                        ),
+                        itemBuilder: (_, i) => OfferCard(offer: offers[i]),
                       ),
               ),
               SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),

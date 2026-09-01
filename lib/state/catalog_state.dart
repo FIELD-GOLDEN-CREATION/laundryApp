@@ -71,14 +71,6 @@ double _distanceKm(double? lat, double? lng) {
 }
 
 PromoOffer promoFromJson(Map<String, dynamic> j) {
-  PromoAppliesTo appliesTo = PromoAppliesTo.entireOrder;
-  switch (j['applies_to'] as String?) {
-    case 'specificCategory':
-      appliesTo = PromoAppliesTo.specificCategory;
-    case 'specificItem':
-      appliesTo = PromoAppliesTo.specificItem;
-  }
-
   return PromoOffer(
     id: '${j['id']}',
     code: j['code'] as String? ?? '',
@@ -91,9 +83,10 @@ PromoOffer promoFromJson(Map<String, dynamic> j) {
     vendorName: j['shop'] != null ? j['shop']['name'] as String? ?? '' : 'FreshFold',
     vendorId: j['shop_id'] != null ? '${j['shop_id']}' : null,
     minSpend: parseNum(j['min_spend_tzs'])?.toDouble() ?? 0,
-    appliesTo: appliesTo,
+    appliesTo: promoAppliesToFromJson(j['applies_to'] as String?),
     targetCategory: j['target_category_id'] != null ? '${j['target_category_id']}' : null,
     targetItem: j['target_item_id'] != null ? '${j['target_item_id']}' : null,
+    targetPackage: j['target_package_id'] != null ? '${j['target_package_id']}' : null,
     maxRedemptions: parseNum(j['max_redemptions'])?.toInt(),
     currentRedemptions: parseNum(j['redemptions_count'])?.toInt() ?? 0,
     isActive: j['is_active'] as bool? ?? true,

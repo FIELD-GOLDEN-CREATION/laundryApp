@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/basket_helper.dart';
 import '../state/cart_addons_state.dart';
+import '../state/cart_promo_state.dart';
 import '../state/cart_state.dart';
 import '../state/fulfillment_state.dart';
 import '../theme/colors.dart';
@@ -30,6 +31,11 @@ Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop, 
       // Add-on selections are indices into the previous shop's add-on list —
       // meaningless (or wrong) against the new shop's, so they don't carry over.
       ref.read(cartAddonsProvider.notifier).clear();
+      // A promo was validated against the previous shop's id/subtotal and a
+      // chosen package belongs to the previous shop's catalog — neither
+      // means anything against the new shop, so they don't carry over either.
+      ref.read(cartPromoProvider.notifier).clear();
+      ref.read(cartPackageProvider.notifier).clear();
       ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId, shopSlug: shopSlug);
     }
     return true;
@@ -40,6 +46,8 @@ Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop, 
 
   ref.read(cartProvider.notifier).clear();
   ref.read(cartAddonsProvider.notifier).clear();
+  ref.read(cartPromoProvider.notifier).clear();
+  ref.read(cartPackageProvider.notifier).clear();
   ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId, shopSlug: shopSlug);
   return true;
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
@@ -472,11 +473,19 @@ class ApiService {
   /// the backend re-prices them itself from this shop's vendor_items to
   /// compute a category/item-scoped promo's discount against just that
   /// item's value, not the whole order. Never send prices from the client.
+  /// [packageId] is the basket's active package (if any), needed the same
+  /// way for a package-scoped promo. [isDelivery]/[deliveryFeeTzs] are
+  /// needed for a delivery-scoped promo — `deliveryFeeTzs` of 0 reads as
+  /// "not quoted yet" (a real quote is never that low), which the backend
+  /// treats as a pending discount rather than an error.
   Future<Map<String, dynamic>> validatePromo(
     String code,
     String shopId,
     double subtotal, {
     Map<int, int> cartItems = const {},
+    String? packageId,
+    bool isDelivery = false,
+    int deliveryFeeTzs = 0,
   }) =>
       // Backend validates `subtotal_tzs` as a required integer — the old
       // `subtotal` key was never read, so promo codes never matched anything.
@@ -488,6 +497,9 @@ class ApiService {
           'items': [
             for (final entry in cartItems.entries) {'item_id': entry.key, 'qty': entry.value},
           ],
+        if (packageId != null && packageId.isNotEmpty) 'package_id': packageId,
+        'is_delivery': isDelivery,
+        'delivery_fee_tzs': deliveryFeeTzs,
       });
 
   // =========================================================================
@@ -571,18 +583,12 @@ class ApiService {
   // IMAGE UPLOAD (ImageBB)
   // =========================================================================
 
-  Future<String> uploadImage(File file) async {
+  Future<String> uploadImage(XFile file) async {
     final uri = Uri.parse('https://api.imgbb.com/1/upload');
     final request = http.MultipartRequest('POST', uri);
     request.fields['key'] = imagebbKey;
-    final stream = http.ByteStream(file.openRead());
-    final length = await file.length();
-    request.files.add(http.MultipartFile(
-      'image',
-      stream,
-      length,
-      filename: file.path.split(Platform.pathSeparator).last,
-    ));
+    final bytes = await file.readAsBytes();
+    request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: file.name));
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
     if (response.statusCode == 200) {

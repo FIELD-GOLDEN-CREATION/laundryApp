@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/laundry_category.dart';
 import '../../models/promo_offer.dart';
+import '../../models/service_package.dart';
 import '../../state/catalog_state.dart';
+import '../../state/vendor_packages_state.dart';
 import '../../state/vendor_promos_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import '../../utils/cart_math.dart';
 
 class VendorPromosScreen extends ConsumerStatefulWidget {
   const VendorPromosScreen({super.key});
@@ -308,6 +311,9 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
       if (ref.read(categoriesProvider).items.isEmpty) {
         ref.read(categoriesProvider.notifier).load(withItems: true);
       }
+      if (ref.read(vendorPackagesProvider).isEmpty) {
+        ref.read(vendorPackagesProvider.notifier).loadPackages();
+      }
     });
   }
 
@@ -413,6 +419,24 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _FormChip(
+                      label: 'Package',
+                      selected: state.selectedAppliesTo == 3,
+                      onTap: () => notifier.pickAppliesTo(3),
+                    ),
+                    const SizedBox(width: 10),
+                    _FormChip(
+                      label: 'Delivery',
+                      selected: state.selectedAppliesTo == 4,
+                      onTap: () => notifier.pickAppliesTo(4),
+                    ),
+                    const SizedBox(width: 10),
+                    const Spacer(),
+                  ],
+                ),
                 if (state.selectedAppliesTo == 1) ...[
                   const SizedBox(height: 12),
                   _FormLabel('CATEGORY'),
@@ -434,6 +458,18 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
                     onTap: () async {
                       final picked = await _pickItem(context, ref);
                       if (picked != null) notifier.pickTargetItem(picked.$1, picked.$2);
+                    },
+                  ),
+                ],
+                if (state.selectedAppliesTo == 3) ...[
+                  const SizedBox(height: 12),
+                  _FormLabel('PACKAGE'),
+                  _PickerRow(
+                    label: state.targetPackageName,
+                    hint: 'Select a package',
+                    onTap: () async {
+                      final picked = await _pickPackage(context, ref);
+                      if (picked != null) notifier.pickTargetPackage(picked.$1, picked.$2);
                     },
                   ),
                 ],
@@ -524,12 +560,19 @@ class _PromoFormSheetState extends ConsumerState<PromoFormSheet> {
                       onTap: () async {
                         if (!notifier.canSubmit) {
                           final needsTarget = (state.selectedAppliesTo == 1 && state.targetCategoryId == null) ||
-                              (state.selectedAppliesTo == 2 && state.targetItemId == null);
+                              (state.selectedAppliesTo == 2 && state.targetItemId == null) ||
+                              (state.selectedAppliesTo == 3 && state.targetPackageId == null);
+                          final targetLabel = switch (state.selectedAppliesTo) {
+                            1 => 'category',
+                            2 => 'item',
+                            3 => 'package',
+                            _ => '',
+                          };
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
                                 needsTarget
-                                    ? 'Pick a ${state.selectedAppliesTo == 1 ? "category" : "item"} for this promo.'
+                                    ? 'Pick a $targetLabel for this promo.'
                                     : 'Enter a promo name and discount value.',
                               ),
                             ),
@@ -601,6 +644,79 @@ Future<(String, String)?> _pickItem(BuildContext context, WidgetRef ref) {
       );
     }),
   );
+}
+
+/// Single-select picker over the vendor's own packages, returning the chosen
+/// (id, name), or null if the vendor backed out. Sourced from
+/// `vendorPackagesProvider` — the backend only accepts a `target_package_id`
+/// matching an existing row owned by this vendor.
+Future<(String, String)?> _pickPackage(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<(String, String)>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => Consumer(builder: (_, ref, _) {
+      return _PackagePickerSheet(packages: ref.watch(vendorPackagesProvider));
+    }),
+  );
+}
+
+class _PackagePickerSheet extends StatelessWidget {
+  const _PackagePickerSheet({required this.packages});
+  final List<ServicePackage> packages;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+            decoration: const BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
+                  ),
+                ),
+                Text('Select package', style: AppText.serif(fontSize: 22)),
+                const SizedBox(height: 3),
+                Text('Choose which package this promo applies to.', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                const SizedBox(height: 14),
+                if (packages.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        'No packages yet.',
+                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                      ),
+                    ),
+                  )
+                else
+                  ...packages.map((pkg) => _PickerTile(
+                    title: pkg.name,
+                    subtitle: formatMoney(pkg.priceTzs),
+                    onTap: () => Navigator.of(context).pop((pkg.id, pkg.name)),
+                  )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 enum _TargetPickerMode { category, item }
@@ -685,26 +801,28 @@ class _ItemPickerSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: Colors.white,
-        border: Border.all(color: AppColors.creamDark),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        title: Text(category.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
-        subtitle: Text('${category.items.length} items', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
-        children: category.items
-            .map((item) => _PickerTile(
-                  title: item.name,
-                  subtitle: item.description,
-                  onTap: () => Navigator.of(context).pop((item.id, item.name)),
-                ))
-            .toList(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.creamDark),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          title: Text(category.name, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
+          subtitle: Text('${category.items.length} items', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+          children: category.items
+              .map((item) => _PickerTile(
+                    title: item.name,
+                    subtitle: item.description,
+                    onTap: () => Navigator.of(context).pop((item.id, item.name)),
+                  ))
+              .toList(),
+        ),
       ),
     );
   }

@@ -1,6 +1,18 @@
 enum DiscountType { percentage, fixedAmount }
 
-enum PromoAppliesTo { entireOrder, specificCategory, specificItem }
+enum PromoAppliesTo { entireOrder, specificCategory, specificItem, specificPackage, delivery }
+
+/// Parses the backend's camelCase `applies_to` string into [PromoAppliesTo].
+/// The single shared parser for every site that reads this field — a promo
+/// scope is only meaningful if the client's notion of it can never drift
+/// from the server's.
+PromoAppliesTo promoAppliesToFromJson(String? v) => switch (v) {
+  'specificCategory' => PromoAppliesTo.specificCategory,
+  'specificItem' => PromoAppliesTo.specificItem,
+  'specificPackage' => PromoAppliesTo.specificPackage,
+  'delivery' => PromoAppliesTo.delivery,
+  _ => PromoAppliesTo.entireOrder,
+};
 
 enum PromoAudience { allUsers, firstTimeCustomers, returningCustomers }
 
@@ -20,6 +32,7 @@ class PromoOffer {
     this.appliesTo = PromoAppliesTo.entireOrder,
     this.targetCategory,
     this.targetItem,
+    this.targetPackage,
     this.audience = PromoAudience.allUsers,
     this.maxRedemptions,
     this.currentRedemptions = 0,
@@ -41,6 +54,7 @@ class PromoOffer {
   final PromoAppliesTo appliesTo;
   final String? targetCategory;
   final String? targetItem;
+  final String? targetPackage;
   final PromoAudience audience;
   final int? maxRedemptions;
   final int currentRedemptions;
@@ -70,6 +84,10 @@ class PromoOffer {
         return 'Category: ${targetCategory ?? ""}';
       case PromoAppliesTo.specificItem:
         return 'Item: ${targetItem ?? ""}';
+      case PromoAppliesTo.specificPackage:
+        return 'Package: ${targetPackage ?? ""}';
+      case PromoAppliesTo.delivery:
+        return 'Delivery fee';
     }
   }
 
@@ -109,6 +127,7 @@ class PromoOffer {
     PromoAppliesTo? appliesTo,
     String? targetCategory,
     String? targetItem,
+    String? targetPackage,
     PromoAudience? audience,
     int? maxRedemptions,
     int? currentRedemptions,
@@ -129,6 +148,7 @@ class PromoOffer {
     appliesTo: appliesTo ?? this.appliesTo,
     targetCategory: targetCategory ?? this.targetCategory,
     targetItem: targetItem ?? this.targetItem,
+    targetPackage: targetPackage ?? this.targetPackage,
     audience: audience ?? this.audience,
     maxRedemptions: maxRedemptions ?? this.maxRedemptions,
     currentRedemptions: currentRedemptions ?? this.currentRedemptions,
