@@ -70,6 +70,7 @@ class OrdersNotifier extends Notifier<List<Order>> {
   Future<Order?> createOrderApi({
     required String shopId,
     required List<Map<String, dynamic>> items,
+    List<Map<String, dynamic>>? addons,
     String fulfillment = 'delivery',
     String? addressId,
     String? scheduledDate,
@@ -82,6 +83,7 @@ class OrdersNotifier extends Notifier<List<Order>> {
       final data = await api.createOrder({
         'shop_id': shopId,
         'items': items,
+        if (addons != null && addons.isNotEmpty) 'addons': addons,
         'fulfillment': fulfillment,
         if (addressId != null) 'address_id': addressId,
         if (scheduledDate != null) 'scheduled_date': scheduledDate,

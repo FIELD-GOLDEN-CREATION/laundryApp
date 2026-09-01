@@ -113,10 +113,13 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
     try {
       final data = await api.getVendorAddons();
       final addons = data.map((j) => VendorAddon(
-        id: j['id'] as String?,
-        title: j['name'] as String? ?? j['title'] as String? ?? '',
-        priceTzs: parseDouble(j['price'])
-            ?? parseDouble(j['price_tzs'])
+        // Backend returns `id` as an int — `as String?` throws on a type
+        // mismatch instead of returning null, which silently broke this
+        // whole load (caught nowhere, since it isn't an ApiException).
+        id: j['id'] != null ? '${j['id']}' : null,
+        title: j['title'] as String? ?? j['name'] as String? ?? '',
+        priceTzs: parseDouble(j['price_tzs'])
+            ?? parseDouble(j['price'])
             ?? 0,
       )).toList();
       state = state.copyWith(addons: addons, isLoading: false);
@@ -127,10 +130,12 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
 
   Future<bool> addAddon(String title, double priceTzs) async {
     try {
-      final data = await api.createVendorAddon({'name': title, 'price': priceTzs});
+      // Field names match the `vendor_addons` table (title, price_tzs) —
+      // the backend's validator requires both and rejects anything else.
+      final data = await api.createVendorAddon({'title': title, 'price_tzs': priceTzs.round()});
       final j = data['data'] as Map<String, dynamic>? ?? data;
       final addon = VendorAddon(
-        id: j['id'] as String?,
+        id: j['id'] != null ? '${j['id']}' : null,
         title: title,
         priceTzs: priceTzs,
       );
@@ -163,7 +168,7 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
 
     if (addon.id != null) {
       try {
-        await api.updateVendorAddon(addon.id!, {'name': updatedTitle, 'price': updatedPrice});
+        await api.updateVendorAddon(addon.id!, {'title': updatedTitle, 'price_tzs': updatedPrice.round()});
       } on ApiException {
         return false;
       }

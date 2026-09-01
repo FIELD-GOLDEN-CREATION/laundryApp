@@ -77,41 +77,79 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
   }
 
   ServicePackage _fromJson(Map<String, dynamic> j) {
-    final kindStr = j['type'] as String? ?? 'weight';
+    // Field names mirror the Laravel `packages` table/model (kind,
+    // price_tzs, compare_at_tzs) — NOT the customer-facing shorthand this
+    // used to send, which the backend's validator silently rejected.
+    final kindStr = j['kind'] as String? ?? 'weight';
     final kind = switch (kindStr) {
-      'item_count' => PackageKind.itemCount,
+      'itemCount' => PackageKind.itemCount,
       'household' => PackageKind.household,
       'subscription' => PackageKind.subscription,
       _ => PackageKind.weight,
     };
     return ServicePackage(
-      id: j['id'] as String? ?? '',
+      id: '${j['id'] ?? ''}',
       name: j['name'] as String? ?? '',
       tagline: j['tagline'] as String? ?? '',
       kind: kind,
-      priceTzs: parseDouble(j['price']) ?? 0,
+      priceTzs: parseDouble(j['price_tzs']) ?? 0,
       priceUnit: j['price_unit'] as String? ?? '/ pack',
-      inclusions: (j['inclusions'] as List?)?.cast<String>() ?? [],
-      compareAtTzs: parseDouble(j['compare_price']),
+      inclusions: (j['inclusions'] as List?)
+              ?.map((e) => e is Map<String, dynamic> ? e['label'] as String? ?? '' : '$e')
+              .where((s) => s.isNotEmpty)
+              .toList() ??
+          [],
+      compareAtTzs: parseDouble(j['compare_at_tzs']),
       note: j['note'] as String? ?? '',
       tag: j['tag'] as String? ?? '',
-      serviceTags: (j['service_tags'] as List?)?.cast<String>() ?? [],
+      // Eloquent snake_cases eager-loaded relation keys in JSON output, so
+      // `serviceTags()` on the Package model comes back as `service_tags`.
+      serviceTags: (j['service_tags'] as List?)
+              ?.map((e) => e is Map<String, dynamic> ? e['tag'] as String? ?? '' : '$e')
+              .where((s) => s.isNotEmpty)
+              .toList() ??
+          [],
       active: j['is_active'] as bool? ?? true,
+      packageItems: (j['items'] as List?)
+              ?.map((e) {
+                if (e is! Map<String, dynamic>) return null;
+                return PackageItem(
+                  itemId: '${e['item_id'] ?? ''}',
+                  itemName: e['item_name'] as String? ?? '',
+                  qty: parseDouble(e['qty'])?.toInt() ?? 0,
+                  unitPrice: parseDouble(e['unit_price_tzs']) ?? 0,
+                );
+              })
+              .whereType<PackageItem>()
+              .toList() ??
+          [],
     );
   }
 
   Map<String, dynamic> _toJson(ServicePackage pkg) => {
     'name': pkg.name,
     'tagline': pkg.tagline,
-    'type': pkg.kind.name,
-    'price': pkg.priceTzs,
+    'kind': pkg.kind.name,
+    // Sent as ints — the backend validates price_tzs/unit_price_tzs with
+    // `integer`, which rejects a float-typed JSON value like 5000.0.
+    'price_tzs': pkg.priceTzs.round(),
     'price_unit': pkg.priceUnit,
     'inclusions': pkg.inclusions,
-    if (pkg.compareAtTzs != null) 'compare_price': pkg.compareAtTzs,
+    if (pkg.compareAtTzs != null) 'compare_at_tzs': pkg.compareAtTzs!.round(),
     'note': pkg.note,
     'tag': pkg.tag,
     'service_tags': pkg.serviceTags,
     'is_active': pkg.active,
+    if (pkg.packageItems.isNotEmpty)
+      'items': [
+        for (final item in pkg.packageItems)
+          {
+            'item_id': int.tryParse(item.itemId) ?? 0,
+            'item_name': item.itemName,
+            'qty': item.qty,
+            'unit_price_tzs': item.unitPrice.round(),
+          },
+      ],
   };
 }
 

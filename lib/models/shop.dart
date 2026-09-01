@@ -24,6 +24,7 @@ class Shop {
     required this.isOpenNow,
     required this.phone,
     this.imageUrl = '',
+    this.photos = const [],
   });
 
   final String slotId;
@@ -75,4 +76,9 @@ class Shop {
   /// Storefront photo URL. Empty means "no photo yet" — the UI renders a
   /// styled placeholder via RemoteImage's fallback.
   final String imageUrl;
+
+  /// The shop's uploaded gallery (vendor Settings → Shop photos), shown as
+  /// an auto-advancing slideshow on the Detail screen's header. Empty means
+  /// the header falls back to the single [imageUrl].
+  final List<String> photos;
 }

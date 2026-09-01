@@ -110,7 +110,7 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
                               // One order goes to one vendor — confirm before
                               // a second shop's item lands in someone else's
                               // basket.
-                              if (!await ensureBasketShop(context, ref, vendor.name, shopId: vendor.slotId)) return;
+                              if (!await ensureBasketShop(context, ref, vendor.name, shopId: vendor.slotId, shopSlug: vendor.listSlotId)) return;
                               ref.read(fulfillmentProvider.notifier).addServiceItem(MenuItem(
                                     key: key,
                                     name: offer.itemName.isNotEmpty ? offer.itemName : widget.categoryName,

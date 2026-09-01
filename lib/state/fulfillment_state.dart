@@ -11,6 +11,7 @@ class FulfillmentState {
     this.extraItems = const {},
     this.catalog = const {},
     this.shopId = '',
+    this.shopSlug = '',
   });
 
   final String mode;
@@ -29,6 +30,10 @@ class FulfillmentState {
   /// Backend id of the basket's shop (for order placement).
   final String shopId;
 
+  /// Slug of the basket's shop — the only key the public `/shops/{slug}`
+  /// endpoint accepts, so this is what add-on lookups are keyed by.
+  final String shopSlug;
+
   /// Catalog including extras — what totals are computed over.
   List<MenuItem> get pricedItems => [...catalog.values, ...extraItems.values];
 
@@ -42,6 +47,7 @@ class FulfillmentState {
     Map<String, MenuItem>? extraItems,
     Map<String, MenuItem>? catalog,
     String? shopId,
+    String? shopSlug,
   }) =>
       FulfillmentState(
         mode: mode ?? this.mode,
@@ -51,6 +57,7 @@ class FulfillmentState {
         extraItems: extraItems ?? this.extraItems,
         catalog: catalog ?? this.catalog,
         shopId: shopId ?? this.shopId,
+        shopSlug: shopSlug ?? this.shopSlug,
       );
 }
 
@@ -69,9 +76,10 @@ class FulfillmentNotifier extends Notifier<FulfillmentState> {
   /// any non-catalog lines the previous vendor contributed. Callers are
   /// responsible for clearing `cartProvider` alongside it — `ensureBasketShop`
   /// does both.
-  void startBasketFor(String shop, {String shopId = ''}) => state = state.copyWith(
+  void startBasketFor(String shop, {String shopId = '', String shopSlug = ''}) => state = state.copyWith(
         shop: shop,
         shopId: shopId,
+        shopSlug: shopSlug,
         extraItems: const {},
         catalog: const {},
       );
@@ -81,10 +89,12 @@ class FulfillmentNotifier extends Notifier<FulfillmentState> {
     required String shopId,
     required String shopName,
     required List<MenuItem> items,
+    String? shopSlug,
   }) =>
       state = state.copyWith(
         shopId: shopId,
         shop: shopName,
+        shopSlug: shopSlug,
         catalog: {for (final item in items) item.key: item},
       );
 

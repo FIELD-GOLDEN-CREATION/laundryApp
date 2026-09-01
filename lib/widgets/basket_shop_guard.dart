@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/basket_helper.dart';
+import '../state/cart_addons_state.dart';
 import '../state/cart_state.dart';
 import '../state/fulfillment_state.dart';
 import '../theme/colors.dart';
@@ -15,14 +16,22 @@ import '../theme/text_styles.dart';
 /// basket (and the order it becomes) references a real shop; order placement
 /// silently falls back to local-only when it's missing.
 ///
+/// [shopSlug] lets the cart look up this shop's add-on services (the public
+/// shop-detail endpoint is keyed by slug, not id) — pass it whenever known.
+///
 /// Returns false if they backed out, in which case the caller must not add
 /// the item and must not navigate.
-Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop, {String shopId = ''}) async {
+Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop, {String shopId = '', String shopSlug = ''}) async {
   final fulfillment = ref.read(fulfillmentProvider);
   if (!basketBelongsToOtherShop(ref.read(cartProvider), fulfillment, shop)) {
     // Nothing at stake — claim the empty basket for this vendor so the cart
     // banner, chat thread and placed order all name the right shop.
-    if (fulfillment.shop != shop) ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId);
+    if (fulfillment.shop != shop) {
+      // Add-on selections are indices into the previous shop's add-on list —
+      // meaningless (or wrong) against the new shop's, so they don't carry over.
+      ref.read(cartAddonsProvider.notifier).clear();
+      ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId, shopSlug: shopSlug);
+    }
     return true;
   }
 
@@ -30,7 +39,8 @@ Future<bool> ensureBasketShop(BuildContext context, WidgetRef ref, String shop, 
   if (!confirmed) return false;
 
   ref.read(cartProvider.notifier).clear();
-  ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId);
+  ref.read(cartAddonsProvider.notifier).clear();
+  ref.read(fulfillmentProvider.notifier).startBasketFor(shop, shopId: shopId, shopSlug: shopSlug);
   return true;
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,6 +66,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
         Future.microtask(() => ref.read(fulfillmentProvider.notifier).setShopCatalog(
               shopId: shop.slotId,
               shopName: shop.name,
+              shopSlug: shop.listSlotId,
               items: priceList,
             ));
       }
@@ -216,7 +219,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
       context.push('/cart');
       return;
     }
-    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId)) return;
+    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId, shopSlug: widget.shop.listSlotId)) return;
     if (!context.mounted) return;
     ref.read(fulfillmentProvider.notifier).addServiceItem(
       MenuItem(
@@ -236,13 +239,16 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
       ref.read(cartProvider.notifier).setQty(item.key, -currentQty);
       return;
     }
-    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId)) return;
+    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId, shopSlug: widget.shop.listSlotId)) return;
     if (!context.mounted) return;
     ref.read(cartProvider.notifier).setQty(item.key, 1);
   }
 }
 
-class _EdgedHeroImage extends StatelessWidget {
+/// Shows the shop's uploaded photo gallery as an auto-advancing slideshow —
+/// 4s per photo, matching the vendor Settings screen's own copy — falling
+/// back to the single storefront [Shop.imageUrl] when no gallery exists.
+class _EdgedHeroImage extends StatefulWidget {
   const _EdgedHeroImage({
     required this.shop,
     required this.fav,
@@ -256,13 +262,62 @@ class _EdgedHeroImage extends StatelessWidget {
   final VoidCallback onBack;
 
   @override
+  State<_EdgedHeroImage> createState() => _EdgedHeroImageState();
+}
+
+class _EdgedHeroImageState extends State<_EdgedHeroImage> {
+  Timer? _timer;
+  int _index = 0;
+
+  List<String> get _slides {
+    final photos = widget.shop.photos;
+    if (photos.isNotEmpty) return photos;
+    return [widget.shop.imageUrl];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _restartTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _EdgedHeroImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.shop.listSlotId != widget.shop.listSlotId) {
+      _index = 0;
+      _restartTimer();
+    }
+  }
+
+  void _restartTimer() {
+    _timer?.cancel();
+    if (_slides.length <= 1) return;
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      setState(() => _index = (_index + 1) % _slides.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final slides = _slides;
+    final url = slides[_index.clamp(0, slides.length - 1)];
     return SizedBox(
       height: 200,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          RemoteImage(url: shop.imageUrl, fallback: shop.name, fit: BoxFit.cover),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 450),
+            child: RemoteImage(key: ValueKey(url), url: url, fallback: widget.shop.name, fit: BoxFit.cover),
+          ),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -286,14 +341,14 @@ class _EdgedHeroImage extends StatelessWidget {
                 children: [
                   _GlassButton(
                     icon: Icons.arrow_back_ios_new,
-                    onTap: onBack,
+                    onTap: widget.onBack,
                   ),
                   Row(
                     children: [
                       _GlassButton(
-                        icon: fav ? Icons.favorite : Icons.favorite_border,
-                        onTap: onFavToggle,
-                        iconColor: fav ? AppColors.danger : null,
+                        icon: widget.fav ? Icons.favorite : Icons.favorite_border,
+                        onTap: widget.onFavToggle,
+                        iconColor: widget.fav ? AppColors.danger : null,
                       ),
                       const SizedBox(width: 10),
                       _GlassButton(
