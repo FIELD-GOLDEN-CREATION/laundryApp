@@ -318,15 +318,15 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> acceptOrder(String orderId, {int? deliveryFeeTzs}) =>
-      post('/vendor/orders/$orderId/accept', body: {
+      put('/vendor/orders/$orderId/accept', body: {
         if (deliveryFeeTzs != null) 'delivery_fee': deliveryFeeTzs,
       });
 
   Future<Map<String, dynamic>> rejectOrder(String orderId) =>
-      post('/vendor/orders/$orderId/reject');
+      put('/vendor/orders/$orderId/reject');
 
   Future<Map<String, dynamic>> updateOrderStatus(String orderId, String status) =>
-      patch('/vendor/orders/$orderId/status', body: {'status': status});
+      put('/vendor/orders/$orderId/status', body: {'status': status});
 
   Future<Map<String, dynamic>> getVendorOrderDetail(String orderId) =>
       get('/vendor/orders/$orderId');

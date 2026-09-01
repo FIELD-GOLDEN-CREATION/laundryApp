@@ -36,7 +36,14 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(shopDetailProvider(widget.shop.listSlotId).future));
+    // Both providers are plain FutureProvider.family (not autoDispose), so
+    // once fetched they stay cached in memory for the rest of the app
+    // session — a vendor's catalog edit would never appear on a shop page
+    // the customer had already opened without this explicit refetch.
+    Future.microtask(() {
+      ref.invalidate(shopDetailProvider(widget.shop.listSlotId));
+      ref.invalidate(shopPackagesProvider(widget.shop.slotId));
+    });
   }
 
   @override
