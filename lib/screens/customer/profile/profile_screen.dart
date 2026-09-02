@@ -255,17 +255,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 22), child: Text(clientLabel('ACCOUNT DETAILS', 'TAARIFA ZA AKAUNTI', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)))),
             _SectionLabel(clientLabel('Saved addresses', 'Anwani zilizohifadhiwa', language)),
-            Column(
-              children: [
-                for (var i = 0; i < profile.addresses.length; i++) ...[
-                  _AddressRow(
-                    label: profile.addresses[i].label,
-                    line: profile.addresses[i].line,
-                    onSave: (line) => notifier.updateAddressLine(i, line),
-                  ),
-                  if (i != profile.addresses.length - 1) const SizedBox(height: 10),
+            if (profile.addresses.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                   color: AppColors.clientSurface(context),
+                   border: Border.all(color: AppColors.clientBorder(context)),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                   clientLabel('No addresses saved yet.', 'Hakuna anwani iliyohifadhiwa.', language),
+                   style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                ),
+              )
+            else
+              Column(
+                children: [
+                  for (var i = 0; i < profile.addresses.length; i++) ...[
+                    _AddressRow(
+                      key: ValueKey(profile.addresses[i].id ?? 'addr-$i'),
+                      label: profile.addresses[i].label,
+                      line: profile.addresses[i].line,
+                      onSave: (line) => notifier.updateAddressLine(i, line),
+                      onDelete: () => notifier.removeAddressAt(i),
+                    ),
+                    if (i != profile.addresses.length - 1) const SizedBox(height: 10),
+                  ],
                 ],
-              ],
+              ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.teal, width: 1.5),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => _showAddAddressSheet(context, ref),
+                  child: Container(
+                    height: 48,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '+ ${clientLabel('Add address', 'Ongeza anwani', language)}',
+                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                    ),
+                  ),
+                ),
+              ),
             ),
             _SectionLabel(clientLabel('Saved cards', 'Kadi zilizohifadhiwa', language)),
             if (savedCards.isEmpty)
@@ -437,11 +476,12 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _AddressRow extends StatefulWidget {
-  const _AddressRow({required this.label, required this.line, required this.onSave});
+  const _AddressRow({super.key, required this.label, required this.line, required this.onSave, required this.onDelete});
 
   final String label;
   final String line;
   final ValueChanged<String> onSave;
+  final Future<bool> Function() onDelete;
 
   @override
   State<_AddressRow> createState() => _AddressRowState();
@@ -471,9 +511,41 @@ class _AddressRowState extends State<_AddressRow> {
   }
 
   void _useCurrentLocation() {
-    // Placeholder â€” wire up to Google Maps' location picker later.
+    // Placeholder — wire up to Google Maps' location picker later.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Google Maps location picker coming soon')),
+    );
+  }
+
+  void _confirmDelete() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Delete address?', style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800)),
+        content: Text(
+          'This will remove "${widget.label}" from your saved addresses. This cannot be undone.',
+          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final ok = await widget.onDelete();
+              if (!mounted || ok) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not delete address. Please try again.')),
+              );
+            },
+            child: Text('Delete', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.danger)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -513,9 +585,19 @@ class _AddressRowState extends State<_AddressRow> {
                 ),
               ),
               if (!_editing)
-                InkWell(
-                  onTap: _startEditing,
-                  child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: _confirmDelete,
+                      child: Text('Delete', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.danger)),
+                    ),
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: _startEditing,
+                      child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -597,6 +679,198 @@ class _AddressRowState extends State<_AddressRow> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The "add address" bottom-sheet form for Profile's "Saved addresses"
+/// section — mirrors the shape of `showLinkCardSheet`.
+void _showAddAddressSheet(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => _AddAddressSheet(ref: ref),
+  );
+}
+
+class _AddAddressSheet extends StatefulWidget {
+  const _AddAddressSheet({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  State<_AddAddressSheet> createState() => _AddAddressSheetState();
+}
+
+class _AddAddressSheetState extends State<_AddAddressSheet> {
+  final _labelCtrl = TextEditingController();
+  final _lineCtrl = TextEditingController();
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _labelCtrl.dispose();
+    _lineCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final label = _labelCtrl.text.trim();
+    final line = _lineCtrl.text.trim();
+    if (label.isEmpty) {
+      setState(() => _error = 'Enter a label, e.g. Home or Work.');
+      return;
+    }
+    if (line.isEmpty) {
+      setState(() => _error = 'Enter the address.');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final ok = await widget.ref.read(profileProvider.notifier).addAddress(label, line);
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() {
+        _saving = false;
+        _error = 'Could not save address. Please try again.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+            decoration: const BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
+                  ),
+                ),
+                Text('Add address', style: AppText.serif(fontSize: 22)),
+                const SizedBox(height: 3),
+                Text(
+                  'Saved to your account for pickup and delivery',
+                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                ),
+                const SizedBox(height: 16),
+                _AddAddressField(label: 'Label', hint: 'Home, Work, ...', controller: _labelCtrl),
+                const SizedBox(height: 12),
+                _AddAddressField(label: 'Address', hint: 'Street, area, city', controller: _lineCtrl),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.danger)),
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: _saving ? null : () => Navigator.of(context).pop(),
+                          child: Container(
+                            height: 52,
+                            alignment: Alignment.center,
+                            child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.muted)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 7,
+                      child: Material(
+                        color: AppColors.teal,
+                        borderRadius: BorderRadius.circular(18),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: _saving ? null : _save,
+                          child: Container(
+                            height: 52,
+                            alignment: Alignment.center,
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cream),
+                                  )
+                                : Text('Save address', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddAddressField extends StatelessWidget {
+  const _AddAddressField({required this.label, required this.hint, required this.controller});
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppText.eyebrow()),
+        const SizedBox(height: 7),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.creamDark),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          alignment: Alignment.centerLeft,
+          child: TextField(
+            controller: controller,
+            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+            decoration: InputDecoration.collapsed(
+              hintText: hint,
+              hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -414,7 +414,23 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                           _ProcessStepRow(
                             step: kProcessingSteps[i],
                             done: i <= state.step,
-                            onTap: () => notifier.pickStep(i),
+                            // Only the immediate next step is tappable — the
+                            // backend rejects skipping or re-triggering one.
+                            onTap: i == state.step + 1 && !state.isUpdatingStatus
+                                ? () async {
+                                    final ok = await notifier.advanceStep(i);
+                                    if (!ok && context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Could not update status to "${kProcessingSteps[i].title}"'),
+                                          backgroundColor: AppColors.danger,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                : null,
                           ),
                       ],
                     ),

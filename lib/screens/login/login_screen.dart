@@ -253,6 +253,6 @@ class _LoginField extends StatelessWidget {
     height: 50,
     padding: const EdgeInsets.symmetric(horizontal: 14),
     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), border: Border.all(color: Colors.white.withValues(alpha: 0.24)), borderRadius: BorderRadius.circular(14)),
-    child: TextField(controller: controller, obscureText: obscure, onChanged: onChanged, onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(), style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.cream), decoration: InputDecoration.collapsed(hintText: hint, hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.45)))),
+    child: TextField(controller: controller, obscureText: obscure, onChanged: onChanged, onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(), textAlignVertical: TextAlignVertical.center, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.cream), decoration: InputDecoration.collapsed(hintText: hint, hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.45)))),
   );
 }

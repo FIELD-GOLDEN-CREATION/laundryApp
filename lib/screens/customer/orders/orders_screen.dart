@@ -127,7 +127,7 @@ class _OrderCard extends StatelessWidget {
   final VoidCallback onTap;
   final String language;
 
-  /// Whether to show the WhatsApp/call buttons â€” only for active orders (a
+  /// Whether to show the WhatsApp/call buttons — only for active orders (a
   /// customer only needs to reach the vendor while an order is in progress).
   final bool showContact;
 

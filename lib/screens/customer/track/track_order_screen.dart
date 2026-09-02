@@ -20,17 +20,19 @@ import '../../../widgets/round_back_button.dart';
 /// timestamps come from the order's tracking rows once the backend exposes
 /// them per step.
 const _kTrackSteps = [
-  TrackStepDef(title: 'Picked up', time: ''),
-  TrackStepDef(title: 'Sorted & counted', time: ''),
+  TrackStepDef(title: 'Accepted', time: ''),
   TrackStepDef(title: 'Washing in progress', time: ''),
+  TrackStepDef(title: 'Ready for delivery', time: ''),
   TrackStepDef(title: 'Out for delivery', time: ''),
+  TrackStepDef(title: 'Delivered', time: ''),
 ];
 
 const _kSelfTrackSteps = [
   TrackStepDef(title: 'Dropped at shop', time: 'Promise arrival window'),
-  TrackStepDef(title: 'Sorted & counted', time: 'On arrival'),
   TrackStepDef(title: 'Washing in progress', time: 'After drop-off'),
   TrackStepDef(title: 'Ready for collection', time: ''),
+  TrackStepDef(title: 'Ready for collection', time: ''),
+  TrackStepDef(title: 'Collected', time: ''),
 ];
 
 class TrackOrderScreen extends ConsumerStatefulWidget {

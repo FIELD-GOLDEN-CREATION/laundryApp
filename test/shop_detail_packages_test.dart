@@ -4,9 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:laundry_app/models/service_package.dart';
 import 'package:laundry_app/models/shop.dart';
 import 'package:laundry_app/screens/customer/shop_detail/shop_detail_screen.dart';
-import 'package:laundry_app/state/cart_state.dart';
 import 'package:laundry_app/state/catalog_state.dart';
-import 'package:laundry_app/state/fulfillment_state.dart';
+import 'package:laundry_app/state/vendor_basket.dart';
 import 'package:laundry_app/theme/app_theme.dart';
 import 'package:laundry_app/utils/cart_math.dart';
 
@@ -133,27 +132,30 @@ void main() {
     await tester.tap(find.text('Select package').first);
     await tester.pump();
 
-    expect(container.read(cartProvider)[key], 1);
-    expect(container.read(fulfillmentProvider).extraItems[key]?.price, package.priceTzs);
+    expect(container.read(basketsProvider)[_marina.slotId]?.qty[key], 1);
+    expect(container.read(basketsProvider)[_marina.slotId]?.extraItems[key]?.price, package.priceTzs);
 
     // The bundle's price reaches the sticky CTA.
-    final extra = container.read(fulfillmentProvider).extraItems.values.toList();
-    expect(cartSubtotal(container.read(cartProvider), extra), package.priceTzs);
+    final basket = container.read(basketsProvider)[_marina.slotId]!;
+    expect(cartSubtotal(basket.qty, basket.extraItems.values.toList()), package.priceTzs);
 
     // Second tap is a "view basket" affordance, not a duplicate purchase.
     expect(find.text('In basket · view'), findsOneWidget);
   });
 
-  testWidgets('a second vendor asks before emptying the basket', (tester) async {
+  testWidgets('two vendors keep fully independent baskets', (tester) async {
     _useTallViewport(tester);
 
     final container = await _pumpDetail(tester, _marina);
     await _openPackagesTab(tester);
     await tester.tap(find.text('Select package').first);
     await tester.pump();
-    expect(container.read(fulfillmentProvider).shop, _marina.name);
 
-    // Now the same customer opens a different shop and picks a package.
+    final marinaKey = container.read(shopPackagesProvider(_marina.slotId)).asData!.value.first.cartKey(_marina.slotId);
+    expect(container.read(basketsProvider)[_marina.slotId]?.qty[marinaKey], 1);
+
+    // Now the same customer opens a different shop and picks a package —
+    // no confirmation needed, since each vendor keeps its own basket.
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -165,22 +167,12 @@ void main() {
     await tester.tap(find.text('Select package').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Start a new basket?'), findsOneWidget);
+    expect(find.text('Start a new basket?'), findsNothing);
 
-    // Backing out leaves the first shop's basket exactly as it was.
-    await tester.tap(find.text('Keep basket'));
-    await tester.pumpAndSettle();
-    expect(container.read(fulfillmentProvider).shop, _marina.name);
-    expect(container.read(cartProvider)[container.read(shopPackagesProvider(_marina.slotId)).asData!.value.first.cartKey(_marina.slotId)], 1);
+    final brightKey = container.read(shopPackagesProvider(_brightAndFold.slotId)).asData!.value.first.cartKey(_brightAndFold.slotId);
+    expect(container.read(basketsProvider)[_brightAndFold.slotId]?.qty[brightKey], 1);
 
-    // Confirming swaps the basket over to the new vendor.
-    await tester.tap(find.text('Select package').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Start new basket'));
-    await tester.pumpAndSettle();
-
-    expect(container.read(fulfillmentProvider).shop, _brightAndFold.name);
-    expect(container.read(cartProvider)[container.read(shopPackagesProvider(_marina.slotId)).asData!.value.first.cartKey(_marina.slotId)] ?? 0, 0);
-    expect(container.read(cartProvider)[container.read(shopPackagesProvider(_brightAndFold.slotId)).asData!.value.first.cartKey(_brightAndFold.slotId)], 1);
+    // Marina's basket is completely untouched by browsing/adding at Bright & Fold.
+    expect(container.read(basketsProvider)[_marina.slotId]?.qty[marinaKey], 1);
   });
 }

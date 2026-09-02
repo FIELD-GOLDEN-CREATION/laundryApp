@@ -79,18 +79,22 @@ class OrderStatus {
 }
 
 /// Status label + badge colors for a given track step — shared by the
-/// Orders list badge and the Track screen heading so advancing a demo
-/// order's step keeps both in sync.
+/// Orders list badge and the Track screen heading so advancing an order's
+/// backend status (see `kOrderStatusSteps` in orders_state.dart) keeps both
+/// in sync. Step indices: 0 accepted, 1 in_wash, 2 ready, 3 out_for_delivery,
+/// 4 delivered.
 OrderStatus orderStatusForStep(int step) {
   switch (step) {
     case 0:
-      return const OrderStatus('Picked up', AppColors.teal, AppColors.tealMuted);
+      return const OrderStatus('Accepted', AppColors.teal, AppColors.tealMuted);
     case 1:
-      return const OrderStatus('Sorted', AppColors.teal, AppColors.tealMuted);
-    case 2:
       return const OrderStatus('Washing', AppColors.teal, AppColors.tealMuted);
+    case 2:
+      return const OrderStatus('Ready', AppColors.teal, AppColors.tealMuted);
     case 3:
       return const OrderStatus('Out for delivery', AppColors.teal, AppColors.tealMuted);
+    case 4:
+      return const OrderStatus('Delivered', AppColors.teal, AppColors.tealMuted);
     default:
       return const OrderStatus('Order placed', AppColors.amber, AppColors.amberLight);
   }
@@ -99,13 +103,15 @@ OrderStatus orderStatusForStep(int step) {
 OrderStatus selfOrderStatusForStep(int step) {
   switch (step) {
     case 0:
-      return const OrderStatus('At shop', AppColors.teal, AppColors.tealMuted);
+      return const OrderStatus('Accepted', AppColors.teal, AppColors.tealMuted);
     case 1:
-      return const OrderStatus('Sorted', AppColors.teal, AppColors.tealMuted);
-    case 2:
       return const OrderStatus('Washing', AppColors.teal, AppColors.tealMuted);
+    case 2:
+      return const OrderStatus('Ready for collection', AppColors.teal, AppColors.tealMuted);
     case 3:
       return const OrderStatus('Ready for collection', AppColors.teal, AppColors.tealMuted);
+    case 4:
+      return const OrderStatus('Collected', AppColors.teal, AppColors.tealMuted);
     default:
       return const OrderStatus('Promise booked', AppColors.amber, AppColors.amberLight);
   }

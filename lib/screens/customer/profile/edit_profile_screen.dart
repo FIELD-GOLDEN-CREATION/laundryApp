@@ -27,7 +27,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _Field(label: 'Full name', controller: name),
       _Field(label: 'Phone number', controller: phone, keyboardType: TextInputType.phone),
       const SizedBox(height: 14),
-      FilledButton(onPressed: () { if (name.text.trim().isEmpty || phone.text.trim().isEmpty) return; ref.read(profileProvider.notifier).updateDetails(name: name.text.trim(), phone: phone.text.trim(), photoLabel: photoLabel); Navigator.pop(context); }, style: FilledButton.styleFrom(backgroundColor: AppColors.teal, padding: const EdgeInsets.symmetric(vertical: 16)), child: Text('Save changes', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream))),
+      FilledButton(onPressed: () async { if (name.text.trim().isEmpty || phone.text.trim().isEmpty) return; final ok = await ref.read(profileProvider.notifier).updateDetails(name: name.text.trim(), phone: phone.text.trim(), photoLabel: photoLabel); if (!context.mounted) return; if (!ok) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not save changes. Please try again.'))); return; } Navigator.pop(context); }, style: FilledButton.styleFrom(backgroundColor: AppColors.teal, padding: const EdgeInsets.symmetric(vertical: 16)), child: Text('Save changes', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream))),
     ]),
   );
 }
