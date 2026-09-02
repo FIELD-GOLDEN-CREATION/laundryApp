@@ -16,6 +16,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
 import '../../../widgets/basket_shop_guard.dart';
 import '../../../widgets/remote_image.dart';
+import '../../../widgets/shop_location_label.dart';
 import 'widgets/package_card.dart';
 
 const _kTabLabels = ['About', 'Packages', 'Price list'];
@@ -609,10 +610,15 @@ class _AboutSection extends StatelessWidget {
             Icon(Icons.location_on_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                shop.distance.isNotEmpty ? '${shop.distance} km away' : shop.meta,
-                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-              ),
+              child: shop.distance.isNotEmpty
+                  ? Text(
+                      '${shop.distance} km away',
+                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                    )
+                  : ShopLocationLabel(
+                      shop: shop,
+                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                    ),
             ),
           ],
         ),

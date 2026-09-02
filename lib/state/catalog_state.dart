@@ -56,6 +56,8 @@ Shop shopFromJson(Map<String, dynamic> j) {
             .where((s) => s.isNotEmpty)
             .toList() ??
         [],
+    latitude: lat,
+    longitude: lng,
   );
 }
 
