@@ -6,13 +6,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../models/service_package.dart';
+import '../../../../models/shop.dart';
 import '../../../../models/user_role.dart';
 import '../../../../state/auth_state.dart';
-import '../../../../state/cart_state.dart';
 import '../../../../state/catalog_state.dart';
+import '../../../../state/vendor_basket.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
-import '../../../../widgets/basket_shop_guard.dart';
 
 // Bundled Storyset illustrations — https://storyset.com/shopping
 const _kPackageIllustrations = {
@@ -134,7 +134,7 @@ class _PackageCard extends ConsumerWidget {
     ),
   );
 
-  Future<void> _onTap(BuildContext context, WidgetRef ref) async {
+  void _onTap(BuildContext context, WidgetRef ref) {
     final auth = ref.read(authProvider);
     if (auth.role == UserRole.guest) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,17 +148,21 @@ class _PackageCard extends ConsumerWidget {
       );
       return;
     }
-    if (!await ensureBasketShop(context, ref, pkg.shopName, shopId: pkg.shopId)) return;
-    if (!context.mounted) return;
-    final cart = ref.read(cartProvider.notifier);
-    final cartPkg = ref.read(cartPackageProvider.notifier);
-    cartPkg.addPackage(pkg, cart);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${pkg.name} added to basket!'),
-        action: SnackBarAction(label: 'View basket', textColor: AppColors.teal, onPressed: () => context.push('/cart')),
-      ),
-    );
+    // Already the active package for this vendor's basket — send them to
+    // it instead of re-adding, which would otherwise double up the same
+    // package items in the cart.
+    final existingPkg = ref.read(basketsProvider)[pkg.shopId]?.activePackage;
+    if (existingPkg?.id != pkg.id) {
+      ref.read(basketsProvider.notifier).addPackage(pkg.shopId, pkg);
+    }
+    Shop? match;
+    for (final s in ref.read(shopsProvider).items) {
+      if (s.slotId == pkg.shopId) {
+        match = s;
+        break;
+      }
+    }
+    context.push('/detail?tab=1', extra: match);
   }
 
   @override

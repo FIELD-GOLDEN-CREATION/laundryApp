@@ -10,15 +10,12 @@ import '../../../utils/num_helper.dart';
 import '../../../utils/schedule_options.dart';
 import '../../../models/address.dart';
 import '../../../state/auth_state.dart';
-import '../../../state/cart_addons_state.dart';
-import '../../../state/cart_promo_state.dart';
-import '../../../state/cart_state.dart';
-import '../../../state/catalog_state.dart' show shopAddonsProvider;
+import '../../../state/catalog_state.dart' show shopAddonsProvider, shopsProvider;
 import '../../../state/client_preferences_state.dart';
-import '../../../state/fulfillment_state.dart';
 import '../../../state/place_order_helper.dart';
 import '../../../state/profile_state.dart';
 import '../../../state/schedule_state.dart';
+import '../../../state/vendor_basket.dart';
 import '../../../state/vendor_catalog_state.dart' show VendorAddon;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -29,7 +26,9 @@ import '../../../widgets/radio_option_card.dart';
 import '../../../widgets/round_back_button.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
-  const ScheduleScreen({super.key});
+  const ScheduleScreen({super.key, required this.shopId});
+
+  final String shopId;
 
   @override
   ConsumerState<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -41,13 +40,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   bool _addressesRequested = false;
   int? _lastQuotedSeed;
 
+  VendorBasket _basket() => ref.read(basketsProvider)[widget.shopId] ?? VendorBasket.empty(widget.shopId);
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final fulfillment = ref.read(fulfillmentProvider);
-      if (fulfillment.isDelivery && fulfillment.deliveryFeeTzs == 0 && !fulfillment.quoting) {
+      final basket = _basket();
+      if (basket.isDelivery && basket.deliveryFeeTzs == 0 && !basket.quoting) {
         _maybeQuote();
       }
     });
@@ -75,16 +76,16 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     }
   }
 
-  /// Auto-runs the delivery quote whenever the pickup location changes â€”
+  /// Auto-runs the delivery quote whenever the pickup location changes —
   /// Home, Office or "Locate me". Only skips when the exact same seed was
   /// already quoted (so rebuilds don't re-show the sheet).
   void _maybeQuote() {
     if (_quotingLocal) return;
-    final fulfillment = ref.read(fulfillmentProvider);
-    if (!fulfillment.isDelivery) return;
+    final basket = _basket();
+    if (!basket.isDelivery) return;
     final schedule = ref.read(scheduleProvider);
     final seed = schedule.addrIndex < 0 ? 0 : schedule.addrIndex;
-    if (_lastQuotedSeed == seed && fulfillment.deliveryFeeTzs > 0) return;
+    if (_lastQuotedSeed == seed && basket.deliveryFeeTzs > 0) return;
     _lastQuotedSeed = seed;
     _runQuote();
   }
@@ -106,30 +107,30 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     return (null, null);
   }
 
-  /// Places the order straight from scheduling â€” the client no longer pays
+  /// Places the order straight from scheduling — the client no longer pays
   /// up front, so there's nothing left for a separate checkout step to
   /// collect. `checkout_screen.dart` still exists but nothing routes to it.
   Future<void> _continueToConfirmation() async {
-    if (gateGuest(ref, context, 'Log in to place your order â€” guests can browse everything else.')) return;
+    if (gateGuest(ref, context, 'Log in to place your order — guests can browse everything else.')) return;
     final schedule = ref.read(scheduleProvider);
-    final fulfillment = ref.read(fulfillmentProvider);
-    final qty = ref.read(cartProvider);
-    final priced = ref.read(fulfillmentProvider).pricedItems;
+    final basket = _basket();
+    final qty = basket.qty;
+    final priced = basket.pricedItems;
     final subtotal = cartSubtotal(qty, priced);
-    final deliveryFee = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
-    final vendorAddons = fulfillment.shopSlug.isEmpty
+    final deliveryFee = basket.isDelivery ? basket.deliveryFeeTzs : 0;
+    final vendorAddons = basket.shopSlug.isEmpty
         ? const <VendorAddon>[]
-        : ref.read(shopAddonsProvider(fulfillment.shopSlug)).asData?.value ?? const <VendorAddon>[];
-    final addonTotal = ref.read(cartAddonsProvider.notifier).totalFor(vendorAddons);
+        : ref.read(shopAddonsProvider(basket.shopSlug)).asData?.value ?? const <VendorAddon>[];
+    final addonSum = addonTotal(basket.selectedAddonIndices, vendorAddons);
     // A promo only ever discounts the entity it's scoped to — mirrors the
     // same bucketing cart_screen.dart's summary panel does, so the total
     // shown here doesn't drift from what the customer already saw.
-    final promoState = ref.read(cartPromoProvider);
+    final promoState = basket.promo;
     final discount = promoState.discountAmount;
     final isDeliveryDiscount = promoState.appliedPromo?.appliesTo == PromoAppliesTo.delivery;
     final discountedSubtotal = isDeliveryDiscount ? subtotal : (subtotal - discount).clamp(0.0, double.infinity);
     final discountedDelivery = isDeliveryDiscount ? (deliveryFee - discount).clamp(0.0, double.infinity) : deliveryFee.toDouble();
-    final total = discountedSubtotal + discountedDelivery + addonTotal;
+    final total = discountedSubtotal + discountedDelivery + addonSum;
     final addresses = ref.read(profileProvider).addresses;
     final address = schedule.isCurrentLocation
         ? Address(label: 'Current location', line: schedule.currentLocation.isEmpty ? 'Current location' : schedule.currentLocation)
@@ -137,10 +138,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final days = upcomingDays();
     final day = days[schedule.dayIndex.clamp(0, days.length - 1)];
     final pickupSummary = '${day.dow} ${day.num}, ${kTimeSlots[schedule.slotIndex]}';
-    final (deliveryLat, deliveryLng) = fulfillment.isDelivery ? _deliveryLatLng() : (null, null);
+    final (deliveryLat, deliveryLng) = basket.isDelivery ? _deliveryLatLng() : (null, null);
 
     final order = await placeCurrentOrder(
       ref,
+      shopId: widget.shopId,
       paymentMethod: '',
       pickup: pickupSummary,
       address: address.line,
@@ -157,52 +159,50 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   /// known — Cart couldn't compute this (no address there), so it applied
   /// the code without an amount; this fills it in before the order is placed.
   Future<void> _refreshPendingDeliveryPromo(int feeTzs) async {
-    final promoState = ref.read(cartPromoProvider);
-    if (promoState.appliedPromo?.appliesTo != PromoAppliesTo.delivery) return;
+    final basket = _basket();
+    if (basket.promo.appliedPromo?.appliesTo != PromoAppliesTo.delivery) return;
 
-    final fulfillmentState = ref.read(fulfillmentProvider);
-    final qty = ref.read(cartProvider);
-    final priced = fulfillmentState.pricedItems;
+    final qty = basket.qty;
+    final priced = basket.pricedItems;
     final subtotal = cartSubtotal(qty, [], priced);
-    final pkg = ref.read(cartPackageProvider);
     final cartItems = {
       for (final item in priced)
-        if ((qty[item.key] ?? 0) > 0)
-          if (int.tryParse(item.key) case final id?) id: qty[item.key] ?? 0,
+        if ((qty[item.key] ?? 0) > 0 && !item.key.startsWith('pkg:'))
+          if (int.tryParse(item.key.split(':').last) case final id?) id: qty[item.key] ?? 0,
     };
 
-    await ref.read(cartPromoProvider.notifier).refreshPromo(
+    await ref.read(basketsProvider.notifier).refreshPromo(
+      widget.shopId,
       subtotal,
-      fulfillmentState.shopId,
       cartItems: cartItems,
-      packageId: pkg?.id,
+      packageId: cartPackageId(qty, priced),
       isDelivery: true,
       deliveryFeeTzs: feeTzs,
     );
   }
 
-  /// Quietly resolves the real delivery fee in the background â€” no modal or
+  /// Quietly resolves the real delivery fee in the background — no modal or
   /// snackbar theatrics. The CTA's "Finding your driverâ€¦" label already
   /// covers the `quoting` state, so this just needs to fill in the fee for
   /// the order total.
   Future<void> _runQuote() async {
     if (_quotingLocal) return;
     _quotingLocal = true;
-    final fulfillmentState = ref.read(fulfillmentProvider);
-    final fulfillment = ref.read(fulfillmentProvider.notifier);
+    final shopId = widget.shopId;
+    final basketsNotifier = ref.read(basketsProvider.notifier);
     final (lat, lng) = _deliveryLatLng();
 
-    fulfillment.setQuoting(true);
+    basketsNotifier.setQuoting(shopId, true);
     var fee = 1800;
     try {
-      final data = await api.getDeliveryFee(fulfillmentState.shopId, lat: lat, lng: lng);
+      final data = await api.getDeliveryFee(shopId, lat: lat, lng: lng);
       fee = parseInt((data['data'] ?? data)['delivery_fee_tzs']) ?? 1800;
     } on ApiException {
       fee = 1800;
     } finally {
-      fulfillment.finishQuote(fee: fee);
+      basketsNotifier.finishQuote(shopId, fee: fee);
       _quotingLocal = false;
-      if (mounted) fulfillment.setQuoting(false);
+      if (mounted) basketsNotifier.setQuoting(shopId, false);
     }
     await _refreshPendingDeliveryPromo(fee);
   }
@@ -212,9 +212,18 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final language = ref.watch(clientPreferencesProvider).language;
     final schedule = ref.watch(scheduleProvider);
     final notifier = ref.read(scheduleProvider.notifier);
-    final fulfillment = ref.watch(fulfillmentProvider);
-    final isDelivery = fulfillment.isDelivery;
-    final quoting = fulfillment.quoting;
+    final basket = ref.watch(basketsProvider.select((m) => m[widget.shopId])) ?? VendorBasket.empty(widget.shopId);
+    final isDelivery = basket.isDelivery;
+    final quoting = basket.quoting;
+    var shopName = basket.shopName;
+    if (shopName.isEmpty) {
+      for (final s in ref.watch(shopsProvider).items) {
+        if (s.slotId == widget.shopId) {
+          shopName = s.name;
+          break;
+        }
+      }
+    }
 
     // Saved addresses come from the customer profile (API-backed).
     final addresses = ref.watch(profileProvider.select((s) => s.addresses));
@@ -234,7 +243,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         ? schedule.currentLocation
         : addresses.isNotEmpty ? addresses[schedule.addrIndex.clamp(0, addresses.length - 1)].line : schedule.currentLocation;
 
-    final quoteReady = fulfillment.deliveryFeeTzs > 0;
+    final quoteReady = basket.deliveryFeeTzs > 0;
     final ctaLabel = () {
       if (!isDelivery) return clientLabel('Place order', 'Weka oda', language);
       if (quoting || !quoteReady) return clientLabel('Finding your driverâ€¦', 'Kumtafuta dereva wakoâ€¦', language);
@@ -286,7 +295,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     ),
                   ],
                 ),
-              ] else _ShopDropOffCard(shop: fulfillment.shop, language: language),
+              ] else _ShopDropOffCard(shop: shopName, language: language),
               _SectionLabel(isDelivery ? clientLabel('Pickup day', 'Siku ya kuchukua', language) : clientLabel('Drop-off day', 'Siku ya kupeleka', language)),
               SizedBox(
                 height: 62,
@@ -357,7 +366,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       ),
       bottomNavigationBar: PrimaryCtaBar(
         label: ctaLabel,
-        hint: isDelivery && quoteReady ? formatMoney(fulfillment.deliveryFeeTzs.toDouble()) : null,
+        hint: isDelivery && quoteReady ? formatMoney(basket.deliveryFeeTzs.toDouble()) : null,
         onPressed: isDelivery && !quoteReady ? () {} : _continueToConfirmation,
       ),
     );
@@ -398,7 +407,7 @@ class _ShopDropOffCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(shop, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                 const SizedBox(height: 2),
-                Text(clientLabel('Pay at the shop â€” no delivery fee', 'Ulipa dukani â€” hakuna nauli', language), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.teal)),
+                Text(clientLabel('Pay at the shop — no delivery fee', 'Ulipa dukani — hakuna nauli', language), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.teal)),
               ],
             ),
           ),
@@ -408,7 +417,7 @@ class _ShopDropOffCard extends StatelessWidget {
   }
 }
 
-/// A stylised map preview of the pickup area â€” a fixed-height, properly
+/// A stylised map preview of the pickup area — a fixed-height, properly
 /// sized tile with a location pin and the selected address, so the location
 /// reads visually instead of as a bare list row.
 class _MapPreview extends StatelessWidget {

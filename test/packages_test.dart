@@ -2,9 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:laundry_app/models/menu_item.dart';
 import 'package:laundry_app/models/service_package.dart';
-import 'package:laundry_app/state/basket_helper.dart';
-import 'package:laundry_app/state/cart_state.dart';
-import 'package:laundry_app/state/fulfillment_state.dart';
+import 'package:laundry_app/state/vendor_basket.dart';
 import 'package:laundry_app/utils/cart_math.dart';
 import 'package:laundry_app/state/vendor_packages_state.dart';
 
@@ -85,51 +83,56 @@ void main() {
     });
   });
 
-  group('basketBelongsToOtherShop', () {
-    const marina = FulfillmentState(shop: 'Marina Fresh Laundry');
-
-    test('is false for an empty basket, whatever shop it was pointed at', () {
-      expect(basketBelongsToOtherShop(const {}, marina, 'Bright & Fold'), isFalse);
-      expect(basketBelongsToOtherShop(const {'shirt': 0}, marina, 'Bright & Fold'), isFalse);
-    });
-
-    test('is false when the basket already belongs to that shop', () {
-      expect(basketBelongsToOtherShop(const {'shirt': 2}, marina, 'Marina Fresh Laundry'), isFalse);
-    });
-
-    test('is true when a filled basket belongs to someone else', () {
-      expect(basketBelongsToOtherShop(const {'shirt': 2}, marina, 'Bright & Fold'), isTrue);
-    });
-
-    test('counts service and package lines, not just the menu', () {
-      final fulfillment = marina.copyWith(
-        extraItems: {'svc:x': const MenuItem(key: 'svc:x', name: 'Ironing', unit: 'per service', initial: 'I', price: 5000)},
-      );
-      expect(basketBelongsToOtherShop(const {'svc:x': 1}, fulfillment, 'Bright & Fold'), isTrue);
-    });
-  });
-
   group('basket state', () {
-    test('clear empties the cart', () {
+    test('setQty increments and clamps at zero, scoped to one shop', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(cartProvider.notifier).setQty('shirt', 3);
-      container.read(cartProvider.notifier).clear();
-      expect(container.read(cartProvider), isEmpty);
+      final notifier = container.read(basketsProvider.notifier);
+      notifier.setQty('shop-a', 'shirt', 3);
+      expect(container.read(basketsProvider)['shop-a']?.qty['shirt'], 3);
+
+      notifier.setQty('shop-a', 'shirt', -100);
+      expect(container.read(basketsProvider)['shop-a']?.qty['shirt'], 0);
     });
 
-    test('startBasketFor repoints the shop and drops the old vendor extras', () {
+    test('two vendors keep fully separate baskets', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final notifier = container.read(fulfillmentProvider.notifier);
-      notifier.addServiceItem(const MenuItem(key: 'svc:x', name: 'Ironing', unit: 'per service', initial: 'I', price: 5000));
-      notifier.startBasketFor('Bright & Fold');
+      final notifier = container.read(basketsProvider.notifier);
+      notifier.setQty('shop-a', 'shirt', 2);
+      notifier.setQty('shop-b', 'shirt', 5);
 
-      expect(container.read(fulfillmentProvider).shop, 'Bright & Fold');
-      expect(container.read(fulfillmentProvider).extraItems, isEmpty);
-      expect(container.read(fulfillmentProvider).catalog, isEmpty);
+      expect(container.read(basketsProvider)['shop-a']?.qty['shirt'], 2);
+      expect(container.read(basketsProvider)['shop-b']?.qty['shirt'], 5);
+    });
+
+    test('addServiceItem registers a catalog line scoped to one shop only', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(basketsProvider.notifier).addServiceItem(
+            'shop-a',
+            const MenuItem(key: 'svc:x', name: 'Ironing', unit: 'per service', initial: 'I', price: 5000),
+          );
+
+      expect(container.read(basketsProvider)['shop-a']?.extraItems, isNotEmpty);
+      expect(container.read(basketsProvider)['shop-b'], isNull);
+    });
+
+    test('clearBasket removes only that shop, leaving every other basket untouched', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(basketsProvider.notifier);
+      notifier.setQty('shop-a', 'shirt', 2);
+      notifier.setQty('shop-b', 'shirt', 5);
+
+      notifier.clearBasket('shop-a');
+
+      expect(container.read(basketsProvider).containsKey('shop-a'), isFalse);
+      expect(container.read(basketsProvider)['shop-b']?.qty['shirt'], 5);
     });
   });
 

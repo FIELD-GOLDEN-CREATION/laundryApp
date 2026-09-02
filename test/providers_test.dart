@@ -3,35 +3,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:laundry_app/models/order.dart';
-import 'package:laundry_app/state/cart_state.dart';
 import 'package:laundry_app/state/chat_state.dart';
 import 'package:laundry_app/state/orders_state.dart';
+import 'package:laundry_app/state/vendor_basket.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  test('CartNotifier.setQty increments and clamps at zero', () {
+  test('BasketsNotifier.setQty increments and clamps at zero', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    container.read(cartProvider.notifier).setQty('shirt', 1);
-    expect(container.read(cartProvider)['shirt'], 1);
+    container.read(basketsProvider.notifier).setQty('shop-a', 'shirt', 1);
+    expect(container.read(basketsProvider)['shop-a']?.qty['shirt'], 1);
 
-    container.read(cartProvider.notifier).setQty('bed', -5);
-    expect(container.read(cartProvider)['bed'], 0);
+    container.read(basketsProvider.notifier).setQty('shop-a', 'bed', -5);
+    expect(container.read(basketsProvider)['shop-a']?.qty['bed'], 0);
   });
 
-  test('CartNotifier.setQty applies deltas and clamps at zero', () {
+  test('BasketsNotifier.setQty applies deltas and clamps at zero', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final notifier = container.read(cartProvider.notifier);
-    notifier.setQty('shirt', 5);
-    expect(container.read(cartProvider)['shirt'], 5);
+    final notifier = container.read(basketsProvider.notifier);
+    notifier.setQty('shop-a', 'shirt', 5);
+    expect(container.read(basketsProvider)['shop-a']?.qty['shirt'], 5);
 
-    notifier.setQty('shirt', -100);
-    expect(container.read(cartProvider)['shirt'], 0);
+    notifier.setQty('shop-a', 'shirt', -100);
+    expect(container.read(basketsProvider)['shop-a']?.qty['shirt'], 0);
   });
 
   test('OrdersNotifier.placeOrder inserts an unpicked-up order at the top', () {

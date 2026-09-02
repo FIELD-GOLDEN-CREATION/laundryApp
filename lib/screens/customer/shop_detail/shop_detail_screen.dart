@@ -7,14 +7,12 @@ import 'package:go_router/go_router.dart';
 import '../../../models/menu_item.dart';
 import '../../../models/service_package.dart';
 import '../../../models/shop.dart';
-import '../../../state/cart_state.dart';
 import '../../../state/catalog_state.dart';
-import '../../../state/fulfillment_state.dart';
 import '../../../state/profile_state.dart';
+import '../../../state/vendor_basket.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
-import '../../../widgets/basket_shop_guard.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/shop_location_label.dart';
 import 'widgets/package_card.dart';
@@ -22,16 +20,20 @@ import 'widgets/package_card.dart';
 const _kTabLabels = ['About', 'Packages', 'Price list'];
 
 class ShopDetailScreen extends ConsumerStatefulWidget {
-  const ShopDetailScreen({super.key, required this.shop});
+  const ShopDetailScreen({super.key, required this.shop, this.initialTab = 0});
 
   final Shop shop;
+
+  /// Tab to open on ('About', 'Packages', 'Price list'), e.g. 1 to land
+  /// straight on Packages when arriving from a package tap elsewhere.
+  final int initialTab;
 
   @override
   ConsumerState<ShopDetailScreen> createState() => _ShopDetailScreenState();
 }
 
 class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
-  int _tab = 0;
+  late int _tab = widget.initialTab;
   bool _catalogRegistered = false;
 
   @override
@@ -50,10 +52,9 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
-    final qty = ref.watch(cartProvider);
+    final basket = ref.watch(basketsProvider.select((m) => m[shop.slotId])) ?? VendorBasket.empty(shop.slotId);
+    final qty = basket.qty;
     final fav = ref.watch(profileProvider.select((s) => s.fav));
-    final fulfillment = ref.watch(fulfillmentProvider);
-    final extraItems = fulfillment.extraItems.values.toList();
 
     final displayName = shop.name;
     final displayDescription = shop.description;
@@ -66,190 +67,170 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
     final packages = packagesAsync.asData?.value ?? const <ServicePackage>[];
     final priceList = detailAsync.asData?.value ?? const <MenuItem>[];
 
-    // Register this shop's price list with the basket only when the basket
-    // is empty or already belongs to this shop.
+    // Register this shop's price list into ITS OWN basket entry — every
+    // vendor keeps a separate `VendorBasket`, so there's no other vendor's
+    // state this could ever collide with or need to defer to.
     if (!_catalogRegistered && priceList.isNotEmpty) {
       _catalogRegistered = true;
-      if (fulfillment.catalog.isEmpty || fulfillment.shop == shop.name) {
-        Future.microtask(() => ref.read(fulfillmentProvider.notifier).setShopCatalog(
-              shopId: shop.slotId,
-              shopName: shop.name,
-              shopSlug: shop.listSlotId,
-              items: priceList,
-            ));
-      }
+      Future.microtask(() => ref.read(basketsProvider.notifier).setShopCatalog(
+            shop.slotId,
+            shopName: shop.name,
+            shopSlug: shop.listSlotId,
+            items: priceList,
+          ));
     }
 
-    final pricedItems = fulfillment.pricedItems;
+    final pricedItems = basket.pricedItems;
 
     return Scaffold(
       backgroundColor: AppColors.clientSurface(context),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 200),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: AppText.serif(fontSize: 28, color: AppColors.clientText(context)),
-                      ),
-                      const SizedBox(height: 10),
-                      _InfoChips(
-                        shop: shop,
-                        displayHours: displayHours,
-                        displayHoursColor: displayHoursColor,
-                      ),
-                      const SizedBox(height: 20),
-                      if (shop.badges.isNotEmpty) ...[
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: shop.badges.map((badge) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.tealMuted,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              badge,
-                              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.teal),
-                            ),
-                          )).toList(),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                      _DirectionButton(
-                        onPressed: () => context.push('/direction', extra: shop),
-                      ),
-                      const SizedBox(height: 20),
-                      _ShopTabBar(
-                        labels: _kTabLabels,
-                        index: _tab,
-                        onChanged: (i) => setState(() => _tab = i),
-                      ),
-                      const SizedBox(height: 18),
-                      if (_tab == 0)
-                        _AboutSection(
-                          description: displayDescription,
-                          shop: shop,
-                        )
-                      else if (_tab == 1)
-                        loading
-                            ? const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40),
-                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              )
-                            : packages.isEmpty
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Text(
-                                      'This shop hasn\'t listed any packages yet.',
-                                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
-                                    ),
-                                  )
-                                : Column(
-                                    children: [
-                                      for (final package in packages) ...[
-                                        PackageCard(
-                                          package: package,
-                                          inBasket: (qty[package.cartKey(shop.slotId)] ?? 0) > 0,
-                                          onSelect: () => _selectPackage(context, package, displayName),
-                                        ),
-                                        if (package != packages.last) const SizedBox(height: 10),
-                                      ],
-                                    ],
-                                  )
-                      else
-                        loading
-                            ? const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40),
-                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              )
-                            : priceList.isEmpty
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Text(
-                                      'No price list available yet.',
-                                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
-                                    ),
-                                  )
-                                : Column(
-                                    children: [
-                                      for (final item in priceList) ...[
-                                        _MenuRow(
-                                          item: item,
-                                          checked: (qty[item.key] ?? 0) > 0,
-                                          onToggle: () => _toggleMenuItem(context, item, displayName),
-                                        ),
-                                        if (item != priceList.last) const SizedBox(height: 10),
-                                      ],
-                                    ],
-                                  ),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: _EdgedHeroImage(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _EdgedHeroImage(
               shop: shop,
               fav: fav,
               onFavToggle: () => ref.read(profileProvider.notifier).toggleFav(),
               onBack: () => context.pop(),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: AppText.serif(fontSize: 28, color: AppColors.clientText(context)),
+                  ),
+                  const SizedBox(height: 10),
+                  _InfoChips(
+                    shop: shop,
+                    displayHours: displayHours,
+                    displayHoursColor: displayHoursColor,
+                  ),
+                  const SizedBox(height: 20),
+                  if (shop.badges.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: shop.badges.map((badge) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.tealMuted,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          badge,
+                          style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.teal),
+                        ),
+                      )).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  _DirectionButton(
+                    onPressed: () => context.push('/direction', extra: shop),
+                  ),
+                  const SizedBox(height: 20),
+                  _ShopTabBar(
+                    labels: _kTabLabels,
+                    index: _tab,
+                    onChanged: (i) => setState(() => _tab = i),
+                  ),
+                  const SizedBox(height: 18),
+                  if (_tab == 0)
+                    _AboutSection(
+                      description: displayDescription,
+                      shop: shop,
+                    )
+                  else if (_tab == 1)
+                    loading
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40),
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : packages.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  'This shop hasn\'t listed any packages yet.',
+                                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
+                                ),
+                              )
+                            : Column(
+                                children: [
+                                  for (final package in packages) ...[
+                                    PackageCard(
+                                      package: package,
+                                      inBasket: (qty[package.cartKey(shop.slotId)] ?? 0) > 0,
+                                      onSelect: () => _selectPackage(context, package),
+                                    ),
+                                    if (package != packages.last) const SizedBox(height: 10),
+                                  ],
+                                ],
+                              )
+                  else
+                    loading
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40),
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : priceList.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  'No price list available yet.',
+                                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
+                                ),
+                              )
+                            : Column(
+                                children: [
+                                  for (final item in priceList) ...[
+                                    _MenuRow(
+                                      item: item,
+                                      checked: (qty[item.key] ?? 0) > 0,
+                                      onToggle: () => _toggleMenuItem(item),
+                                    ),
+                                    if (item != priceList.last) const SizedBox(height: 10),
+                                  ],
+                                ],
+                              ),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: _BottomBar(
         shopName: displayName,
         imageUrl: shop.imageUrl,
-        cartTotal: formatMoney(cartSubtotal(qty, extraItems, pricedItems)),
-        onViewBasket: () => context.push('/cart'),
+        cartTotal: formatMoney(cartSubtotal(qty, [], pricedItems)),
+        onViewBasket: () => context.push('/cart', extra: shop.slotId),
       ),
     );
   }
 
-  Future<void> _selectPackage(BuildContext context, ServicePackage package, String shopName) async {
-    final key = package.cartKey(widget.shop.slotId);
-    if ((ref.read(cartProvider)[key] ?? 0) > 0) {
-      context.push('/cart');
+  void _selectPackage(BuildContext context, ServicePackage package) {
+    final shopId = widget.shop.slotId;
+    final key = package.cartKey(shopId);
+    final notifier = ref.read(basketsProvider.notifier);
+    if ((ref.read(basketsProvider)[shopId]?.qty[key] ?? 0) > 0) {
+      context.push('/cart', extra: shopId);
       return;
     }
-    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId, shopSlug: widget.shop.listSlotId)) return;
-    if (!context.mounted) return;
-    ref.read(fulfillmentProvider.notifier).addServiceItem(
-      MenuItem(
-        key: key,
-        name: package.name,
-        unit: package.cartSubtitle,
-        initial: package.initial,
-        price: package.priceTzs,
-      ),
-    );
-    ref.read(cartProvider.notifier).setQty(key, 1);
+    notifier.addPackage(shopId, package);
   }
 
-  Future<void> _toggleMenuItem(BuildContext context, MenuItem item, String shopName) async {
-    final currentQty = ref.read(cartProvider)[item.key] ?? 0;
+  void _toggleMenuItem(MenuItem item) {
+    final shopId = widget.shop.slotId;
+    final notifier = ref.read(basketsProvider.notifier);
+    final currentQty = ref.read(basketsProvider)[shopId]?.qty[item.key] ?? 0;
     if (currentQty > 0) {
-      ref.read(cartProvider.notifier).setQty(item.key, -currentQty);
+      notifier.setQty(shopId, item.key, -currentQty);
       return;
     }
-    if (!await ensureBasketShop(context, ref, shopName, shopId: widget.shop.slotId, shopSlug: widget.shop.listSlotId)) return;
-    if (!context.mounted) return;
-    ref.read(cartProvider.notifier).setQty(item.key, 1);
+    notifier.setQty(shopId, item.key, 1);
   }
 }
 
@@ -318,6 +299,7 @@ class _EdgedHeroImageState extends State<_EdgedHeroImage> {
     final slides = _slides;
     final url = slides[_index.clamp(0, slides.length - 1)];
     return SizedBox(
+      width: double.infinity,
       height: 200,
       child: Stack(
         fit: StackFit.expand,
@@ -822,11 +804,11 @@ class _BottomBar extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                 children: [
-                   Text(
-                     shopName,
-                     style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
-                   ),
+                children: [
+                  Text(
+                    shopName,
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
+                  ),
                   Text(
                     cartTotal,
                     style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),

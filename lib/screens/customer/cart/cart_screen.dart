@@ -7,12 +7,10 @@ import '../../../models/menu_item.dart';
 import '../../../models/promo_offer.dart';
 import '../../../models/service_package.dart';
 import '../../../models/shop.dart';
-import '../../../state/cart_addons_state.dart';
-import '../../../state/cart_state.dart';
 import '../../../state/cart_promo_state.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
-import '../../../state/fulfillment_state.dart';
+import '../../../state/vendor_basket.dart';
 import '../../../state/vendor_catalog_state.dart' show VendorAddon;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -21,21 +19,30 @@ import '../../../widgets/curved_clipper.dart';
 import '../../../widgets/round_back_button.dart';
 
 class CartScreen extends ConsumerWidget {
-  const CartScreen({super.key});
+  const CartScreen({super.key, required this.shopId});
+
+  final String shopId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final qty = ref.watch(cartProvider);
-    final notifier = ref.read(cartProvider.notifier);
-    final fulfillment = ref.watch(fulfillmentProvider);
+    final basket = ref.watch(basketsProvider.select((m) => m[shopId])) ?? VendorBasket.empty(shopId);
+    final qty = basket.qty;
+    final basketsNotifier = ref.read(basketsProvider.notifier);
     final language = ref.watch(clientPreferencesProvider).language;
-    final priced = fulfillment.pricedItems;
-    final pkg = ref.watch(cartPackageProvider);
-    final pkgNotifier = ref.read(cartPackageProvider.notifier);
-    final lines = priced.where((i) => (qty[i.key] ?? 0) > 0).toList();
+    final priced = basket.pricedItems;
+    final pkg = basket.activePackage;
+    // The package is billed as one priced line (its own vendor-set price,
+    // not the sum of what's inside it) — its "rate" is just that line's
+    // quantity. Hidden from "Additional items" below since
+    // `_PackageBundleCard` is its only on-screen row; showing it again there
+    // too is what previously let edits desync from the card's own total.
+    final pkgKey = pkg?.cartKey(shopId);
+    final pkgRate = pkgKey != null ? (qty[pkgKey] ?? 0) : 0;
+    final lines = priced.where((i) => (qty[i.key] ?? 0) > 0 && i.key != pkgKey).toList();
+    final basketHasContent = lines.isNotEmpty || pkg != null;
     final subtotal = cartSubtotal(qty, [], priced);
-    final delivery = fulfillment.isDelivery ? fulfillment.deliveryFeeTzs : 0;
-    final promoState = ref.watch(cartPromoProvider);
+    final delivery = basket.isDelivery ? basket.deliveryFeeTzs : 0;
+    final promoState = basket.promo;
     final discount = promoState.discountAmount;
     // A promo discounts whichever entity it's actually scoped to — a
     // delivery-scoped discount must come off the delivery fee, not the item
@@ -47,21 +54,32 @@ class CartScreen extends ConsumerWidget {
     // public shop-detail payload (keyed by slug), not `/vendor/addons`,
     // which is scoped to whichever vendor is logged in on this device and
     // has nothing to do with the shop the customer is actually ordering from.
-    final vendorAddons = fulfillment.shopSlug.isEmpty
+    final vendorAddons = basket.shopSlug.isEmpty
         ? const <VendorAddon>[]
-        : ref.watch(shopAddonsProvider(fulfillment.shopSlug)).asData?.value ?? const <VendorAddon>[];
-    final cartAddons = ref.watch(cartAddonsProvider);
-    final cartAddonsNotifier = ref.read(cartAddonsProvider.notifier);
-    final addonTotal = cartAddonsNotifier.totalFor(vendorAddons);
-    final total = discountedSubtotal + discountedDelivery + addonTotal;
+        : ref.watch(shopAddonsProvider(basket.shopSlug)).asData?.value ?? const <VendorAddon>[];
+    final selectedAddonIndices = basket.selectedAddonIndices;
+    final addonSum = addonTotal(selectedAddonIndices, vendorAddons);
+    final total = discountedSubtotal + discountedDelivery + addonSum;
 
-    // Back to the shop the basket already belongs to â€” resolved from the
-    // live shop list by name.
+    // Basket opened before this shop's own catalog registration finished
+    // (e.g. "View basket" tapped from a snackbar) has no display name yet —
+    // fall back to a lookup by id against the live shop list.
+    var shopName = basket.shopName;
+    if (shopName.isEmpty) {
+      for (final s in ref.watch(shopsProvider).items) {
+        if (s.slotId == shopId) {
+          shopName = s.name;
+          break;
+        }
+      }
+    }
+
+    // Back to this basket's own shop, resolved from the live shop list by id.
     void openBasketShop() {
       final shops = ref.read(shopsProvider).items;
       Shop? match;
       for (final s in shops) {
-        if (s.name == fulfillment.shop) {
+        if (s.slotId == shopId) {
           match = s;
           break;
         }
@@ -82,7 +100,7 @@ class CartScreen extends ConsumerWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(clientLabel('Your basket', 'Kikapu chako', language), style: AppText.serif(fontSize: 24, color: AppColors.clientText(context))),
-                    Text(fulfillment.shop, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
+                    Text(shopName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
                   ]),
                 ),
                 Container(
@@ -97,15 +115,22 @@ class CartScreen extends ConsumerWidget {
               ]),
             ),
             Expanded(
-              child: lines.isEmpty
+              child: !basketHasContent
                   ? _EmptyBasket(onBrowse: openBasketShop, language: language)
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(18, 12, 18, 26),
                       children: [
-                        _ShopBanner(shop: fulfillment.shop, isDelivery: fulfillment.isDelivery, language: language),
+                        _ShopBanner(shop: shopName, isDelivery: basket.isDelivery, language: language),
                         const SizedBox(height: 18),
                         if (pkg != null) ...[
-                          _PackageBundleCard(pkg: pkg, onRemove: () => pkgNotifier.removePackage(notifier), language: language),
+                          _PackageBundleCard(
+                            pkg: pkg,
+                            rate: pkgRate,
+                            onRemove: () => basketsNotifier.removePackage(shopId),
+                            onIncrement: () => basketsNotifier.incrementRate(shopId),
+                            onDecrement: () => basketsNotifier.decrementRate(shopId),
+                            language: language,
+                          ),
                           const SizedBox(height: 18),
                         ],
                         Text(clientLabel('How do you want your order?', 'Unataka oda yako ipokeleweje?', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
@@ -116,28 +141,33 @@ class CartScreen extends ConsumerWidget {
                             title: clientLabel('Driver delivery', 'Usafirishaji', language),
                             sub: clientLabel('We pick up & deliver to your door', 'Tunachukua na kupeleka mlangoni', language),
                             time: clientLabel('Pickup window', 'Muda wa kuchukua', language),
-                            selected: fulfillment.isDelivery,
-                            onTap: () => ref.read(fulfillmentProvider.notifier).setMode('delivery'),
+                            selected: basket.isDelivery,
+                            onTap: () => basketsNotifier.setMode(shopId, 'delivery'),
                           )),
                           const SizedBox(width: 10),
                           Expanded(child: _FulfillmentTile(
                             icon: Icons.storefront_outlined,
                             title: clientLabel('Self drop-off', 'Unapeleka mwenyewe', language),
-                            sub: clientLabel('Promise order â€” you take it to the shop', 'Oda ya ahadi â€” unapeleka dukani', language),
+                            sub: clientLabel('Promise order — you take it to the shop', 'Oda ya ahadi — unapeleka dukani', language),
                             time: clientLabel('Free, no delivery fee', 'Bure, hakuna nauli', language),
-                            selected: !fulfillment.isDelivery,
-                            onTap: () => ref.read(fulfillmentProvider.notifier).setMode('self'),
+                            selected: !basket.isDelivery,
+                            onTap: () => basketsNotifier.setMode(shopId, 'self'),
                           )),
                         ]),
                         const SizedBox(height: 20),
                         Row(children: [
                           Text(pkg != null ? clientLabel('Additional items', 'Vitu nyongeza', language) : clientLabel('Your items', 'Vitu vyako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                           const Spacer(),
-                          Text('${cartItemCount(qty, [], priced)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                          Text('${cartItemCount(qty, [], lines)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
                         ]),
                         const SizedBox(height: 10),
                         for (final item in lines) ...[
-                          _CartRow(item: item, qty: qty[item.key] ?? 0, notifier: notifier, language: language),
+                          _CartRow(
+                            item: item,
+                            qty: qty[item.key] ?? 0,
+                            onSetQty: (key, delta) => basketsNotifier.setQty(shopId, key, delta),
+                            language: language,
+                          ),
                           if (item != lines.last) const SizedBox(height: 10),
                         ],
                         const SizedBox(height: 13),
@@ -165,32 +195,37 @@ class CartScreen extends ConsumerWidget {
                         const SizedBox(height: 22),
                         _AddOnsSection(
                           addons: vendorAddons,
-                          selectedIndices: cartAddons,
-                          onToggle: (i) => cartAddonsNotifier.toggle(i),
+                          selectedIndices: selectedAddonIndices,
+                          onToggle: (i) => basketsNotifier.toggleAddon(shopId, i),
                           language: language,
                         ),
                         const SizedBox(height: 18),
                         _PromoCodeSection(
                           subtotal: subtotal,
                           language: language,
-                          shopId: fulfillment.shopId,
-                          packageId: pkg?.id,
-                          isDelivery: fulfillment.isDelivery,
+                          shopId: shopId,
+                          packageId: cartPackageId(qty, priced),
+                          isDelivery: basket.isDelivery,
                           deliveryFeeTzs: delivery,
                           cartItems: {
-                            for (final line in lines)
-                              if (!line.key.startsWith('pkg:'))
-                                if (int.tryParse(line.key) case final id?) id: qty[line.key] ?? 0,
+                            // Built from every priced line (including package
+                            // items, hidden from `lines` above so they don't
+                            // double-render) so an item/category promo scoped
+                            // to something inside the active package still
+                            // matches.
+                            for (final item in priced)
+                              if ((qty[item.key] ?? 0) > 0 && !item.key.startsWith('pkg:'))
+                                if (int.tryParse(item.key.split(':').last) case final id?) id: qty[item.key] ?? 0,
                           },
                         ),
                         const SizedBox(height: 18),
                         _SummaryPanel(
                           subtotal: subtotal,
                           delivery: delivery,
-                          isDelivery: fulfillment.isDelivery,
+                          isDelivery: basket.isDelivery,
                           discount: discount,
                           promoState: promoState,
-                          addonTotal: addonTotal,
+                          addonTotal: addonSum,
                           total: total,
                           language: language,
                         ),
@@ -209,13 +244,13 @@ class CartScreen extends ConsumerWidget {
             elevation: 14,
             shadowColor: AppColors.amber.withValues(alpha: 0.35),
             child: InkWell(
-              onTap: () => lines.isEmpty ? openBasketShop() : context.push('/schedule'),
+              onTap: () => !basketHasContent ? openBasketShop() : context.push('/schedule', extra: shopId),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(22, 30, 22, 16),
                 child: Row(children: [
                   Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      lines.isEmpty ? clientLabel('Browse services', 'Vinjari huduma', language) : clientLabel('Proceed to schedule', 'Endelea kwenye ratiba', language),
+                      !basketHasContent ? clientLabel('Browse services', 'Vinjari huduma', language) : clientLabel('Proceed to schedule', 'Endelea kwenye ratiba', language),
                       style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.cream),
                     ),
                     const SizedBox(height: 2),
@@ -234,9 +269,19 @@ class CartScreen extends ConsumerWidget {
 }
 
 class _PackageBundleCard extends StatelessWidget {
-  const _PackageBundleCard({required this.pkg, required this.onRemove, required this.language});
+  const _PackageBundleCard({
+    required this.pkg,
+    required this.rate,
+    required this.onRemove,
+    required this.onIncrement,
+    required this.onDecrement,
+    required this.language,
+  });
   final ServicePackage pkg;
+  final int rate;
   final VoidCallback onRemove;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
   final String language;
 
   @override
@@ -279,10 +324,10 @@ class _PackageBundleCard extends StatelessWidget {
                 for (final pi in pkg.packageItems) ...[
                   Row(
                     children: [
-                      Text('${pi.qty}Ã—', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                      Text('${pi.qty * rate}×', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal)),
                       const SizedBox(width: 8),
                       Expanded(child: Text(pi.itemName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate))),
-                      Text(formatMoney(pi.lineTotal), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.slate)),
+                      Text(formatMoney(pi.lineTotal * rate), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.slate)),
                     ],
                   ),
                   if (pi != pkg.packageItems.last) const SizedBox(height: 8),
@@ -294,8 +339,25 @@ class _PackageBundleCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Text(clientLabel('Quantity', 'Idadi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.teal)),
+              Row(
+                children: [
+                  _StepButton(symbol: '−', bg: Colors.white.withValues(alpha: 0.7), fg: AppColors.teal, onTap: onDecrement),
+                  SizedBox(
+                    width: 30,
+                    child: Text('$rate', textAlign: TextAlign.center, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                  ),
+                  _StepButton(symbol: '+', bg: AppColors.teal, fg: Colors.white, onTap: onIncrement),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Text(clientLabel('Package total', 'Jumla ya kifurushi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.teal)),
-              Text(formatMoney(pkg.priceTzs), style: AppText.serif(fontSize: 17, color: AppColors.teal)),
+              Text(formatMoney(pkg.priceTzs * rate), style: AppText.serif(fontSize: 17, color: AppColors.teal)),
             ],
           ),
         ],
@@ -409,11 +471,11 @@ class _FulfillmentTile extends StatelessWidget {
 }
 
 class _CartRow extends StatelessWidget {
-  const _CartRow({required this.item, required this.qty, required this.notifier, required this.language});
+  const _CartRow({required this.item, required this.qty, required this.onSetQty, required this.language});
 
   final MenuItem item;
   final int qty;
-  final CartNotifier notifier;
+  final void Function(String key, int delta) onSetQty;
   final String language;
 
   @override
@@ -456,12 +518,12 @@ class _CartRow extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  _StepButton(symbol: 'âˆ’', bg: AppColors.clientSurfaceRaised(context), fg: AppColors.teal, onTap: () => notifier.setQty(item.key, -1)),
+                  _StepButton(symbol: '−', bg: AppColors.clientSurfaceRaised(context), fg: AppColors.teal, onTap: () => onSetQty(item.key, -1)),
                   SizedBox(
                     width: 26,
                     child: Text('$qty', textAlign: TextAlign.center, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                   ),
-                  _StepButton(symbol: '+', bg: AppColors.teal, fg: Colors.white, onTap: () => notifier.setQty(item.key, 1)),
+                  _StepButton(symbol: '+', bg: AppColors.teal, fg: Colors.white, onTap: () => onSetQty(item.key, 1)),
                 ],
               ),
             ],
@@ -473,7 +535,7 @@ class _CartRow extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () => notifier.setQty(item.key, -qty),
+                onTap: () => onSetQty(item.key, -qty),
                 child: Padding(
                   padding: const EdgeInsets.all(6),
                   child: Icon(Icons.remove_circle_outline_rounded, size: 18, color: AppColors.clientSecondaryText(context)),
@@ -544,13 +606,14 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
     // never an auto-apply, and only when they haven't already typed/applied
     // something themselves.
     Future.microtask(() async {
-      if (!mounted || _controller.text.isNotEmpty || ref.read(cartPromoProvider).hasPromo) return;
+      bool hasPromo() => ref.read(basketsProvider)[widget.shopId]?.promo.hasPromo ?? false;
+      if (!mounted || _controller.text.isNotEmpty || hasPromo()) return;
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim().toUpperCase() ?? '';
       if (!mounted || text.isEmpty || !_looksLikeCode.hasMatch(text)) return;
-      if (_controller.text.isNotEmpty || ref.read(cartPromoProvider).hasPromo) return;
+      if (_controller.text.isNotEmpty || hasPromo()) return;
       _controller.text = text;
-      ref.read(cartPromoProvider.notifier).setPromo(text);
+      ref.read(basketsProvider.notifier).setPromo(widget.shopId, text);
     });
   }
 
@@ -563,8 +626,8 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
 
   @override
   Widget build(BuildContext context) {
-    final promoState = ref.watch(cartPromoProvider);
-    final notifier = ref.read(cartPromoProvider.notifier);
+    final promoState = ref.watch(basketsProvider.select((m) => m[widget.shopId]?.promo)) ?? const CartPromoState();
+    final notifier = ref.read(basketsProvider.notifier);
     final hasPromo = promoState.hasPromo;
 
     return Container(
@@ -597,7 +660,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                 const Spacer(),
                 GestureDetector(
                   onTap: () {
-                    notifier.removePromo();
+                    notifier.removePromo(widget.shopId);
                     _controller.clear();
                   },
                   child: Text(
@@ -701,8 +764,8 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                       ),
-                      onChanged: (v) => notifier.setPromo(v),
-                      onSubmitted: (_) => notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems, packageId: widget.packageId, isDelivery: widget.isDelivery, deliveryFeeTzs: widget.deliveryFeeTzs),
+                      onChanged: (v) => notifier.setPromo(widget.shopId, v),
+                      onSubmitted: (_) => notifier.applyPromo(widget.shopId, widget.subtotal, cartItems: widget.cartItems, packageId: widget.packageId, isDelivery: widget.isDelivery, deliveryFeeTzs: widget.deliveryFeeTzs),
                     ),
                   ),
                   Container(
@@ -714,7 +777,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                       child: InkWell(
                         onTap: () {
                           _focusNode.unfocus();
-                          notifier.applyPromo(widget.subtotal, widget.shopId, cartItems: widget.cartItems, packageId: widget.packageId, isDelivery: widget.isDelivery, deliveryFeeTzs: widget.deliveryFeeTzs);
+                          notifier.applyPromo(widget.shopId, widget.subtotal, cartItems: widget.cartItems, packageId: widget.packageId, isDelivery: widget.isDelivery, deliveryFeeTzs: widget.deliveryFeeTzs);
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

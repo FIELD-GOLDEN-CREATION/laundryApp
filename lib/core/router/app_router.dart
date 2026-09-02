@@ -6,7 +6,6 @@ import '../../screens/customer/cart/cart_screen.dart';
 import '../../models/shop.dart';
 import '../../models/laundry_category.dart';
 import '../../state/catalog_state.dart';
-import '../../screens/customer/checkout/checkout_screen.dart';
 import '../../screens/customer/checkout/order_confirmation_screen.dart';
 import '../../screens/customer/home/home_screen.dart';
 import '../../screens/login/login_screen.dart';
@@ -35,7 +34,6 @@ import '../../screens/vendor/vendor_orders_screen.dart';
 import '../../screens/vendor/vendor_settings_screen.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/bottom_tab_bar.dart';
-import '../../widgets/announcement_banner.dart';
 
 /// Root navigation graph.
 ///
@@ -84,12 +82,13 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/detail',
       builder: (_, state) => Consumer(builder: (_, ref, _) {
+        final initialTab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
         final extra = state.extra as Shop?;
-        if (extra != null) return ShopDetailScreen(shop: extra);
+        if (extra != null) return ShopDetailScreen(shop: extra, initialTab: initialTab);
         // No explicit shop (e.g. an offer claim) — open the top-ranked one.
         final shops = ref.watch(shopsProvider).items;
         return shops.isNotEmpty
-            ? ShopDetailScreen(shop: shops.first)
+            ? ShopDetailScreen(shop: shops.first, initialTab: initialTab)
             : const Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2)));
       }),
     ),
@@ -108,9 +107,8 @@ final appRouter = GoRouter(
         return ServiceVendorsScreen(categoryId: category?.id ?? '', categoryName: category?.name ?? '');
       },
     ),
-    GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
-    GoRoute(path: '/schedule', builder: (_, _) => const ScheduleScreen()),
-    GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
+    GoRoute(path: '/cart', builder: (_, state) => CartScreen(shopId: state.extra as String? ?? '')),
+    GoRoute(path: '/schedule', builder: (_, state) => ScheduleScreen(shopId: state.extra as String? ?? '')),
     GoRoute(
       path: '/order-confirmation',
       builder: (_, state) => OrderConfirmationScreen(orderId: state.extra as String?),
@@ -141,12 +139,7 @@ class _CustomerTabShell extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            const AnnouncementBanner(),
-            Expanded(child: shell),
-          ],
-        ),
+        child: shell,
       ),
       bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: shell.currentIndex,
@@ -174,12 +167,7 @@ class _RoleTabShell extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            const AnnouncementBanner(),
-            Expanded(child: shell),
-          ],
-        ),
+        child: shell,
       ),
       bottomNavigationBar: AppBottomTabBar(
         items: items,

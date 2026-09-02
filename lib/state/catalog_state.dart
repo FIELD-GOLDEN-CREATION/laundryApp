@@ -159,12 +159,14 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
     packageItems: (j['items'] as List?)
             ?.map((e) {
               if (e is! Map<String, dynamic>) return null;
-              final item = e['item'] as Map<String, dynamic>?;
+              // Mirrors the `package_items` table columns directly — the
+              // backend never eager-loads a nested `item` relation, it
+              // always returns these flat (see `PackageItem::$fillable`).
               return PackageItem(
-                itemId: '${e['item_id'] ?? item?['id'] ?? ''}',
-                itemName: item?['name'] as String? ?? e['name'] as String? ?? '',
+                itemId: '${e['item_id'] ?? ''}',
+                itemName: e['item_name'] as String? ?? '',
                 qty: parseNum(e['qty'])?.toInt() ?? 0,
-                unitPrice: parseDouble(item?['default_price_tzs']) ?? 0,
+                unitPrice: parseDouble(e['unit_price_tzs']) ?? 0,
               );
             })
             .whereType<PackageItem>()
@@ -409,7 +411,7 @@ final shopDetailProvider = FutureProvider.family<List<MenuItem>, String>((ref, s
     for (final vi in vendorItems)
       if ((vi['is_available'] as bool? ?? true))
         MenuItem(
-          key: '${vi['item_id'] ?? vi['item']?['id'] ?? ''}',
+          key: MenuItem.cartKey(slug, '${vi['item_id'] ?? vi['item']?['id'] ?? ''}'),
           name: vi['item']?['name'] as String? ?? '',
           unit: '${vi['item']?['unit'] ?? 'per piece'}',
           initial: (vi['item']?['name'] as String?)?.isNotEmpty == true

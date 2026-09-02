@@ -4,14 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../models/menu_item.dart';
 import '../../../models/shop.dart';
-import '../../../state/cart_state.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
-import '../../../state/fulfillment_state.dart';
+import '../../../state/vendor_basket.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
-import '../../../widgets/basket_shop_guard.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
 
@@ -104,23 +102,20 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
                         borderRadius: BorderRadius.circular(20),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
-                          onTap: () async {
-                            final key = offer.itemId;
-                            if ((ref.read(cartProvider)[key] ?? 0) == 0) {
-                              // One order goes to one vendor — confirm before
-                              // a second shop's item lands in someone else's
-                              // basket.
-                              if (!await ensureBasketShop(context, ref, vendor.name, shopId: vendor.slotId, shopSlug: vendor.listSlotId)) return;
-                              ref.read(fulfillmentProvider.notifier).addServiceItem(MenuItem(
+                          onTap: () {
+                            final key = MenuItem.cartKey(vendor.listSlotId, offer.itemId);
+                            final notifier = ref.read(basketsProvider.notifier);
+                            if ((ref.read(basketsProvider)[vendor.slotId]?.qty[key] ?? 0) == 0) {
+                              notifier.addServiceItem(vendor.slotId, MenuItem(
                                     key: key,
                                     name: offer.itemName.isNotEmpty ? offer.itemName : widget.categoryName,
                                     unit: '${vendor.name} · from',
                                     initial: offer.itemName.isNotEmpty ? offer.itemName[0].toUpperCase() : 'S',
                                     price: offer.startingPriceTzs,
                                   ));
-                              ref.read(cartProvider.notifier).setQty(key, 1);
+                              notifier.setQty(vendor.slotId, key, 1);
                             }
-                            if (context.mounted) context.push('/cart');
+                            context.push('/cart', extra: vendor.slotId);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(13),

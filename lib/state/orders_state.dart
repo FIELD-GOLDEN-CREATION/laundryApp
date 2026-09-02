@@ -168,26 +168,25 @@ Order orderFromJson(Map<String, dynamic> j) {
   );
 }
 
+/// Backend `orders.status` pipeline, in order — index i is what
+/// `orderStatusForStep`/`selfOrderStatusForStep`'s case i describes. Mirrors
+/// `VendorOrderController`'s status column (`pending` is pre-acceptance and
+/// has no step; `cancelled` is a terminal branch, not a step).
+const kOrderStatusSteps = ['accepted', 'in_wash', 'ready', 'out_for_delivery', 'delivered'];
+
 int stepFromStatus(String status, String fulfillment) {
-  return switch (status) {
-    'placed' || 'pending' => kOrderPlacedStep,
-    'picked_up' || 'at_shop' => 0,
-    'sorted' || 'in_progress' => 1,
-    'washing' || 'processing' => 2,
-    'out_for_delivery' || 'ready' || 'ready_for_pickup' => 3,
-    'delivered' || 'completed' => 3,
-    _ => kOrderPlacedStep,
-  };
+  final i = kOrderStatusSteps.indexOf(status);
+  return i < 0 ? kOrderPlacedStep : i;
 }
 
 String labelFromStatus(String status) {
   return switch (status) {
-    'placed' || 'pending' => 'Order placed',
-    'picked_up' || 'at_shop' => 'Picked up',
-    'sorted' || 'in_progress' => 'Sorted',
-    'washing' || 'processing' => 'Washing',
-    'out_for_delivery' || 'ready' || 'ready_for_pickup' => 'Ready',
-    'delivered' || 'completed' => 'Delivered',
+    'pending' => 'Order placed',
+    'accepted' => 'Accepted',
+    'in_wash' => 'Washing',
+    'ready' => 'Ready',
+    'out_for_delivery' => 'Out for delivery',
+    'delivered' => 'Delivered',
     'cancelled' => 'Cancelled',
     _ => status,
   };
