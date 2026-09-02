@@ -30,16 +30,15 @@ class CartScreen extends ConsumerWidget {
     final basketsNotifier = ref.read(basketsProvider.notifier);
     final language = ref.watch(clientPreferencesProvider).language;
     final priced = basket.pricedItems;
-    final pkg = basket.activePackage;
-    // The package is billed as one priced line (its own vendor-set price,
-    // not the sum of what's inside it) — its "rate" is just that line's
-    // quantity. Hidden from "Additional items" below since
-    // `_PackageBundleCard` is its only on-screen row; showing it again there
-    // too is what previously let edits desync from the card's own total.
-    final pkgKey = pkg?.cartKey(shopId);
-    final pkgRate = pkgKey != null ? (qty[pkgKey] ?? 0) : 0;
-    final lines = priced.where((i) => (qty[i.key] ?? 0) > 0 && i.key != pkgKey).toList();
-    final basketHasContent = lines.isNotEmpty || pkg != null;
+    final activePackages = basket.activePackages.values.toList();
+    // Each package is billed as its own priced line (its vendor-set price,
+    // not the sum of what's inside it). Hidden from "Additional items" below
+    // since `_PackageBundleCard` is their only on-screen row; showing them
+    // again there too is what previously let edits desync from the card's
+    // own total.
+    final pkgKeys = {for (final p in activePackages) p.cartKey(shopId)};
+    final lines = priced.where((i) => (qty[i.key] ?? 0) > 0 && !pkgKeys.contains(i.key)).toList();
+    final basketHasContent = lines.isNotEmpty || activePackages.isNotEmpty;
     final subtotal = cartSubtotal(qty, [], priced);
     final delivery = basket.isDelivery ? basket.deliveryFeeTzs : 0;
     final promoState = basket.promo;
@@ -122,13 +121,13 @@ class CartScreen extends ConsumerWidget {
                       children: [
                         _ShopBanner(shop: shopName, isDelivery: basket.isDelivery, language: language),
                         const SizedBox(height: 18),
-                        if (pkg != null) ...[
+                        for (final p in activePackages) ...[
                           _PackageBundleCard(
-                            pkg: pkg,
-                            rate: pkgRate,
-                            onRemove: () => basketsNotifier.removePackage(shopId),
-                            onIncrement: () => basketsNotifier.incrementRate(shopId),
-                            onDecrement: () => basketsNotifier.decrementRate(shopId),
+                            pkg: p,
+                            rate: qty[p.cartKey(shopId)] ?? 0,
+                            onRemove: () => basketsNotifier.removePackage(shopId, p.id),
+                            onIncrement: () => basketsNotifier.incrementRate(shopId, p.id),
+                            onDecrement: () => basketsNotifier.decrementRate(shopId, p.id),
                             language: language,
                           ),
                           const SizedBox(height: 18),
@@ -156,7 +155,7 @@ class CartScreen extends ConsumerWidget {
                         ]),
                         const SizedBox(height: 20),
                         Row(children: [
-                          Text(pkg != null ? clientLabel('Additional items', 'Vitu nyongeza', language) : clientLabel('Your items', 'Vitu vyako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+                          Text(activePackages.isNotEmpty ? clientLabel('Additional items', 'Vitu nyongeza', language) : clientLabel('Your items', 'Vitu vyako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                           const Spacer(),
                           Text('${cartItemCount(qty, [], lines)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
                         ]),

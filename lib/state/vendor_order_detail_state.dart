@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/track_step_def.dart';
 import '../services/api_service.dart';
 import '../utils/num_helper.dart';
+import '../utils/time_format.dart';
 import 'vendor_orders_state.dart';
 
 const kGarmentLabels = ['Shirts ×4', 'Trousers ×2', 'Dress ×1', 'Linen ×1'];
@@ -220,10 +221,20 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
     return [
       for (final j in rows.reversed)
         TrackStepDef(
-          title: _statusLabel(j['status'] as String? ?? ''),
-          time: _timeLabel(j['created_at'] as String? ?? j['at'] as String? ?? ''),
+          title: _stepTitle(j),
+          // `completed_at` is when the stage was actually reached;
+          // `created_at` is only a fallback for older rows that predate it.
+          time: _timeLabel((j['completed_at'] ?? j['created_at']) as String? ?? ''),
         ),
     ];
+  }
+
+  /// Prefers the row's human-readable `title` (what the backend records);
+  /// falls back to humanizing the raw `status` key if `title` is missing.
+  String _stepTitle(Map<String, dynamic> j) {
+    final title = j['title'] as String?;
+    if (title != null && title.isNotEmpty) return title;
+    return _statusLabel(j['status'] as String? ?? '');
   }
 
   String _statusLabel(String status) {
@@ -237,10 +248,7 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
   String _timeLabel(String iso) {
     final parsed = DateTime.tryParse(iso);
     if (parsed == null) return '—';
-    final h = parsed.hour % 12 == 0 ? 12 : parsed.hour % 12;
-    final m = parsed.minute.toString().padLeft(2, '0');
-    final suffix = parsed.hour < 12 ? 'AM' : 'PM';
-    return '$h:$m $suffix';
+    return formatClockTime(parsed);
   }
 
   void pickGarment(int i) => state = state.copyWith(garment: i);
