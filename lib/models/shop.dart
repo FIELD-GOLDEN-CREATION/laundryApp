@@ -25,6 +25,8 @@ class Shop {
     required this.phone,
     this.imageUrl = '',
     this.photos = const [],
+    this.latitude,
+    this.longitude,
   });
 
   final String slotId;
@@ -81,4 +83,9 @@ class Shop {
   /// an auto-advancing slideshow on the Detail screen's header. Empty means
   /// the header falls back to the single [imageUrl].
   final List<String> photos;
+
+  /// GPS coordinates, when the backend has them — lets the UI resolve a
+  /// real place name if [meta] turns out to be a stale raw coordinate pair.
+  final double? latitude;
+  final double? longitude;
 }

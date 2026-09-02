@@ -82,6 +82,7 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
                       _showAcceptDialog(context, ref, orders[i]);
                     }
                   },
+                  onReject: orders[i].stage == 'new' ? () => _showRejectDialog(context, ref, orders[i]) : null,
                   onOpen: () => openDetail(orders[i]),
                   onChat: orders[i].stage == 'wip' ? () => showVendorChatPanel(context, orders[i].customer) : null,
                 ),
@@ -106,6 +107,43 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AcceptOrderSheet(order: order, isDelivery: isDelivery),
+    );
+  }
+
+  void _showRejectDialog(BuildContext context, WidgetRef ref, VendorOrder order) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Reject order?', style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800)),
+        content: Text(
+          'This will decline ${order.id} from ${order.customer}. This cannot be undone.',
+          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final ok = await ref.read(vendorOrdersProvider.notifier).rejectOrder(normalizeVendorOrderId(order.id));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(ok ? '${order.id} declined' : 'Could not reject ${order.id}'),
+                  backgroundColor: ok ? AppColors.danger : AppColors.muted,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            },
+            child: Text('Reject', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.danger)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -206,12 +244,14 @@ class _OrderCard extends StatelessWidget {
     required this.order,
     required this.onToggle,
     required this.onOpen,
+    this.onReject,
     this.onChat,
   });
 
   final VendorOrder order;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
+  final VoidCallback? onReject;
   final VoidCallback? onChat;
 
   @override
@@ -317,38 +357,39 @@ class _OrderCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                   ],
+                  if (isNew && onReject != null) ...[
+                    Material(
+                      color: AppColors.dangerLight,
+                      borderRadius: BorderRadius.circular(999),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: onReject,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          child: Text(
+                            'Reject',
+                            style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.danger),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Material(
                     color: active ? AppColors.tealMuted : AppColors.teal,
                     borderRadius: BorderRadius.circular(999),
+                    clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(999),
                       onTap: onToggle,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isNew ? 'Accept' : 'Update status',
-                              style: AppText.sans(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: active ? AppColors.teal : AppColors.cream,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 34,
-                              height: 20,
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: active ? AppColors.teal : Colors.white.withValues(alpha: 0.35),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              alignment: active ? Alignment.centerRight : Alignment.centerLeft,
-                              child: Container(width: 16, height: 16, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-                            ),
-                          ],
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        child: Text(
+                          isNew ? 'Accept' : 'Update status',
+                          style: AppText.sans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: active ? AppColors.teal : AppColors.cream,
+                          ),
                         ),
                       ),
                     ),

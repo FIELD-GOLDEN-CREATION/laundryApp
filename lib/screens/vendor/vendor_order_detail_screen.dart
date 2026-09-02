@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/track_step_def.dart';
-import '../../state/vendor_catalog_state.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../theme/colors.dart';
@@ -40,8 +39,9 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
   Widget build(BuildContext context) {
     final state = ref.watch(vendorOrderDetailProvider);
     final notifier = ref.read(vendorOrderDetailProvider.notifier);
-    final vendorAddons = ref.watch(vendorCatalogProvider.select((s) => s.addons));
-    final lines = state.lines;
+    final packageLines = state.packageLines;
+    final itemLines = state.itemLines;
+    final addons = state.addons;
 
     return Scaffold(
       body: SafeArea(
@@ -73,7 +73,7 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                 ),
               ],
             ),
-            const _SectionLabel('Packages & services selected'),
+            const _SectionLabel('Package selected'),
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -81,38 +81,38 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                 borderRadius: BorderRadius.circular(20),
               ),
               clipBehavior: Clip.antiAlias,
-              child: lines.isEmpty
+              child: packageLines.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(16),
                       child: Center(
                         child: state.isLoading
                             ? const CircularProgressIndicator(strokeWidth: 2)
                             : Text(
-                                'No line items on this order.',
+                                'No package selected for this order.',
                                 style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
                               ),
                       ),
                     )
                   : Column(
                       children: [
-                        for (var i = 0; i < lines.length; i++)
+                        for (var i = 0; i < packageLines.length; i++)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
                               border: Border(
-                                bottom: BorderSide(color: i == lines.length - 1 ? Colors.transparent : AppColors.cream),
+                                bottom: BorderSide(color: i == packageLines.length - 1 ? Colors.transparent : AppColors.cream),
                               ),
                             ),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${lines[i].qty}× ${lines[i].name}',
+                                    '${packageLines[i].qty}× ${packageLines[i].name}',
                                     style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
                                   ),
                                 ),
                                 Text(
-                                  formatTzs(lines[i].total),
+                                  formatTzs(packageLines[i].total),
                                   style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
                                 ),
                               ],
@@ -121,55 +121,125 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                       ],
                     ),
             ),
-            if (vendorAddons.isNotEmpty) ...[
-              const _SectionLabel('Add-on services requested'),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: AppColors.creamDark),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    for (var i = 0; i < vendorAddons.length; i++)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: i == vendorAddons.length - 1 ? Colors.transparent : AppColors.cream),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: AppColors.tealMuted,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.teal),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                vendorAddons[i].title,
-                                style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                            Text(
-                              formatTzs(vendorAddons[i].priceTzs),
-                              style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.amber),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+            const _SectionLabel('Add-on services selected'),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.creamDark),
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
+              clipBehavior: Clip.antiAlias,
+              child: addons.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: state.isLoading
+                            ? const CircularProgressIndicator(strokeWidth: 2)
+                            : Text(
+                                'No add-on services selected for this order.',
+                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                              ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < addons.length; i++)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: i == addons.length - 1 ? Colors.transparent : AppColors.cream),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.tealMuted,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.teal),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    addons[i].title,
+                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                                Text(
+                                  formatTzs(addons[i].priceTzs),
+                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.amber),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+            const _SectionLabel('Categories & items'),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.creamDark),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: itemLines.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: state.isLoading
+                            ? const CircularProgressIndicator(strokeWidth: 2)
+                            : Text(
+                                'No items on this order.',
+                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                              ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < itemLines.length; i++)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: i == itemLines.length - 1 ? Colors.transparent : AppColors.cream),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (itemLines[i].categoryName.isNotEmpty) ...[
+                                        Text(
+                                          itemLines[i].categoryName.toUpperCase(),
+                                          style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.4),
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ],
+                                      Text(
+                                        '${itemLines[i].qty}× ${itemLines[i].name}',
+                                        style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  formatTzs(itemLines[i].total),
+                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
             const _SectionLabel('Digital garment tag'),
             Container(
               padding: const EdgeInsets.all(16),
