@@ -290,6 +290,19 @@ class _ItemCheckboxRowState extends State<_ItemCheckboxRow> {
                 ),
               ),
               const SizedBox(width: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: RemoteImage(
+                    url: widget.item.imageUrl,
+                    fallback: widget.item.name.isNotEmpty ? widget.item.name[0].toUpperCase() : '?',
+                    borderRadius: 8,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -112,6 +112,7 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
                                     unit: '${vendor.name} · from',
                                     initial: offer.itemName.isNotEmpty ? offer.itemName[0].toUpperCase() : 'S',
                                     price: offer.startingPriceTzs,
+                                    imageUrl: offer.imageUrl,
                                   ));
                               notifier.setQty(vendor.slotId, key, 1);
                             }

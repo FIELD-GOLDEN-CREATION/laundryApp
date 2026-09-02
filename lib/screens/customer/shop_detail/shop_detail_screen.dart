@@ -687,12 +687,17 @@ class _MenuRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(13)),
-            alignment: Alignment.center,
-            child: Text(item.initial, style: AppText.serif(fontSize: 16, color: AppColors.teal)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: RemoteImage(
+                url: item.imageUrl,
+                fallback: item.initial,
+                borderRadius: 13,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

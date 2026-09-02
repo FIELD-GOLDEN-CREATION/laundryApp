@@ -81,7 +81,7 @@ PromoOffer promoFromJson(Map<String, dynamic> j) {
     discountValue: parseNum(j['discount_value'])?.toDouble() ?? 0,
     isPercentage: j['is_percentage'] as bool? ?? false,
     expiresAt: DateTime.tryParse(j['expires_at'] as String? ?? '') ?? DateTime.now().add(const Duration(days: 30)),
-    imageUrl: '',
+    imageUrl: j['image_url'] as String? ?? '',
     vendorName: j['shop'] != null ? j['shop']['name'] as String? ?? '' : 'FreshFold',
     vendorId: j['shop_id'] != null ? '${j['shop_id']}' : null,
     minSpend: parseNum(j['min_spend_tzs'])?.toDouble() ?? 0,
@@ -364,6 +364,7 @@ class CategoryShopOffer {
     required this.itemName,
     required this.itemUnit,
     required this.startingPriceTzs,
+    this.imageUrl = '',
   });
 
   final String shopId;
@@ -374,6 +375,7 @@ class CategoryShopOffer {
   final String itemName;
   final String itemUnit;
   final double startingPriceTzs;
+  final String imageUrl;
 }
 
 /// Active shops carrying [categoryId], each with their cheapest item.
@@ -388,6 +390,7 @@ final categoryShopsProvider = FutureProvider.family<List<CategoryShopOffer>, Str
             itemName: j['item_name'] as String? ?? '',
             itemUnit: j['item_unit'] as String? ?? 'per piece',
             startingPriceTzs: parseDouble(j['starting_price_tzs']) ?? 0,
+            imageUrl: j['item_image_url'] as String? ?? '',
           ))
       .toList();
 });
@@ -418,6 +421,7 @@ final shopDetailProvider = FutureProvider.family<List<MenuItem>, String>((ref, s
               ? (vi['item']['name'] as String)[0].toUpperCase()
               : '?',
           price: parseDouble(vi['price_tzs']) ?? 0,
+          imageUrl: vi['item']?['image_url'] as String? ?? '',
         ),
   ];
 });
