@@ -25,7 +25,7 @@ class VendorBasket {
     this.qty = const {},
     this.catalog = const {},
     this.extraItems = const {},
-    this.activePackage,
+    this.activePackages = const {},
     this.selectedAddonIndices = const {},
     this.mode = 'delivery',
     this.deliveryFeeTzs = 0,
@@ -50,7 +50,11 @@ class VendorBasket {
   final Map<String, MenuItem> catalog;
   final Map<String, MenuItem> extraItems;
 
-  final ServicePackage? activePackage;
+  /// Every package currently in this basket, keyed by [ServicePackage.id]
+  /// (unique within a vendor's package list) — a customer can hold several
+  /// different packages from the same shop at once, each billed as its own
+  /// priced line via [ServicePackage.cartKey].
+  final Map<String, ServicePackage> activePackages;
   final Set<int> selectedAddonIndices;
 
   final String mode;
@@ -69,8 +73,7 @@ class VendorBasket {
     Map<String, int>? qty,
     Map<String, MenuItem>? catalog,
     Map<String, MenuItem>? extraItems,
-    ServicePackage? activePackage,
-    bool clearActivePackage = false,
+    Map<String, ServicePackage>? activePackages,
     Set<int>? selectedAddonIndices,
     String? mode,
     int? deliveryFeeTzs,
@@ -84,7 +87,7 @@ class VendorBasket {
         qty: qty ?? this.qty,
         catalog: catalog ?? this.catalog,
         extraItems: extraItems ?? this.extraItems,
-        activePackage: clearActivePackage ? null : (activePackage ?? this.activePackage),
+        activePackages: activePackages ?? this.activePackages,
         selectedAddonIndices: selectedAddonIndices ?? this.selectedAddonIndices,
         mode: mode ?? this.mode,
         deliveryFeeTzs: deliveryFeeTzs ?? this.deliveryFeeTzs,
@@ -135,48 +138,51 @@ class BasketsNotifier extends Notifier<Map<String, VendorBasket>> {
     });
   }
 
-  /// Adds a package to [shopId]'s basket at qty 1, replacing whatever
-  /// package was active there before.
+  /// Adds a package to [shopId]'s basket at qty 1, alongside any other
+  /// packages already active there — a customer can stack several different
+  /// packages from the same shop in one order.
   void addPackage(String shopId, ServicePackage pkg) {
-    final prev = basketFor(shopId).activePackage;
-    if (prev != null) {
-      final prevKey = prev.cartKey(shopId);
-      final prevQty = basketFor(shopId).qty[prevKey] ?? 0;
-      if (prevQty > 0) setQty(shopId, prevKey, -prevQty);
-    }
     final key = pkg.cartKey(shopId);
     addServiceItem(shopId, MenuItem(key: key, name: pkg.name, unit: pkg.cartSubtitle, initial: pkg.initial, price: pkg.priceTzs));
     setQty(shopId, key, 1);
-    _update(shopId, (b) => b.copyWith(activePackage: pkg));
+    _update(shopId, (b) => b.copyWith(activePackages: {...b.activePackages, pkg.id: pkg}));
   }
 
-  void incrementRate(String shopId) {
-    final pkg = basketFor(shopId).activePackage;
+  void incrementRate(String shopId, String packageId) {
+    final pkg = basketFor(shopId).activePackages[packageId];
     if (pkg == null) return;
     setQty(shopId, pkg.cartKey(shopId), 1);
   }
 
-  /// Removes one of the active package. Reaching 0 removes it entirely,
+  /// Removes one of [packageId]'s rate. Reaching 0 removes it entirely,
   /// same as [removePackage].
-  void decrementRate(String shopId) {
+  void decrementRate(String shopId, String packageId) {
     final basket = basketFor(shopId);
-    final pkg = basket.activePackage;
+    final pkg = basket.activePackages[packageId];
     if (pkg == null) return;
     final key = pkg.cartKey(shopId);
     final qty = basket.qty[key] ?? 0;
     setQty(shopId, key, -1);
-    if (qty <= 1) _update(shopId, (b) => b.copyWith(clearActivePackage: true));
+    if (qty <= 1) {
+      _update(shopId, (b) {
+        final next = Map.of(b.activePackages)..remove(packageId);
+        return b.copyWith(activePackages: next);
+      });
+    }
   }
 
-  void removePackage(String shopId) {
+  void removePackage(String shopId, String packageId) {
     final basket = basketFor(shopId);
-    final pkg = basket.activePackage;
+    final pkg = basket.activePackages[packageId];
     if (pkg != null) {
       final key = pkg.cartKey(shopId);
       final qty = basket.qty[key] ?? 0;
       if (qty > 0) setQty(shopId, key, -qty);
     }
-    _update(shopId, (b) => b.copyWith(clearActivePackage: true));
+    _update(shopId, (b) {
+      final next = Map.of(b.activePackages)..remove(packageId);
+      return b.copyWith(activePackages: next);
+    });
   }
 
   void toggleAddon(String shopId, int index) {

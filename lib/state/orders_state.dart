@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order.dart';
 import '../models/order_line.dart';
+import '../models/order_tracking_event.dart';
 import '../services/api_service.dart';
 import '../utils/num_helper.dart';
 
@@ -146,6 +147,15 @@ Order orderFromJson(Map<String, dynamic> j) {
   final itemsSummary = j['items_summary'] as String? ??
       (lines.isEmpty ? '0 items' : '${lines.length} item${lines.length == 1 ? '' : 's'}');
 
+  final tracking = (j['tracking'] as List? ?? [])
+      .whereType<Map<String, dynamic>>()
+      .map((t) => OrderTrackingEvent(
+            status: t['status'] as String? ?? '',
+            title: t['title'] as String? ?? '',
+            completedAt: DateTime.tryParse((t['completed_at'] ?? t['created_at'] ?? '') as String? ?? ''),
+          ))
+      .toList();
+
   return Order(
     shop: shopName,
     id: j['id'] != null ? '#LD-${j['id']}' : (j['order_number'] as String? ?? ''),
@@ -165,6 +175,7 @@ Order orderFromJson(Map<String, dynamic> j) {
     deliveryFeeTzs: parseInt(j['delivery_fee'] ?? j['delivery_fee_tzs']) ?? 0,
     customerName: j['customer_name'] as String? ?? '',
     customerPhone: j['customer_phone'] as String? ?? '',
+    tracking: tracking,
   );
 }
 

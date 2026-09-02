@@ -13,27 +13,43 @@ import '../../../state/orders_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/time_format.dart';
 import '../../../widgets/placeholder_image.dart';
 import '../../../widgets/round_back_button.dart';
 
-/// Timeline labels — display configuration. Times are estimates; live
-/// timestamps come from the order's tracking rows once the backend exposes
-/// them per step.
-const _kTrackSteps = [
-  TrackStepDef(title: 'Accepted', time: ''),
-  TrackStepDef(title: 'Washing in progress', time: ''),
-  TrackStepDef(title: 'Ready for delivery', time: ''),
-  TrackStepDef(title: 'Out for delivery', time: ''),
-  TrackStepDef(title: 'Delivered', time: ''),
+/// Timeline step titles, index-aligned with `kOrderStatusSteps` — the actual
+/// timestamp for each step comes from the order's `tracking` rows (see
+/// [_stepTime]).
+const _kTrackTitles = [
+  'Accepted',
+  'Washing in progress',
+  'Ready for delivery',
+  'Out for delivery',
+  'Delivered',
 ];
 
-const _kSelfTrackSteps = [
-  TrackStepDef(title: 'Dropped at shop', time: 'Promise arrival window'),
-  TrackStepDef(title: 'Washing in progress', time: 'After drop-off'),
-  TrackStepDef(title: 'Ready for collection', time: ''),
-  TrackStepDef(title: 'Ready for collection', time: ''),
-  TrackStepDef(title: 'Collected', time: ''),
+const _kSelfTrackTitles = [
+  'Dropped at shop',
+  'Washing in progress',
+  'Ready for collection',
+  'Ready for collection',
+  'Collected',
 ];
+
+/// The real timestamp the order reached `kOrderStatusSteps[i]`, formatted
+/// for display — empty for a completed step with no matching tracking row
+/// (orders that transitioned before tracking was added), or "Pending" for a
+/// step not yet reached.
+String _stepTime(Order order, int i, {required bool done}) {
+  if (i < 0 || i >= kOrderStatusSteps.length) return '';
+  final status = kOrderStatusSteps[i];
+  for (final t in order.tracking) {
+    if (t.status == status && t.completedAt != null) {
+      return formatClockTime(t.completedAt!);
+    }
+  }
+  return done ? '' : 'Pending';
+}
 
 class TrackOrderScreen extends ConsumerStatefulWidget {
   const TrackOrderScreen({super.key, this.orderId});
@@ -93,7 +109,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     final step = order.trackStep;
     final awaitingPickup = step == kOrderPlacedStep;
     final isSelf = order.fulfillment == 'self';
-    final steps = isSelf ? _kSelfTrackSteps : _kTrackSteps;
+    final titles = isSelf ? _kSelfTrackTitles : _kTrackTitles;
     final driverName = order.driver.isNotEmpty ? order.driver : '';
 
     return Scaffold(
@@ -162,11 +178,11 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                     const SizedBox(height: 20),
                     Column(
                       children: [
-                        for (var i = 0; i < steps.length; i++)
+                        for (var i = 0; i < titles.length; i++)
                           _StepTile(
-                            step: steps[i],
+                            step: TrackStepDef(title: titles[i], time: _stepTime(order, i, done: i <= step)),
                             done: i <= step,
-                            isLast: i == steps.length - 1,
+                            isLast: i == titles.length - 1,
                             lineActive: i < step,
                           ),
                       ],

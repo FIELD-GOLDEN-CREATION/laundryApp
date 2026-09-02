@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/colors.dart';
 import 'order_line.dart';
+import 'order_tracking_event.dart';
 
 /// trackStep value meaning the order has been submitted but not yet picked
 /// up by a driver — earlier than index 0 of kTrackSteps.
@@ -27,6 +28,7 @@ class Order {
     this.deliveryFeeTzs = 0,
     this.customerName = '',
     this.customerPhone = '',
+    this.tracking = const [],
   });
 
   final String shop;
@@ -47,6 +49,7 @@ class Order {
   final int deliveryFeeTzs;
   final String customerName;
   final String customerPhone;
+  final List<OrderTrackingEvent> tracking;
 
   Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep, int? deliveryFeeTzs}) => Order(
     shop: shop,
@@ -67,6 +70,7 @@ class Order {
     deliveryFeeTzs: deliveryFeeTzs ?? this.deliveryFeeTzs,
     customerName: customerName,
     customerPhone: customerPhone,
+    tracking: tracking,
   );
 }
 
