@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/address.dart';
 import '../services/api_service.dart';
@@ -14,6 +15,7 @@ class ProfileState {
     this.photoLabel = 'You',
     this.photoUrl,
     this.isLoading = false,
+    this.uploadingProfilePhoto = false,
   });
 
   final List<Address> addresses;
@@ -24,6 +26,7 @@ class ProfileState {
   final String photoLabel;
   final String? photoUrl;
   final bool isLoading;
+  final bool uploadingProfilePhoto;
 
   ProfileState copyWith({
     List<Address>? addresses,
@@ -34,6 +37,7 @@ class ProfileState {
     String? photoLabel,
     String? photoUrl,
     bool? isLoading,
+    bool? uploadingProfilePhoto,
   }) =>
       ProfileState(
         addresses: addresses ?? this.addresses,
@@ -44,6 +48,7 @@ class ProfileState {
         photoLabel: photoLabel ?? this.photoLabel,
         photoUrl: photoUrl ?? this.photoUrl,
         isLoading: isLoading ?? this.isLoading,
+        uploadingProfilePhoto: uploadingProfilePhoto ?? this.uploadingProfilePhoto,
       );
 }
 
@@ -109,6 +114,26 @@ class ProfileNotifier extends Notifier<ProfileState> {
       await loadAddresses();
       return true;
     } on ApiException {
+      return false;
+    }
+  }
+
+  /// Uploads a picked profile photo to ImgBB, then saves the resulting URL
+  /// as the customer's `photo_url` — mirrors the vendor app's
+  /// `uploadProfilePhoto` in `vendor_profile_state.dart`.
+  Future<bool> uploadProfilePhoto(XFile file) async {
+    state = state.copyWith(uploadingProfilePhoto: true);
+    try {
+      final url = await api.uploadImage(file);
+      if (url.isEmpty) {
+        state = state.copyWith(uploadingProfilePhoto: false);
+        return false;
+      }
+      await api.updateProfile({'photo_url': url});
+      state = state.copyWith(photoUrl: url, uploadingProfilePhoto: false);
+      return true;
+    } on ApiException {
+      state = state.copyWith(uploadingProfilePhoto: false);
       return false;
     }
   }

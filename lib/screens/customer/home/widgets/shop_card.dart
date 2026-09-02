@@ -5,6 +5,7 @@ import '../../../../models/shop.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
 import '../../../../widgets/remote_image.dart';
+import '../../../../widgets/shop_location_label.dart';
 
 /// The horizontal-scroll shop card used in Home's "Nearby shops" section.
 class ShopCard extends StatelessWidget {
@@ -68,8 +69,8 @@ class ShopCard extends StatelessWidget {
                        style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      shop.meta,
+                    ShopLocationLabel(
+                      shop: shop,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                        style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
@@ -164,8 +165,8 @@ class ShopListTile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      shop.meta,
+                    ShopLocationLabel(
+                      shop: shop,
                        style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                     const SizedBox(height: 9),

@@ -29,6 +29,7 @@ class DetailLine {
     required this.qty,
     required this.unitPriceTzs,
     this.lineType = '',
+    this.categoryName = '',
   });
 
   final String name;
@@ -36,7 +37,20 @@ class DetailLine {
   final double unitPriceTzs;
   final String lineType;
 
+  /// The catalog category this item belongs to (e.g. "Shirts"), when the
+  /// line is a per-item pick (`lineType == 'item'`). Empty for package rows.
+  final String categoryName;
+
   double get total => qty * unitPriceTzs;
+}
+
+/// An add-on service the customer selected for this order (GET
+/// /vendor/orders/{id} → `addons[]`), e.g. "Stain removal".
+class DetailAddon {
+  const DetailAddon({required this.title, required this.priceTzs});
+
+  final String title;
+  final double priceTzs;
 }
 
 /// Raw API id (no "#LD-" prefix) of the order currently open in the detail
@@ -55,6 +69,7 @@ class VendorOrderDetailState {
     this.customerName = '',
     this.itemsSummary = '',
     this.lines = const [],
+    this.addons = const [],
     this.timeline = const [],
     this.isLoading = false,
   });
@@ -69,10 +84,14 @@ class VendorOrderDetailState {
   final String customerName;
   final String itemsSummary;
   final List<DetailLine> lines;
+  final List<DetailAddon> addons;
   final List<TrackStepDef> timeline;
   final bool isLoading;
 
   bool get hasOrder => orderId.isNotEmpty;
+
+  List<DetailLine> get packageLines => lines.where((l) => l.lineType == 'package').toList();
+  List<DetailLine> get itemLines => lines.where((l) => l.lineType == 'item').toList();
 
   VendorOrderDetailState copyWith({
     int? garment,
@@ -84,6 +103,7 @@ class VendorOrderDetailState {
     String? customerName,
     String? itemsSummary,
     List<DetailLine>? lines,
+    List<DetailAddon>? addons,
     List<TrackStepDef>? timeline,
     bool? isLoading,
   }) =>
@@ -97,6 +117,7 @@ class VendorOrderDetailState {
         customerName: customerName ?? this.customerName,
         itemsSummary: itemsSummary ?? this.itemsSummary,
         lines: lines ?? this.lines,
+        addons: addons ?? this.addons,
         timeline: timeline ?? this.timeline,
         isLoading: isLoading ?? this.isLoading,
       );
@@ -110,20 +131,34 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
     if (rawOrderId.isEmpty) return;
     state = state.copyWith(isLoading: true);
     try {
-      final data = await api.getVendorOrderDetail(rawOrderId);
+      final envelope = await api.getVendorOrderDetail(rawOrderId);
+      final data = envelope['data'] as Map<String, dynamic>? ?? envelope;
       final customer = data['customer'] as Map<String, dynamic>? ?? {};
+
+      final lines = [
+        for (final j in (data['lines'] as List?)?.whereType<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[])
+          DetailLine(
+            name: j['name'] as String? ?? '',
+            qty: parseInt(j['qty']) ?? 0,
+            unitPriceTzs: parseDouble(j['unit_price_tzs']) ?? 0,
+            lineType: j['line_type'] as String? ?? '',
+            categoryName: _categoryName(j),
+          ),
+      ];
 
       state = state.copyWith(
         orderId: rawOrderId,
         customerName: customer['name'] as String? ?? '',
-        itemsSummary: data['items_summary'] as String? ?? '',
-        lines: [
-          for (final j in (data['lines'] as List?)?.whereType<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[])
-            DetailLine(
-              name: j['item_name'] as String? ?? '',
-              qty: parseInt(j['qty']) ?? 0,
-              unitPriceTzs: parseDouble(j['unit_price_tzs']) ?? 0,
-              lineType: j['line_type'] as String? ?? '',
+        itemsSummary: lines
+            .where((l) => l.lineType == 'item')
+            .map((l) => '${l.qty}× ${l.name}')
+            .join(', '),
+        lines: lines,
+        addons: [
+          for (final j in (data['addons'] as List?)?.whereType<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[])
+            DetailAddon(
+              title: j['title'] as String? ?? '',
+              priceTzs: parseDouble(j['price_tzs']) ?? 0,
             ),
         ],
         timeline: _timeline(data['tracking'] as List?),
@@ -133,6 +168,14 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
       // Keep prior state — the inspection UI still works offline.
       state = state.copyWith(isLoading: false);
     }
+  }
+
+  /// A line's catalog category name, when the backend joined `item.category`
+  /// (only present for `line_type == 'item'` rows — package rows have no item).
+  String _categoryName(Map<String, dynamic> line) {
+    final item = line['item'] as Map<String, dynamic>?;
+    final category = item?['category'] as Map<String, dynamic>?;
+    return category?['name'] as String? ?? '';
   }
 
   /// `tracking[]` rows arrive newest-first or oldest-first depending on the

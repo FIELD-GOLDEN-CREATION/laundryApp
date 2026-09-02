@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/icons/app_icons.dart';
 import '../../../models/saved_card.dart';
@@ -19,6 +20,8 @@ import '../../../widgets/toggle_switch.dart';
 /// Notification preference rows — display configuration.
 const _kPreferenceLabels = ['Push notifications', 'Eco detergent by default', 'Contactless pickup'];
 
+enum _ImagePickSource { camera, gallery }
+
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -27,10 +30,79 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _imagePicker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(profileProvider.notifier).loadProfile());
+  }
+
+  /// Bottom sheet offering Camera / Gallery.
+  Future<_ImagePickSource?> _chooseImageSource() {
+    final language = ref.read(clientPreferencesProvider).language;
+    return showModalBottomSheet<_ImagePickSource>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.teal),
+              title: Text(clientLabel('Take photo', 'Piga picha', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+              onTap: () => Navigator.pop(sheetContext, _ImagePickSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: AppColors.teal),
+              title: Text(clientLabel('Choose from gallery', 'Chagua kwenye picha zako', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+              onTap: () => Navigator.pop(sheetContext, _ImagePickSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Runs the OS image picker for [source], surfacing a permission/access
+  /// failure (denied camera/gallery access, no camera present, etc.) as a
+  /// snackbar instead of letting it vanish as an uncaught exception.
+  Future<XFile?> _pickFile(_ImagePickSource source) async {
+    final language = ref.read(clientPreferencesProvider).language;
+    try {
+      final xfile = await _imagePicker.pickImage(
+        source: source == _ImagePickSource.camera ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      return xfile;
+    } catch (_) {
+      if (!mounted) return null;
+      final isCamera = source == _ImagePickSource.camera;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(clientLabel(
+            'Could not access the ${isCamera ? 'camera' : 'gallery'}. Check app permissions in your phone settings.',
+            'Imeshindwa kufikia ${isCamera ? 'kamera' : 'picha zako'}. Angalia ruhusa za programu kwenye mipangilio ya simu.',
+            language,
+          )),
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<void> _editProfilePhoto() async {
+    final source = await _chooseImageSource();
+    if (source == null || !mounted) return;
+    final file = await _pickFile(source);
+    if (file == null || !mounted) return;
+    final language = ref.read(clientPreferencesProvider).language;
+    final ok = await ref.read(profileProvider.notifier).uploadProfilePhoto(file);
+    if (!mounted || ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(clientLabel('Could not upload photo. Please try again.', 'Imeshindwa kupakia picha. Jaribu tena.', language))),
+    );
   }
 
   @override
@@ -66,7 +138,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                      children: [
                    Row(children: [Expanded(child: Text(clientLabel('Profile', 'Wasifu', language), style: AppText.serif(fontSize: 24, color: AppColors.cream))), _HeroIcon(icon: AppIcons.bell, onTap: () => context.push('/notifs'))]),
                   const SizedBox(height: 18),
-                   SizedBox(width: 82, height: 82, child: RemoteImage(url: profile.photoUrl ?? '', fallback: profile.photoLabel, circle: true, borderRadius: 41)),
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      SizedBox(
+                        width: 82,
+                        height: 82,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            RemoteImage(url: profile.photoUrl ?? '', fallback: profile.photoLabel, circle: true, borderRadius: 41),
+                            if (profile.uploadingProfilePhoto)
+                              const DecoratedBox(
+                                decoration: BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cream)),
+                              ),
+                          ],
+                        ),
+                      ),
+                      FloatingActionButton.small(
+                        backgroundColor: AppColors.teal,
+                        onPressed: profile.uploadingProfilePhoto ? null : _editProfilePhoto,
+                        child: const Icon(Icons.camera_alt_outlined, color: AppColors.cream),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 11),
                    Text(profile.name, style: AppText.serif(fontSize: 23, color: AppColors.cream)),
                   const SizedBox(height: 3),
