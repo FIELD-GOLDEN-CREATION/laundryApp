@@ -284,8 +284,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
+            Align(
+              alignment: Alignment.centerLeft,
               child: Material(
                 color: Colors.transparent,
                 shape: RoundedRectangleBorder(
@@ -297,6 +297,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onTap: () => _showAddAddressSheet(context, ref),
                   child: Container(
                     height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     alignment: Alignment.center,
                     child: Text(
                       '+ ${clientLabel('Add address', 'Ongeza anwani', language)}',
@@ -333,8 +334,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
+            Align(
+              alignment: Alignment.centerLeft,
               child: Material(
                 color: Colors.transparent,
                 shape: RoundedRectangleBorder(
@@ -346,6 +347,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onTap: () => showLinkCardSheet(context, ref),
                   child: Container(
                     height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     alignment: Alignment.center,
                     child: Text(
                       '+ Link a card',

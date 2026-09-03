@@ -10,7 +10,7 @@ import '../services/api_service.dart';
 import 'login_form_state.dart';
 
 const _kSessionExpiry = Duration(days: 90);
-const _kLastActiveKey = 'last_active_timestamp';
+const kLastActiveKey = 'last_active_timestamp';
 
 class AuthState {
   const AuthState({
@@ -44,7 +44,7 @@ class AuthNotifier extends Notifier<AuthState> {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      final lastActive = prefs.getInt(_kLastActiveKey);
+      final lastActive = prefs.getInt(kLastActiveKey);
       if (lastActive != null) {
         final lastActiveDate = DateTime.fromMillisecondsSinceEpoch(lastActive);
         if (DateTime.now().difference(lastActiveDate) > _kSessionExpiry) {
@@ -69,7 +69,7 @@ class AuthNotifier extends Notifier<AuthState> {
           userName: userData['name'] as String? ?? firebaseUser.displayName ?? '',
           userPhotoUrl: userData['photo_url'] as String? ?? firebaseUser.photoURL,
         );
-        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
+        await prefs.setInt(kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
       } else {
         state = const AuthState();
       }
@@ -113,7 +113,7 @@ class AuthNotifier extends Notifier<AuthState> {
           userPhotoUrl: userData['photo_url'] as String?,
         );
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
+        await prefs.setInt(kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
         return null;
       } else {
         await FirebaseAuth.instance.signOut();
@@ -168,7 +168,7 @@ class AuthNotifier extends Notifier<AuthState> {
           userPhotoUrl: userData['photo_url'] as String?,
         );
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
+        await prefs.setInt(kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
         return null;
       } else {
         await FirebaseAuth.instance.signOut();
@@ -229,7 +229,7 @@ class AuthNotifier extends Notifier<AuthState> {
           userName: name,
         );
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
+        await prefs.setInt(kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
         return null;
       } else {
         await FirebaseAuth.instance.currentUser?.delete();
@@ -255,7 +255,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (_) {}
     await api.clearToken();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kLastActiveKey);
+    await prefs.remove(kLastActiveKey);
     state = const AuthState();
   }
 
