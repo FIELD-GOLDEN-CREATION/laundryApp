@@ -38,7 +38,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
+    apiKey: 'AIzaSyBBwhu8ZtcOu2vQMDznCBTBd-ZLr-_6-Pg',
     appId: '1:563839138064:ios:9ca47691dd8320d5038d95',
     messagingSenderId: '563839138064',
     projectId: 'freshfold-86da1',
@@ -47,7 +47,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
+    apiKey: 'AIzaSyBBwhu8ZtcOu2vQMDznCBTBd-ZLr-_6-Pg',
     appId: '1:563839138064:ios:9ca47691dd8320d5038d95',
     messagingSenderId: '563839138064',
     projectId: 'freshfold-86da1',

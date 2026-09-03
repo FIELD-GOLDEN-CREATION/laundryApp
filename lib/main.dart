@@ -12,6 +12,10 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final container = ProviderContainer();
   container.read(clientPreferencesProvider.notifier).load();
-  runApp(UncontrolledProviderScope(container: container, child: const LaundryApp()));
-  WidgetsBinding.instance.addPostFrameCallback((_) => UpdateChecker.checkForUpdate());
+  runApp(
+    UncontrolledProviderScope(container: container, child: const LaundryApp()),
+  );
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => UpdateChecker.checkForUpdate(),
+  );
 }
