@@ -55,14 +55,21 @@ class UpdateChecker {
   /// Compares dotted numeric versions ("1.10.0" > "1.9.3"), padding the
   /// shorter side with zeros so "1.2" vs "1.2.1" compares correctly.
   static bool _isNewer(String remote, String current) {
-    final r = remote.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-    final c = current.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+    final r = _versionParts(remote);
+    final c = _versionParts(current);
     for (var i = 0; i < r.length || i < c.length; i++) {
       final rv = i < r.length ? r[i] : 0;
       final cv = i < c.length ? c[i] : 0;
       if (rv != cv) return rv > cv;
     }
     return false;
+  }
+
+  /// Strips any "+build" metadata before splitting on ".", so a tag like
+  /// "1.2.3+4" still compares as [1, 2, 3] instead of zeroing out the
+  /// "3+4" segment (int.tryParse fails on it).
+  static List<int> _versionParts(String version) {
+    return version.split('+').first.split('.').map((p) => int.tryParse(p) ?? 0).toList();
   }
 
   static void _showUpdateDialog({required String version, required String notes, required String downloadUrl}) {
