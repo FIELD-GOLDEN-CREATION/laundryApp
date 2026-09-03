@@ -112,11 +112,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 22),
                     _AuthLabel('EMAIL ADDRESS'),
                     const SizedBox(height: 7),
-                    _LoginField(controller: _emailController, hint: 'Enter email address', onChanged: notifier.setEmail),
+                    _LoginField(controller: _emailController, hint: 'Enter email address', onChanged: notifier.setEmail, prefixIcon: Icons.email_outlined),
                     const SizedBox(height: 15),
-                    _AuthLabel('PASSWORD'),
+                    Row(
+                      children: [
+                        _AuthLabel('PASSWORD'),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                          child: Text('Forgot password?', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.cream.withValues(alpha: 0.72))),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 7),
-                    _LoginField(controller: _passwordController, hint: 'Enter password', obscure: true, onChanged: notifier.setPassword, onSubmitted: _submit),
+                    _LoginField(controller: _passwordController, hint: 'Enter password', obscure: true, onChanged: notifier.setPassword, onSubmitted: _submit, prefixIcon: Icons.lock_outline),
                     if (form.error.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(form.error, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.amberLight)),
@@ -241,18 +251,44 @@ class _AuthLabel extends StatelessWidget {
 }
 
 class _LoginField extends StatelessWidget {
-  const _LoginField({required this.controller, required this.hint, required this.onChanged, this.obscure = false, this.onSubmitted});
+  const _LoginField({required this.controller, required this.hint, required this.onChanged, this.obscure = false, this.onSubmitted, this.prefixIcon});
   final TextEditingController controller;
   final String hint;
   final bool obscure;
   final ValueChanged<String> onChanged;
   final VoidCallback? onSubmitted;
+  final IconData? prefixIcon;
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 50,
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), border: Border.all(color: Colors.white.withValues(alpha: 0.24)), borderRadius: BorderRadius.circular(14)),
-    child: TextField(controller: controller, obscureText: obscure, onChanged: onChanged, onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(), textAlignVertical: TextAlignVertical.center, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.cream), decoration: InputDecoration.collapsed(hintText: hint, hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.45)))),
+    height: 44,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.08),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        if (prefixIcon != null) ...[
+          Icon(prefixIcon, size: 18, color: AppColors.cream.withValues(alpha: 0.55)),
+          const SizedBox(width: 8),
+        ],
+        Expanded(
+          child: TextField(
+            controller: controller,
+            obscureText: obscure,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted == null ? null : (_) => onSubmitted!(),
+            textAlignVertical: TextAlignVertical.center,
+            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.cream),
+            decoration: InputDecoration.collapsed(
+              hintText: hint,
+              hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.45)),
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }
