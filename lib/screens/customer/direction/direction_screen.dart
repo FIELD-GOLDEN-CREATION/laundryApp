@@ -256,19 +256,9 @@ class _DirectionBottomSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Text(shop.name, style: AppText.sans(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.location_on_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  shop.address,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-                ),
-              ),
-            ],
+          Text(
+            shop.distance,
+            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
           ),
           const SizedBox(height: 16),
           Row(
