@@ -5,6 +5,7 @@ class MenuItem {
     required this.unit,
     required this.initial,
     required this.price,
+    this.imageUrl = '',
   });
 
   final String key;
@@ -12,6 +13,7 @@ class MenuItem {
   final String unit;
   final String initial;
   final double price;
+  final String imageUrl;
 
   /// Cart key for a per-piece catalog item at a given shop. Namespaced by
   /// shop (slug) so the same catalog item sold by two vendors never
