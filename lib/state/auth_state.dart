@@ -3,10 +3,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user_role.dart';
 import '../services/api_service.dart';
 import 'login_form_state.dart';
+
+const _kSessionExpiry = Duration(days: 90);
+const _kLastActiveKey = 'last_active_timestamp';
 
 class AuthState {
   const AuthState({
@@ -26,7 +30,53 @@ class AuthState {
 
 class AuthNotifier extends Notifier<AuthState> {
   @override
-  AuthState build() => const AuthState();
+  AuthState build() {
+    _restoreSession();
+    return const AuthState(isLoading: true);
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser == null) {
+        state = const AuthState();
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final lastActive = prefs.getInt(_kLastActiveKey);
+      if (lastActive != null) {
+        final lastActiveDate = DateTime.fromMillisecondsSinceEpoch(lastActive);
+        if (DateTime.now().difference(lastActiveDate) > _kSessionExpiry) {
+          await logout();
+          return;
+        }
+      }
+
+      final idToken = await firebaseUser.getIdToken(true);
+      if (idToken == null) {
+        state = const AuthState();
+        return;
+      }
+
+      final response = await api.login(idToken);
+      if (response['success'] == true) {
+        final userData = response['user'] as Map<String, dynamic>;
+        final role = _parseRole(userData['role'] as String);
+        state = AuthState(
+          role: role,
+          authEmail: firebaseUser.email ?? '',
+          userName: userData['name'] as String? ?? firebaseUser.displayName ?? '',
+          userPhotoUrl: userData['photo_url'] as String? ?? firebaseUser.photoURL,
+        );
+        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
+      } else {
+        state = const AuthState();
+      }
+    } catch (_) {
+      state = const AuthState();
+    }
+  }
 
   UserRole _parseRole(String role) {
     return switch (role) {
@@ -62,6 +112,8 @@ class AuthNotifier extends Notifier<AuthState> {
           userName: userData['name'] as String? ?? '',
           userPhotoUrl: userData['photo_url'] as String?,
         );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
         return null;
       } else {
         await FirebaseAuth.instance.signOut();
@@ -115,6 +167,8 @@ class AuthNotifier extends Notifier<AuthState> {
           userName: userData['name'] as String? ?? '',
           userPhotoUrl: userData['photo_url'] as String?,
         );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
         return null;
       } else {
         await FirebaseAuth.instance.signOut();
@@ -174,6 +228,8 @@ class AuthNotifier extends Notifier<AuthState> {
           authEmail: e,
           userName: name,
         );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
         return null;
       } else {
         await FirebaseAuth.instance.currentUser?.delete();
@@ -198,6 +254,8 @@ class AuthNotifier extends Notifier<AuthState> {
       await GoogleSignIn().signOut();
     } catch (_) {}
     await api.clearToken();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kLastActiveKey);
     state = const AuthState();
   }
 

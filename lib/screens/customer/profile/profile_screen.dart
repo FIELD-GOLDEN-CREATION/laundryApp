@@ -11,6 +11,7 @@ import '../../../state/saved_cards_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../utils/location.dart';
 import '../../../widgets/card_brand_tag.dart';
 import '../../../widgets/link_card_sheet.dart';
 import '../../../widgets/profile_action_tile.dart';
@@ -510,11 +511,20 @@ class _AddressRowState extends State<_AddressRow> {
     setState(() => _editing = false);
   }
 
-  void _useCurrentLocation() {
-    // Placeholder — wire up to Google Maps' location picker later.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Google Maps location picker coming soon')),
-    );
+  Future<void> _useCurrentLocation() async {
+    try {
+      final resolved = await locateUserWithAddress();
+      _controller.text = resolved.displayLabel;
+      setState(() {});
+    } on LocationException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not get your location.')),
+      );
+    }
   }
 
   void _confirmDelete() {
@@ -708,12 +718,37 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
   final _lineCtrl = TextEditingController();
   bool _saving = false;
   String? _error;
+  double? _latitude;
+  double? _longitude;
+  bool _locating = false;
 
   @override
   void dispose() {
     _labelCtrl.dispose();
     _lineCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    try {
+      final resolved = await locateUserWithAddress();
+      _lineCtrl.text = resolved.displayLabel;
+      _latitude = resolved.point.latitude;
+      _longitude = resolved.point.longitude;
+      setState(() {});
+    } on LocationException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not get your location.')),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
   }
 
   Future<void> _save() async {
@@ -732,7 +767,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
       _saving = true;
       _error = null;
     });
-    final ok = await widget.ref.read(profileProvider.notifier).addAddress(label, line);
+    final ok = await widget.ref.read(profileProvider.notifier).addAddress(label, line, latitude: _latitude, longitude: _longitude);
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop();
@@ -779,6 +814,24 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                 _AddAddressField(label: 'Label', hint: 'Home, Work, ...', controller: _labelCtrl),
                 const SizedBox(height: 12),
                 _AddAddressField(label: 'Address', hint: 'Street, area, city', controller: _lineCtrl),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _locating ? null : _useCurrentLocation,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_locating)
+                        const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal))
+                      else
+                        const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
+                      const SizedBox(width: 6),
+                      Text(
+                        _locating ? 'Getting location...' : 'Use current location',
+                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      ),
+                    ],
+                  ),
+                ),
                 if (_error != null) ...[
                   const SizedBox(height: 10),
                   Text(_error!, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.danger)),
