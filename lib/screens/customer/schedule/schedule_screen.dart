@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 import '../../../core/icons/app_icons.dart';
 import '../../../models/promo_offer.dart';
@@ -20,7 +22,6 @@ import '../../../state/vendor_catalog_state.dart' show VendorAddon;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/location.dart';
-import '../../../widgets/map_grid_painter.dart';
 import '../../../widgets/primary_cta_bar.dart';
 import '../../../widgets/radio_option_card.dart';
 import '../../../widgets/round_back_button.dart';
@@ -216,10 +217,14 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final isDelivery = basket.isDelivery;
     final quoting = basket.quoting;
     var shopName = basket.shopName;
+    double? shopLat;
+    double? shopLng;
     if (shopName.isEmpty) {
       for (final s in ref.watch(shopsProvider).items) {
         if (s.slotId == widget.shopId) {
           shopName = s.name;
+          shopLat = s.latitude;
+          shopLng = s.longitude;
           break;
         }
       }
@@ -271,7 +276,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               ),
               const SizedBox(height: 18),
               if (isDelivery) ...[
-                _MapPreview(label: mapLabel, locating: _locating),
+                _ScheduleMap(
+                  shopName: shopName,
+                  shopLat: shopLat,
+                  shopLng: shopLng,
+                  clientLat: schedule.currentLat,
+                  clientLng: schedule.currentLng,
+                  locating: _locating,
+                  label: mapLabel,
+                ),
                 _SectionLabel(clientLabel('Pickup address', 'Anwani ya mzigo', language)),
                 Column(
                   children: [
@@ -417,45 +430,98 @@ class _ShopDropOffCard extends StatelessWidget {
   }
 }
 
-/// A stylised map preview of the pickup area — a fixed-height, properly
-/// sized tile with a location pin and the selected address, so the location
-/// reads visually instead of as a bare list row.
-class _MapPreview extends StatelessWidget {
-  const _MapPreview({required this.label, required this.locating});
+/// A real OpenStreetMap preview showing the client's pickup location and
+/// the vendor shop — both with markers when coordinates are available.
+class _ScheduleMap extends StatelessWidget {
+  const _ScheduleMap({
+    required this.shopName,
+    required this.shopLat,
+    required this.shopLng,
+    required this.clientLat,
+    required this.clientLng,
+    required this.locating,
+    required this.label,
+  });
 
-  final String label;
+  final String shopName;
+  final double? shopLat;
+  final double? shopLng;
+  final double? clientLat;
+  final double? clientLng;
   final bool locating;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
+    final points = <ll.LatLng>[];
+    if (shopLat != null && shopLng != null) points.add(ll.LatLng(shopLat!, shopLng!));
+    if (clientLat != null && clientLng != null) points.add(ll.LatLng(clientLat!, clientLng!));
+
+    final center = points.isNotEmpty
+        ? points.reduce((a, b) => ll.LatLng(
+            (a.latitude + b.latitude) / 2,
+            (a.longitude + b.longitude) / 2,
+          ))
+        : const ll.LatLng(-6.7924, 39.2083); // Dar es Salaam fallback
+
+    final zoom = points.length == 2 ? 13.0 : 15.0;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: SizedBox(
-        height: 150,
+        height: 180,
         width: double.infinity,
         child: Stack(
-          fit: StackFit.expand,
           children: [
-            Container(color: AppColors.tealMuted),
-            CustomPaint(painter: MapGridPainter()),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, AppColors.teal.withValues(alpha: 0.08)],
+            FlutterMap(
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: zoom,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                 ),
               ),
-            ),
-            Center(
-              child: locating
-                  ? const SizedBox(width: 34, height: 34, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.teal))
-                  : const _MapPin(),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.freshfold.laundry',
+                ),
+                MarkerLayer(markers: [
+                  if (shopLat != null && shopLng != null)
+                    Marker(
+                      point: ll.LatLng(shopLat!, shopLng!),
+                      width: 36,
+                      height: 36,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: AppColors.teal,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
+                        ),
+                        child: const Icon(Icons.store, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  if (clientLat != null && clientLng != null)
+                    Marker(
+                      point: ll.LatLng(clientLat!, clientLng!),
+                      width: 32,
+                      height: 32,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                        ),
+                        child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                      ),
+                    ),
+                ]),
+              ],
             ),
             Positioned(
-              left: 14,
-              bottom: 14,
-              right: 14,
+              left: 12,
+              bottom: 12,
+              right: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -463,10 +529,10 @@ class _MapPreview extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  locating ? 'Finding your locationâ€¦' : label,
+                  locating ? 'Finding your location...' : label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800),
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -477,20 +543,6 @@ class _MapPreview extends StatelessWidget {
   }
 }
 
-class _MapPin extends StatelessWidget {
-  const _MapPin();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle),
-      alignment: Alignment.center,
-      child: const AppIcon(AppIcons.locationPin, size: 20, color: AppColors.cream),
-    );
-  }
-}
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
