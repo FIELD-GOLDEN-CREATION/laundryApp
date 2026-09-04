@@ -118,7 +118,7 @@ LaundryItem itemFromJson(Map<String, dynamic> j) {
         parseNum(j['default_price_tzs'])?.toDouble() ??
         0,
     unit: j['unit'] as String? ?? 'per piece',
-    isAvailable: j['is_available'] as bool? ?? true,
+    isAvailable: j['is_available'] == null ? true : (j['is_available'] == true || j['is_available'] == 1),
   );
 }
 
@@ -412,7 +412,7 @@ final shopDetailProvider = FutureProvider.family<List<MenuItem>, String>((ref, s
   final vendorItems = (body['vendor_items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   return [
     for (final vi in vendorItems)
-      if ((vi['is_available'] as bool? ?? true))
+      if (vi['is_available'] == null || vi['is_available'] == true || vi['is_available'] == 1)
         MenuItem(
           key: MenuItem.cartKey(slug, '${vi['item_id'] ?? vi['item']?['id'] ?? ''}'),
           name: vi['item']?['name'] as String? ?? '',

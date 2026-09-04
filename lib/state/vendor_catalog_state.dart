@@ -93,8 +93,8 @@ class VendorCatalogNotifier extends Notifier<VendorCatalogState> {
           if (itemId.isEmpty) continue;
           final vp = j['vendor_price'] as num?;
           if (vp != null) vendorPrices[itemId] = vp.toDouble();
-          final va = j['vendor_available'] as bool?;
-          if (va != null) availability[itemId] = va;
+          final va = j['vendor_available'];
+          if (va != null) availability[itemId] = va == true || va == 1;
         }
       }
 

@@ -124,7 +124,8 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
     try {
-      final data = await api.getVendorDashboard();
+      final response = await api.getVendorDashboard();
+      final data = response['data'] as Map<String, dynamic>? ?? {};
       final shop = data['shop'] as Map<String, dynamic>? ?? {};
       final sub = data['subscription'] as Map<String, dynamic>? ?? {};
 
