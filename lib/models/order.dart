@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../theme/colors.dart';
 import 'order_line.dart';
 import 'order_tracking_event.dart';
+import 'review.dart';
 
 /// trackStep value meaning the order has been submitted but not yet picked
 /// up by a driver — earlier than index 0 of kTrackSteps.
@@ -29,6 +30,7 @@ class Order {
     this.customerName = '',
     this.customerPhone = '',
     this.tracking = const [],
+    this.review,
   });
 
   final String shop;
@@ -50,6 +52,7 @@ class Order {
   final String customerName;
   final String customerPhone;
   final List<OrderTrackingEvent> tracking;
+  final Review? review;
 
   Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep, int? deliveryFeeTzs}) => Order(
     shop: shop,
@@ -71,6 +74,32 @@ class Order {
     customerName: customerName,
     customerPhone: customerPhone,
     tracking: tracking,
+    review: review,
+  );
+
+  /// Separate from [copyWith] since a review's presence is meaningfully
+  /// `null` (deleted) — `copyWith`'s `??` pattern can't express "clear this".
+  Order copyWithReview(Review? review) => Order(
+    shop: shop,
+    id: id,
+    items: items,
+    status: status,
+    statusFg: statusFg,
+    statusBg: statusBg,
+    date: date,
+    total: total,
+    trackStep: trackStep,
+    paymentMethod: paymentMethod,
+    pickup: pickup,
+    address: address,
+    lines: lines,
+    fulfillment: fulfillment,
+    driver: driver,
+    deliveryFeeTzs: deliveryFeeTzs,
+    customerName: customerName,
+    customerPhone: customerPhone,
+    tracking: tracking,
+    review: review,
   );
 }
 

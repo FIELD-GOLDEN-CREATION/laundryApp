@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../models/order.dart';
+import '../../../models/review.dart';
+import '../../../services/api_service.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/orders_state.dart';
@@ -194,6 +196,41 @@ class OrderDetailScreen extends ConsumerWidget {
                       ),
                     ],
 
+                    // Review section — only once the order has actually
+                    // arrived (delivered) / been collected (self pickup),
+                    // matching the backend's `status === 'delivered'` gate.
+                    if (order.trackStep == 4) ...[
+                      const SizedBox(height: 22),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(clientLabel('Your review', 'Maoni yako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+                          if (order.review != null)
+                            Row(
+                              children: [
+                                _ReviewActionButton(
+                                  icon: Icons.edit_outlined,
+                                  onTap: () => _showReviewDialog(context, ref, order, language, existing: order.review),
+                                ),
+                                const SizedBox(width: 6),
+                                _ReviewActionButton(
+                                  icon: Icons.delete_outline_rounded,
+                                  onTap: () => _confirmDeleteReview(context, ref, order, language),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (order.review != null)
+                        _ReviewCard(review: order.review!)
+                      else
+                        _LeaveReviewCard(
+                          language: language,
+                          onTap: () => _showReviewDialog(context, ref, order, language),
+                        ),
+                    ],
+
                     const SizedBox(height: 18),
                     SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => context.push('/track', extra: order.id), icon: const Icon(Icons.location_on_outlined, size: 17), label: Text(clientLabel('Track order', 'Fuatilia oda', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)), style: FilledButton.styleFrom(backgroundColor: AppColors.teal, foregroundColor: AppColors.cream, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
                   ]),
@@ -244,4 +281,284 @@ class _ProfileInfoRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ReviewActionButton extends StatelessWidget {
+  const _ReviewActionButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.cream,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(width: 30, height: 30, child: Icon(icon, size: 15, color: AppColors.clientSecondaryText(context))),
+      ),
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({required this.review});
+  final Review review;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.cream,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.clientBorder(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: List.generate(5, (i) => Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Icon(
+                i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 18,
+                color: i < review.rating ? AppColors.amber : AppColors.creamDark,
+              ),
+            )),
+          ),
+          if (review.comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(review.comment, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientText(context))),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaveReviewCard extends StatelessWidget {
+  const _LeaveReviewCard({required this.language, required this.onTap});
+  final String language;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.cream,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.clientBorder(context))),
+          child: Row(
+            children: [
+              const Icon(Icons.star_outline_rounded, size: 20, color: AppColors.teal),
+              const SizedBox(width: 10),
+              Expanded(child: Text(clientLabel('Leave a review', 'Acha maoni', language), style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context)))),
+              Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.clientSecondaryText(context)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared create/edit dialog — `existing` prefills the star rating and
+/// comment and switches the call from `createReview` to `updateReview`.
+void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String language, {Review? existing}) {
+  int rating = existing?.rating ?? 0;
+  final commentController = TextEditingController(text: existing?.comment ?? '');
+  final isEdit = existing != null;
+
+  showDialog(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialogState) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isEdit ? clientLabel('Edit your review', 'Hariri maoni yako', language) : clientLabel('Rate your order', 'Kadiria oda yako', language),
+                style: AppText.serif(fontSize: 20),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                clientLabel('How was your experience with ${order.shop}?', 'Uzoefu wako na ${order.shop} ulikuwaje?', language),
+                textAlign: TextAlign.center,
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setDialogState(() => rating = i + 1),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      size: 36,
+                      color: i < rating ? AppColors.amber : AppColors.creamDark,
+                    ),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.cream,
+                  border: Border.all(color: AppColors.creamDark),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: TextField(
+                  controller: commentController,
+                  maxLines: 3,
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    hintText: clientLabel('Leave a comment (optional)', 'Wacha maoni (si lazima)', language),
+                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => Navigator.of(ctx).pop(),
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          child: Text(
+                            clientLabel('Cancel', 'Ghairi', language),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: Material(
+                      color: rating > 0 ? AppColors.teal : AppColors.creamDark,
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: rating > 0
+                            ? () async {
+                                final comment = commentController.text.trim();
+                                Map<String, dynamic> response;
+                                try {
+                                  response = isEdit
+                                      ? await api.updateReview(order.id, rating: rating, comment: comment)
+                                      : await api.createReview(order.id, rating: rating, comment: comment);
+                                } on ApiException {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(clientLabel(
+                                          'Could not submit your review. Try again.',
+                                          'Imeshindikana kuwasilisha maoni. Jaribu tena.',
+                                          language,
+                                        )),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                final saved = orderReviewFromJson(response['data'] as Map<String, dynamic>?) ??
+                                    Review(id: existing?.id ?? 0, rating: rating, comment: comment);
+                                ref.read(ordersProvider.notifier).setReview(order.id, saved);
+                                ref.read(completedOrdersProvider.notifier).setReview(order.id, saved);
+                                if (!ctx.mounted) return;
+                                Navigator.of(ctx).pop();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(clientLabel('Thanks for your feedback!', 'Asante kwa maoni yako!', language)),
+                                      backgroundColor: AppColors.teal,
+                                    ),
+                                  );
+                                }
+                              }
+                            : null,
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          child: Text(
+                            isEdit ? clientLabel('Save', 'Hifadhi', language) : clientLabel('Submit Review', 'Wasilisha Maoni', language),
+                            style: AppText.sans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: rating > 0 ? AppColors.cream : AppColors.muted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ).then((_) => commentController.dispose());
+}
+
+void _confirmDeleteReview(BuildContext context, WidgetRef ref, Order order, String language) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(clientLabel('Delete review?', 'Futa maoni?', language), style: AppText.serif(fontSize: 18)),
+      content: Text(
+        clientLabel("This can't be undone.", 'Hili haliwezi kutenduliwa.', language),
+        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: Text(clientLabel('Cancel', 'Ghairi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted)),
+        ),
+        TextButton(
+          onPressed: () async {
+            try {
+              await api.deleteReview(order.id);
+            } on ApiException {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(clientLabel('Could not delete your review. Try again.', 'Imeshindikana kufuta maoni. Jaribu tena.', language))),
+                );
+              }
+              return;
+            }
+            ref.read(ordersProvider.notifier).setReview(order.id, null);
+            ref.read(completedOrdersProvider.notifier).setReview(order.id, null);
+            if (!ctx.mounted) return;
+            Navigator.of(ctx).pop();
+          },
+          child: Text(clientLabel('Delete', 'Futa', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.red)),
+        ),
+      ],
+    ),
+  );
 }

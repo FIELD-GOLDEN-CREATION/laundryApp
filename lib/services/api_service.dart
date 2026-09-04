@@ -32,6 +32,11 @@ class ValidationException extends ApiException {
   final Map<String, dynamic>? errors;
 }
 
+/// Strips the client-only "#LD-" display prefix (see `Order.id`) so a
+/// display id passed straight through by a caller still hits the backend's
+/// numeric `/orders/{id}/...` routes.
+String _rawOrderId(String id) => id.startsWith('#LD-') ? id.substring(4) : id;
+
 // ---------------------------------------------------------------------------
 // API Service
 // ---------------------------------------------------------------------------
@@ -458,10 +463,23 @@ class ApiService {
     required int rating,
     String? comment,
   }) =>
-      post('/orders/$orderId/review', body: {
+      post('/orders/${_rawOrderId(orderId)}/review', body: {
         'rating': rating,
         if (comment != null && comment.isNotEmpty) 'comment': comment,
       });
+
+  Future<Map<String, dynamic>> updateReview(
+    String orderId, {
+    required int rating,
+    String? comment,
+  }) =>
+      put('/orders/${_rawOrderId(orderId)}/review', body: {
+        'rating': rating,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      });
+
+  Future<Map<String, dynamic>> deleteReview(String orderId) =>
+      delete('/orders/${_rawOrderId(orderId)}/review');
 
   // =========================================================================
   // PROMOS (Customer-facing)
