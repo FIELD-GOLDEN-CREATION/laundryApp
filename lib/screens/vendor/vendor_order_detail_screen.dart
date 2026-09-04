@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../models/track_step_def.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/currency.dart';
-import '../../widgets/barcode_strip.dart';
-import '../../widgets/placeholder_image.dart';
+import '../../utils/time_format.dart';
 import '../../widgets/round_back_button.dart';
-import '../../widgets/selectable_chip.dart';
 
 class VendorOrderDetailScreen extends ConsumerStatefulWidget {
   const VendorOrderDetailScreen({super.key});
@@ -35,6 +32,18 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
     });
   }
 
+  void _showStatusError(String title) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(title),
+        backgroundColor: AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(vendorOrderDetailProvider);
@@ -42,6 +51,7 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
     final packageLines = state.packageLines;
     final itemLines = state.itemLines;
     final addons = state.addons;
+    final bulkApplied = state.bulkSnapshot != null;
 
     return Scaffold(
       body: SafeArea(
@@ -73,323 +83,27 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                 ),
               ],
             ),
-            const _SectionLabel('Package selected'),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: packageLines.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
-                        child: state.isLoading
-                            ? const CircularProgressIndicator(strokeWidth: 2)
-                            : Text(
-                                'No package selected for this order.',
-                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
-                              ),
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        for (var i = 0; i < packageLines.length; i++)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: i == packageLines.length - 1 ? Colors.transparent : AppColors.cream),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '${packageLines[i].qty}× ${packageLines[i].name}',
-                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                                Text(
-                                  formatTzs(packageLines[i].total),
-                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-            const _SectionLabel('Add-on services selected'),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: addons.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
-                        child: state.isLoading
-                            ? const CircularProgressIndicator(strokeWidth: 2)
-                            : Text(
-                                'No add-on services selected for this order.',
-                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
-                              ),
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        for (var i = 0; i < addons.length; i++)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: i == addons.length - 1 ? Colors.transparent : AppColors.cream),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.tealMuted,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.teal),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    addons[i].title,
-                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                                Text(
-                                  formatTzs(addons[i].priceTzs),
-                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.amber),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-            const _SectionLabel('Categories & items'),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: itemLines.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
-                        child: state.isLoading
-                            ? const CircularProgressIndicator(strokeWidth: 2)
-                            : Text(
-                                'No items on this order.',
-                                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
-                              ),
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        for (var i = 0; i < itemLines.length; i++)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: i == itemLines.length - 1 ? Colors.transparent : AppColors.cream),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      if (itemLines[i].categoryName.isNotEmpty) ...[
-                                        Text(
-                                          itemLines[i].categoryName.toUpperCase(),
-                                          style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.4),
-                                        ),
-                                        const SizedBox(height: 2),
-                                      ],
-                                      Text(
-                                        '${itemLines[i].qty}× ${itemLines[i].name}',
-                                        style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  formatTzs(itemLines[i].total),
-                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-            const _SectionLabel('Digital garment tag'),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 46,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(14)),
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            state.tagId,
-                            style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.6),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Material(
-                        color: AppColors.tealMuted,
-                        borderRadius: BorderRadius.circular(14),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: notifier.regenTag,
-                          child: Container(
-                            height: 46,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'New tag',
-                              style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const BarcodeStrip(),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (var i = 0; i < kGarmentLabels.length; i++)
-                        SelectableChip(
-                          label: kGarmentLabels[i],
-                          selected: state.garment == i,
-                          onTap: () => notifier.pickGarment(i),
-                          fontSize: 11.5,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const _SectionLabel('Fabric damage inspection'),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < kDamageLabels.length; i++)
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => notifier.toggleDamage(i),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.cream))),
-                          child: Row(
-                            children: [
-                              _DamageCheckbox(checked: state.damage[i]),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  kDamageLabels[i],
-                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextField(
-                      onChanged: notifier.setDamageNote,
-                      maxLines: 3,
-                      style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppColors.cream,
-                        hintText: 'Inspection notes for the customer…',
-                        hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
-                        contentPadding: const EdgeInsets.all(12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const _SectionLabel('Pre-existing stains'),
-            Row(
-              children: [
-                const Expanded(child: AspectRatio(aspectRatio: 1, child: PlaceholderImage(label: 'Photo 1', borderRadius: 16))),
-                const SizedBox(width: 10),
-                const Expanded(child: AspectRatio(aspectRatio: 1, child: PlaceholderImage(label: 'Photo 2', borderRadius: 16))),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Material(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Color(0xFFCBD5CF), width: 1.5),
-                      ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {},
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.upload_outlined, size: 22, color: AppColors.muted),
-                            const SizedBox(height: 6),
-                            Text('Upload', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.muted)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+            if (state.isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else ...[
+              // Only the sections the customer actually picked from render —
+              // an empty package/add-ons/items card is just noise.
+              if (packageLines.isNotEmpty) ...[
+                const _SectionLabel('Package selected'),
+                _LineItemsCard(lines: packageLines),
               ],
-            ),
+              if (addons.isNotEmpty) ...[
+                const _SectionLabel('Add-on services selected'),
+                _AddonsCard(addons: addons),
+              ],
+              if (itemLines.isNotEmpty) ...[
+                const _SectionLabel('Categories & items'),
+                _LineItemsCard(lines: itemLines, showCategory: true),
+              ],
+            ],
             const _SectionLabel('Processing status'),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -398,42 +112,51 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                 border: Border.all(color: AppColors.creamDark),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: state.timeline.isNotEmpty
-                  ? Column(
-                      children: [
-                        for (var i = 0; i < state.timeline.length; i++)
-                          _ProcessStepRow(
-                            step: state.timeline[i],
-                            done: true,
-                          ),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        for (var i = 0; i < kProcessingSteps.length; i++)
-                          _ProcessStepRow(
-                            step: kProcessingSteps[i],
-                            done: i <= state.step,
-                            // Only the immediate next step is tappable — the
-                            // backend rejects skipping or re-triggering one.
-                            onTap: i == state.step + 1 && !state.isUpdatingStatus
-                                ? () async {
-                                    final ok = await notifier.advanceStep(i);
-                                    if (!ok && context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Could not update status to "${kProcessingSteps[i].title}"'),
-                                          backgroundColor: AppColors.danger,
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                : null,
-                          ),
-                      ],
+              child: Column(
+                children: [
+                  for (final step in state.steps)
+                    _ProcessStepRow(
+                      step: step,
+                      locked: kVendorLockedStatuses.contains(step.status),
+                      onTap: state.isUpdatingStatus || kVendorLockedStatuses.contains(step.status)
+                          ? null
+                          : () async {
+                              final ok = await notifier.toggleStep(step.status);
+                              if (!ok) _showStatusError('Could not update status to "${step.title}"');
+                            },
                     ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: bulkApplied ? AppColors.tealMuted : AppColors.teal,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: !state.hasOrder || state.isUpdatingStatus
+                      ? null
+                      : () async {
+                          final ok = bulkApplied ? await notifier.undoMarkAllComplete() : await notifier.markAllComplete();
+                          if (!ok) _showStatusError('Could not update processing status');
+                        },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    child: Center(
+                      child: Text(
+                        bulkApplied ? 'Undo mark all complete' : 'Mark all complete',
+                        style: AppText.sans(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: bulkApplied ? AppColors.teal : AppColors.cream,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -455,34 +178,139 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _DamageCheckbox extends StatelessWidget {
-  const _DamageCheckbox({required this.checked});
-  final bool checked;
+/// Package or per-item basket lines — same row shape, optionally with a
+/// category eyebrow above the name (used for "Categories & items").
+class _LineItemsCard extends StatelessWidget {
+  const _LineItemsCard({required this.lines, this.showCategory = false});
+
+  final List<DetailLine> lines;
+  final bool showCategory;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 22,
-      height: 22,
       decoration: BoxDecoration(
-        color: checked ? AppColors.teal : Colors.transparent,
-        border: Border.all(color: checked ? AppColors.teal : const Color(0xFFCBD5CF), width: 2),
-        borderRadius: BorderRadius.circular(7),
+        color: Colors.white,
+        border: Border.all(color: AppColors.creamDark),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: checked ? const Icon(Icons.check, size: 14, color: AppColors.cream) : null,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < lines.length; i++)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: i == lines.length - 1 ? Colors.transparent : AppColors.cream),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: showCategory
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (lines[i].categoryName.isNotEmpty) ...[
+                                Text(
+                                  lines[i].categoryName.toUpperCase(),
+                                  style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.4),
+                                ),
+                                const SizedBox(height: 2),
+                              ],
+                              Text(
+                                '${lines[i].qty}× ${lines[i].name}',
+                                style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            '${lines[i].qty}× ${lines[i].name}',
+                            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                          ),
+                  ),
+                  Text(
+                    formatTzs(lines[i].total),
+                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddonsCard extends StatelessWidget {
+  const _AddonsCard({required this.addons});
+  final List<DetailAddon> addons;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.creamDark),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < addons.length; i++)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: i == addons.length - 1 ? Colors.transparent : AppColors.cream),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.tealMuted,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.teal),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      addons[i].title,
+                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  Text(
+                    formatTzs(addons[i].priceTzs),
+                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.amber),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
 class _ProcessStepRow extends StatelessWidget {
-  const _ProcessStepRow({required this.step, required this.done, this.onTap});
+  const _ProcessStepRow({required this.step, required this.locked, this.onTap});
 
-  final TrackStepDef step;
-  final bool done;
+  final VendorTrackStep step;
+
+  /// Locked steps (order placed, accepted) are always-true facts of this
+  /// screen being reachable at all — shown done, never tappable.
+  final bool locked;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final done = step.done || locked;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -514,7 +342,7 @@ class _ProcessStepRow extends StatelessWidget {
                 ),
               ),
               Text(
-                done ? step.time : 'Pending',
+                step.completedAt != null ? formatClockTime(step.completedAt!) : (locked ? '—' : 'Pending'),
                 style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.muted),
               ),
             ],

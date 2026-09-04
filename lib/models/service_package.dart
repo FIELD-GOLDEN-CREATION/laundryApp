@@ -57,6 +57,7 @@ class ServicePackage {
     this.tag = '',
     this.serviceTags = const [],
     this.active = true,
+    this.adminLocked = false,
     this.packageItems = const [],
     this.shopId = '',
     this.shopName = '',
@@ -108,6 +109,11 @@ class ServicePackage {
   /// Vendors can retire a package without deleting it; inactive packages
   /// never reach the customer-facing shop page.
   final bool active;
+
+  /// Set when an admin deactivated this package. While true, the vendor
+  /// can still edit it but the backend rejects any attempt to flip [active]
+  /// back on — only an admin re-activating clears it.
+  final bool adminLocked;
 
   /// Specific items with quantities included in this package.
   /// When non-empty, the package is item-based: the customer gets exactly
@@ -171,6 +177,7 @@ class ServicePackage {
     String? tag,
     List<String>? serviceTags,
     bool? active,
+    bool? adminLocked,
     List<PackageItem>? packageItems,
   }) => ServicePackage(
     id: id,
@@ -187,6 +194,7 @@ class ServicePackage {
     tag: tag ?? this.tag,
     serviceTags: serviceTags ?? this.serviceTags,
     active: active ?? this.active,
+    adminLocked: adminLocked ?? this.adminLocked,
     packageItems: packageItems ?? this.packageItems,
   );
 }

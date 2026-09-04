@@ -36,7 +36,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   Widget build(BuildContext context) {
     final tab = ref.watch(ordersTabProvider);
     final notifier = ref.read(ordersTabProvider.notifier);
-    final activeOrders = ref.watch(ordersProvider);
+    // Delivered/collected orders belong on the Completed tab, not Active —
+    // even though ordersProvider's unfiltered API fetch can still include them.
+    final activeOrders = ref.watch(ordersProvider).where((o) => o.trackStep != 4).toList();
     final completed = ref.watch(completedOrdersProvider);
     final orders = tab == 0 ? activeOrders : completed;
     final shops = ref.watch(shopsProvider).items;

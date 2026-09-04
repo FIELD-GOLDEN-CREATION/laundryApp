@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/order.dart';
 import '../models/order_line.dart';
 import '../models/order_tracking_event.dart';
+import '../models/review.dart';
 import '../services/api_service.dart';
 import '../utils/num_helper.dart';
 
@@ -118,6 +119,14 @@ class OrdersNotifier extends Notifier<List<Order>> {
     ];
   }
 
+  /// Reflects a review create/edit/delete (`review: null`) immediately in
+  /// this list without a full reload; a no-op if `id` isn't in this list.
+  void setReview(String id, Review? review) {
+    state = [
+      for (final o in state)
+        if (o.id == id) o.copyWithReview(review) else o,
+    ];
+  }
 }
 
 Order orderFromJson(Map<String, dynamic> j) {
@@ -176,6 +185,7 @@ Order orderFromJson(Map<String, dynamic> j) {
     customerName: j['customer_name'] as String? ?? '',
     customerPhone: j['customer_phone'] as String? ?? '',
     tracking: tracking,
+    review: orderReviewFromJson(j['review'] as Map<String, dynamic>?),
   );
 }
 
@@ -217,6 +227,15 @@ class CompletedOrdersNotifier extends Notifier<List<Order>> {
     } on ApiException {
       // Keep existing state on network errors
     }
+  }
+
+  /// Reflects a review create/edit/delete (`review: null`) immediately in
+  /// this list without a full reload; a no-op if `id` isn't in this list.
+  void setReview(String id, Review? review) {
+    state = [
+      for (final o in state)
+        if (o.id == id) o.copyWithReview(review) else o,
+    ];
   }
 }
 

@@ -62,18 +62,20 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
     }
   }
 
-  void toggleActive(String id) {
-    state = [
-      for (final p in state)
-        if (p.id == id) p.copyWith(active: !p.active) else p,
-    ];
+  Future<bool> toggleActive(String id) {
+    final index = state.indexWhere((p) => p.id == id);
+    if (index == -1) return Future.value(false);
+    final current = state[index];
+    // Admin-locked packages can only come back on through the admin panel —
+    // the backend rejects this too, but skip the round trip.
+    if (current.adminLocked && !current.active) return Future.value(false);
+    return updatePackage(id, current.copyWith(active: !current.active));
   }
 
-  void setPrice(String id, double value) {
-    state = [
-      for (final p in state)
-        if (p.id == id) p.copyWith(priceTzs: value.clamp(0, double.infinity)) else p,
-    ];
+  Future<bool> setPrice(String id, double value) {
+    final index = state.indexWhere((p) => p.id == id);
+    if (index == -1) return Future.value(false);
+    return updatePackage(id, state[index].copyWith(priceTzs: value.clamp(0, double.infinity)));
   }
 
   ServicePackage _fromJson(Map<String, dynamic> j) {
@@ -110,6 +112,7 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
               .toList() ??
           [],
       active: j['is_active'] as bool? ?? true,
+      adminLocked: j['admin_locked'] as bool? ?? false,
       packageItems: (j['items'] as List?)
               ?.map((e) {
                 if (e is! Map<String, dynamic>) return null;

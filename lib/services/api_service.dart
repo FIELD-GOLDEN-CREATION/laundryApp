@@ -32,6 +32,11 @@ class ValidationException extends ApiException {
   final Map<String, dynamic>? errors;
 }
 
+/// Strips the client-only "#LD-" display prefix (see `Order.id`) so a
+/// display id passed straight through by a caller still hits the backend's
+/// numeric `/orders/{id}/...` routes.
+String _rawOrderId(String id) => id.startsWith('#LD-') ? id.substring(4) : id;
+
 // ---------------------------------------------------------------------------
 // API Service
 // ---------------------------------------------------------------------------
@@ -325,8 +330,11 @@ class ApiService {
   Future<Map<String, dynamic>> rejectOrder(String orderId) =>
       put('/vendor/orders/$orderId/reject');
 
-  Future<Map<String, dynamic>> updateOrderStatus(String orderId, String status) =>
-      put('/vendor/orders/$orderId/status', body: {'status': status});
+  Future<Map<String, dynamic>> updateOrderStatus(String orderId, String status, {bool done = true}) =>
+      put('/vendor/orders/$orderId/status', body: {'status': status, 'done': done});
+
+  Future<Map<String, dynamic>> bulkCompleteOrderStatus(String orderId) =>
+      put('/vendor/orders/$orderId/status/bulk-complete');
 
   Future<Map<String, dynamic>> getVendorOrderDetail(String orderId) =>
       get('/vendor/orders/$orderId');
@@ -455,10 +463,23 @@ class ApiService {
     required int rating,
     String? comment,
   }) =>
-      post('/orders/$orderId/review', body: {
+      post('/orders/${_rawOrderId(orderId)}/review', body: {
         'rating': rating,
         if (comment != null && comment.isNotEmpty) 'comment': comment,
       });
+
+  Future<Map<String, dynamic>> updateReview(
+    String orderId, {
+    required int rating,
+    String? comment,
+  }) =>
+      put('/orders/${_rawOrderId(orderId)}/review', body: {
+        'rating': rating,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      });
+
+  Future<Map<String, dynamic>> deleteReview(String orderId) =>
+      delete('/orders/${_rawOrderId(orderId)}/review');
 
   // =========================================================================
   // PROMOS (Customer-facing)

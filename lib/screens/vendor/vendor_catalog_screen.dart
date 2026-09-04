@@ -19,6 +19,9 @@ import '../../widgets/remote_image.dart';
 /// Display cap mirrored from the shop page's package carousel.
 const _kMaxShopPackages = 4;
 
+/// Set to true to re-enable the "Add-on services" section on this screen.
+const _kShowAddonServices = false;
+
 class VendorCatalogScreen extends ConsumerStatefulWidget {
   const VendorCatalogScreen({super.key});
 
@@ -81,33 +84,36 @@ class _VendorCatalogScreenState extends ConsumerState<VendorCatalogScreen> {
                 categoryId: category.id,
               );
             }),
-            const _SectionLabel('Add-on services'),
-            Text(
-              'Define extra services customers can add to their order at checkout.',
-              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.3),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(20),
+            // Add-on services section hidden for now; kept in code for a quick re-enable.
+            if (_kShowAddonServices) ...[
+              const _SectionLabel('Add-on services'),
+              Text(
+                'Define extra services customers can add to their order at checkout.',
+                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted, height: 1.3),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < state.addons.length; i++)
-                    _AddonRow(
-                      addon: state.addons[i],
-                      onRemove: () => notifier.removeAddon(i),
-                      onUpdated: (title, price) => notifier.updateAddon(i, title: title, priceTzs: price),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.creamDark),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < state.addons.length; i++)
+                      _AddonRow(
+                        addon: state.addons[i],
+                        onRemove: () => notifier.removeAddon(i),
+                        onUpdated: (title, price) => notifier.updateAddon(i, title: title, priceTzs: price),
+                      ),
+                    _AddAddonRow(
+                      onAdd: (title, price) => notifier.addAddon(title, price),
                     ),
-                  _AddAddonRow(
-                    onAdd: (title, price) => notifier.addAddon(title, price),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
             const _SectionLabel('Packages'),
             Text(
               liveCount == 0
@@ -565,6 +571,7 @@ class _PackageRowState extends State<_PackageRow> {
   Widget build(BuildContext context) {
     final package = widget.package;
     final on = package.active;
+    final locked = package.adminLocked && !on;
     final savings = package.savingsPercent;
 
     return Container(
@@ -599,10 +606,32 @@ class _PackageRowState extends State<_PackageRow> {
                       '${package.inclusions.length == 1 ? 'inclusion' : 'inclusions'}',
                       style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
                     ),
+                    if (locked) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock_outline_rounded, size: 11, color: AppColors.danger),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Disabled by admin',
+                            style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.danger),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
-              ToggleSwitch(on: on, onTap: widget.onToggle),
+              ToggleSwitch(
+                on: on,
+                enabled: !locked,
+                onTap: locked
+                    ? () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('This package was disabled by an admin. Contact support to re-enable it.')),
+                        )
+                    : widget.onToggle,
+              ),
             ],
           ),
           const SizedBox(height: 11),

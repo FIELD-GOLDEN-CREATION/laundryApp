@@ -36,10 +36,19 @@ const _kSelfTrackTitles = [
   'Collected',
 ];
 
+/// Whether the order has an `order_tracking` row for `kOrderStatusSteps[i]`
+/// — the vendor toggles these independently now (see
+/// `vendor_order_detail_screen.dart`), so this can't be derived from a
+/// single `trackStep` index any more: a later step can be done while an
+/// earlier one isn't.
+bool _stepDone(Order order, int i) {
+  if (i < 0 || i >= kOrderStatusSteps.length) return false;
+  final status = kOrderStatusSteps[i];
+  return order.tracking.any((t) => t.status == status && t.completedAt != null);
+}
+
 /// The real timestamp the order reached `kOrderStatusSteps[i]`, formatted
-/// for display — empty for a completed step with no matching tracking row
-/// (orders that transitioned before tracking was added), or "Pending" for a
-/// step not yet reached.
+/// for display — "Pending" for a step not yet reached.
 String _stepTime(Order order, int i, {required bool done}) {
   if (i < 0 || i >= kOrderStatusSteps.length) return '';
   final status = kOrderStatusSteps[i];
@@ -180,10 +189,10 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                       children: [
                         for (var i = 0; i < titles.length; i++)
                           _StepTile(
-                            step: TrackStepDef(title: titles[i], time: _stepTime(order, i, done: i <= step)),
-                            done: i <= step,
+                            step: TrackStepDef(title: titles[i], time: _stepTime(order, i, done: _stepDone(order, i))),
+                            done: _stepDone(order, i),
                             isLast: i == titles.length - 1,
-                            lineActive: i < step,
+                            lineActive: _stepDone(order, i),
                           ),
                       ],
                     ),
