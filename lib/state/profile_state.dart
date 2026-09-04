@@ -89,9 +89,9 @@ class ProfileNotifier extends Notifier<ProfileState> {
     }
   }
 
-  Future<bool> addAddress(String label, String line) async {
+  Future<bool> addAddress(String label, String line, {double? latitude, double? longitude}) async {
     try {
-      await api.createAddress({'label': label, 'line': line});
+      await api.createAddress({'label': label, 'line': line, 'latitude': latitude, 'longitude': longitude});
       await loadAddresses();
       return true;
     } on ApiException {

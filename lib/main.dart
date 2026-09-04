@@ -19,7 +19,11 @@ class _AppLifecycleObserver extends WidgetsBindingObserver {
 
   Future<void> _touchLastActive() async {
     final prefs = await SharedPreferences.getInstance();
+<<<<<<< HEAD
     await prefs.setInt(kLastActiveKey, DateTime.now().millisecondsSinceEpoch);
+=======
+    await prefs.setInt('last_active_timestamp', DateTime.now().millisecondsSinceEpoch);
+>>>>>>> 4e62a817e3263876c9bbe91f9d6c4c87e9fee87d
   }
 }
 
