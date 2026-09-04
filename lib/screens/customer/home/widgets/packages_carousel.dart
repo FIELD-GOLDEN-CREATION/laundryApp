@@ -148,7 +148,7 @@ class _PackageCard extends ConsumerWidget {
       );
       return;
     }
-    // Already active in this vendor's basket — send them to it instead of
+    // Already active in this vendor's basket — send them to cart instead of
     // re-adding, which would otherwise double up the same package items in
     // the cart. Other packages already active for this shop are left alone,
     // since a customer can stack more than one.
@@ -156,14 +156,7 @@ class _PackageCard extends ConsumerWidget {
     if (!alreadyActive) {
       ref.read(basketsProvider.notifier).addPackage(pkg.shopId, pkg);
     }
-    Shop? match;
-    for (final s in ref.read(shopsProvider).items) {
-      if (s.slotId == pkg.shopId) {
-        match = s;
-        break;
-      }
-    }
-    context.push('/detail?tab=1', extra: match);
+    context.push('/cart', extra: pkg.shopId);
   }
 
   @override

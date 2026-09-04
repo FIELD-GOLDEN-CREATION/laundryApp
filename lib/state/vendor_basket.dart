@@ -145,7 +145,10 @@ class BasketsNotifier extends Notifier<Map<String, VendorBasket>> {
     final key = pkg.cartKey(shopId);
     addServiceItem(shopId, MenuItem(key: key, name: pkg.name, unit: pkg.cartSubtitle, initial: pkg.initial, price: pkg.priceTzs));
     setQty(shopId, key, 1);
-    _update(shopId, (b) => b.copyWith(activePackages: {...b.activePackages, pkg.id: pkg}));
+    _update(shopId, (b) => b.copyWith(
+      shopName: b.shopName.isEmpty ? pkg.shopName : b.shopName,
+      activePackages: {...b.activePackages, pkg.id: pkg},
+    ));
   }
 
   void incrementRate(String shopId, String packageId) {
