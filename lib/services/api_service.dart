@@ -325,8 +325,11 @@ class ApiService {
   Future<Map<String, dynamic>> rejectOrder(String orderId) =>
       put('/vendor/orders/$orderId/reject');
 
-  Future<Map<String, dynamic>> updateOrderStatus(String orderId, String status) =>
-      put('/vendor/orders/$orderId/status', body: {'status': status});
+  Future<Map<String, dynamic>> updateOrderStatus(String orderId, String status, {bool done = true}) =>
+      put('/vendor/orders/$orderId/status', body: {'status': status, 'done': done});
+
+  Future<Map<String, dynamic>> bulkCompleteOrderStatus(String orderId) =>
+      put('/vendor/orders/$orderId/status/bulk-complete');
 
   Future<Map<String, dynamic>> getVendorOrderDetail(String orderId) =>
       get('/vendor/orders/$orderId');

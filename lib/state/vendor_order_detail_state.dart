@@ -1,35 +1,42 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/track_step_def.dart';
 import '../services/api_service.dart';
 import '../utils/num_helper.dart';
-import '../utils/time_format.dart';
 import 'vendor_orders_state.dart';
 
-const kGarmentLabels = ['Shirts ×4', 'Trousers ×2', 'Dress ×1', 'Linen ×1'];
-const kDamageLabels = [
-  'Fading on collar (shirt 2)',
-  'Loose seam on trousers',
-  'Bleach mark on linen',
-  'Missing button',
+/// One row of the vendor's "Processing status" checklist — a fixed pipeline
+/// entry cross-referenced against this order's `order_tracking` rows.
+class VendorTrackStep {
+  const VendorTrackStep({required this.status, required this.title, this.completedAt});
+
+  /// Backend `orders.status` / `order_tracking.status` key, e.g. `in_wash`.
+  final String status;
+  final String title;
+  final DateTime? completedAt;
+
+  bool get done => completedAt != null;
+}
+
+/// Full order-status pipeline, always displayed in this order regardless of
+/// which steps have a tracking row yet. Mirrors `Order::STATUS_STEPS` on the
+/// backend (pending..delivered; `cancelled` is a terminal branch, not shown
+/// here since this screen only opens for accepted orders).
+const kVendorPipeline = [
+  ('pending', 'Order placed'),
+  ('accepted', 'Accepted'),
+  ('in_wash', 'Washing'),
+  ('ready', 'Ready for delivery'),
+  ('out_for_delivery', 'Out for delivery'),
+  ('delivered', 'Delivered'),
 ];
 
-/// Fallback pipeline labels used when an order has no `tracking` rows yet —
-/// one entry per backend status in [kVendorStatusPipeline], same index.
-const kProcessingSteps = [
-  TrackStepDef(title: 'Accepted', time: '—'),
-  TrackStepDef(title: 'Washing', time: '—'),
-  TrackStepDef(title: 'Ready for delivery', time: '—'),
-  TrackStepDef(title: 'Out for delivery', time: '—'),
-  TrackStepDef(title: 'Delivered', time: '—'),
-];
+/// Steps that are always-true facts of the order reaching this screen —
+/// never independently toggleable by the vendor.
+const kVendorLockedStatuses = {'pending', 'accepted'};
 
-/// Backend `orders.status` values a vendor can advance an order through,
-/// in order — index i is the status PATCHed by tapping step i in
-/// [kProcessingSteps]. Mirrors `VendorOrderController::updateStatus`'s
-/// `$validTransitions` on the backend (accepted is the entry status set by
-/// `POST .../accept`, not itself PATCHed via the status endpoint).
-const kVendorStatusPipeline = ['accepted', 'in_wash', 'ready', 'out_for_delivery', 'delivered'];
+/// The 4 statuses the vendor's per-step toggle / bulk-complete endpoints
+/// operate on. Mirrors `Order::STATUS_PIPELINE` minus `accepted`.
+const kVendorToggleableStatuses = ['in_wash', 'ready', 'out_for_delivery', 'delivered'];
 
 /// One line of the customer's actual basket (GET /vendor/orders/{id} →
 /// `lines[]`): a package row or a per-item service.
@@ -70,30 +77,17 @@ String normalizeVendorOrderId(String displayId) =>
 
 class VendorOrderDetailState {
   const VendorOrderDetailState({
-    this.garment = 0,
-    this.damage = const [true, false, false, false],
-    this.damageNote = '',
-    this.tagId = 'MF-2481-A',
-    this.step = 0,
     this.orderId = '',
     this.status = '',
     this.customerName = '',
     this.itemsSummary = '',
     this.lines = const [],
     this.addons = const [],
-    this.timeline = const [],
+    this.steps = const [],
+    this.bulkSnapshot,
     this.isLoading = false,
     this.isUpdatingStatus = false,
   });
-
-  final int garment;
-  final List<bool> damage;
-  final String damageNote;
-  final String tagId;
-
-  /// Index into [kProcessingSteps]/[kVendorStatusPipeline] the order is
-  /// currently at, derived from [status].
-  final int step;
 
   final String orderId;
 
@@ -103,10 +97,19 @@ class VendorOrderDetailState {
   final String itemsSummary;
   final List<DetailLine> lines;
   final List<DetailAddon> addons;
-  final List<TrackStepDef> timeline;
+
+  /// The full processing-status pipeline (see [kVendorPipeline]), each entry
+  /// resolved against this order's tracking rows.
+  final List<VendorTrackStep> steps;
+
+  /// Snapshot of [steps] taken right before "Mark all complete" was tapped —
+  /// non-null while that bulk action is currently applied; lets "Undo" put
+  /// every step back exactly where it was on/off before the tap.
+  final List<VendorTrackStep>? bulkSnapshot;
+
   final bool isLoading;
 
-  /// True while a step tap's PATCH to the backend is in flight.
+  /// True while a step toggle's PATCH to the backend is in flight.
   final bool isUpdatingStatus;
 
   bool get hasOrder => orderId.isNotEmpty;
@@ -115,44 +118,44 @@ class VendorOrderDetailState {
   List<DetailLine> get itemLines => lines.where((l) => l.lineType == 'item').toList();
 
   VendorOrderDetailState copyWith({
-    int? garment,
-    List<bool>? damage,
-    String? damageNote,
-    String? tagId,
-    int? step,
     String? orderId,
     String? status,
     String? customerName,
     String? itemsSummary,
     List<DetailLine>? lines,
     List<DetailAddon>? addons,
-    List<TrackStepDef>? timeline,
+    List<VendorTrackStep>? steps,
+    List<VendorTrackStep>? Function()? bulkSnapshot,
     bool? isLoading,
     bool? isUpdatingStatus,
   }) =>
       VendorOrderDetailState(
-        garment: garment ?? this.garment,
-        damage: damage ?? this.damage,
-        damageNote: damageNote ?? this.damageNote,
-        tagId: tagId ?? this.tagId,
-        step: step ?? this.step,
         orderId: orderId ?? this.orderId,
         status: status ?? this.status,
         customerName: customerName ?? this.customerName,
         itemsSummary: itemsSummary ?? this.itemsSummary,
         lines: lines ?? this.lines,
         addons: addons ?? this.addons,
-        timeline: timeline ?? this.timeline,
+        steps: steps ?? this.steps,
+        bulkSnapshot: bulkSnapshot != null ? bulkSnapshot() : this.bulkSnapshot,
         isLoading: isLoading ?? this.isLoading,
         isUpdatingStatus: isUpdatingStatus ?? this.isUpdatingStatus,
       );
 }
 
-/// Where `status` sits in [kVendorStatusPipeline]; -1 (e.g. still `pending`,
-/// not yet accepted) shows every step as pending.
-int stepForVendorStatus(String status) {
-  final i = kVendorStatusPipeline.indexOf(status);
-  return i;
+/// Resolves [kVendorPipeline] against the order's raw `tracking[]` rows —
+/// shared by the initial load and every toggle/bulk response so the
+/// checklist always reflects exactly what the backend has on record.
+List<VendorTrackStep> _stepsFromTracking(List? raw) {
+  final rows = (raw ?? []).whereType<Map<String, dynamic>>().toList();
+  final byStatus = <String, DateTime?>{
+    for (final j in rows)
+      (j['status'] as String? ?? ''): DateTime.tryParse((j['completed_at'] ?? j['created_at']) as String? ?? ''),
+  };
+  return [
+    for (final (status, title) in kVendorPipeline)
+      VendorTrackStep(status: status, title: title, completedAt: byStatus[status]),
+  ];
 }
 
 class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
@@ -178,11 +181,9 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
           ),
       ];
 
-      final status = data['status'] as String? ?? '';
       state = state.copyWith(
         orderId: rawOrderId,
-        status: status,
-        step: stepForVendorStatus(status),
+        status: data['status'] as String? ?? '',
         customerName: customer['name'] as String? ?? '',
         itemsSummary: lines
             .where((l) => l.lineType == 'item')
@@ -196,7 +197,8 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
               priceTzs: parseDouble(j['price_tzs']) ?? 0,
             ),
         ],
-        timeline: _timeline(data['tracking'] as List?),
+        steps: _stepsFromTracking(data['tracking'] as List?),
+        bulkSnapshot: () => null,
         isLoading: false,
       );
     } on ApiException {
@@ -213,79 +215,85 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
     return category?['name'] as String? ?? '';
   }
 
-  /// `tracking[]` rows arrive newest-first or oldest-first depending on the
-  /// backend; normalize to oldest-first with humanized labels.
-  List<TrackStepDef> _timeline(List? raw) {
-    final rows = (raw ?? []).whereType<Map<String, dynamic>>().toList();
-    if (rows.isEmpty) return const [];
-    return [
-      for (final j in rows.reversed)
-        TrackStepDef(
-          title: _stepTitle(j),
-          // `completed_at` is when the stage was actually reached;
-          // `created_at` is only a fallback for older rows that predate it.
-          time: _timeLabel((j['completed_at'] ?? j['created_at']) as String? ?? ''),
-        ),
-    ];
-  }
-
-  /// Prefers the row's human-readable `title` (what the backend records);
-  /// falls back to humanizing the raw `status` key if `title` is missing.
-  String _stepTitle(Map<String, dynamic> j) {
-    final title = j['title'] as String?;
-    if (title != null && title.isNotEmpty) return title;
-    return _statusLabel(j['status'] as String? ?? '');
-  }
-
-  String _statusLabel(String status) {
-    if (status.isEmpty) return 'Update';
-    return status
-        .split('_')
-        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
-        .join(' ');
-  }
-
-  String _timeLabel(String iso) {
-    final parsed = DateTime.tryParse(iso);
-    if (parsed == null) return '—';
-    return formatClockTime(parsed);
-  }
-
-  void pickGarment(int i) => state = state.copyWith(garment: i);
-
-  void toggleDamage(int i) {
-    final next = List.of(state.damage);
-    next[i] = !next[i];
-    state = state.copyWith(damage: next);
-  }
-
-  void setDamageNote(String v) => state = state.copyWith(damageNote: v);
-
-  void regenTag() {
+  /// `PUT .../status` and `.../status/bulk-complete` responses only echo
+  /// back the order row (no `tracking` array) — refetch the full detail so
+  /// [steps] reflects the tracking rows the backend actually recorded,
+  /// instead of the empty list a bare `data['tracking']` would produce.
+  Future<void> _refreshSteps() async {
+    final envelope = await api.getVendorOrderDetail(state.orderId);
+    final data = envelope['data'] as Map<String, dynamic>? ?? envelope;
     state = state.copyWith(
-      tagId: 'MF-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      status: data['status'] as String? ?? state.status,
+      steps: _stepsFromTracking(data['tracking'] as List?),
     );
   }
 
-  /// Advances the order to `kVendorStatusPipeline[i]` via the vendor status
-  /// API. Only the immediate next step is a valid move — mirrors the
-  /// backend's `$validTransitions` map, which rejects skipping or
-  /// re-triggering a step. Returns false (no-op) for an invalid tap,
-  /// a request already in flight, or an API failure.
-  Future<bool> advanceStep(int i) async {
+  /// Toggles one processing-status step on/off. No-op for locked statuses
+  /// (order placed/accepted), while a request is already in flight, or
+  /// before an order has loaded. Returns false on any of those or an API
+  /// failure.
+  Future<bool> toggleStep(String status) async {
     if (state.isUpdatingStatus || !state.hasOrder) return false;
-    if (i != state.step + 1 || i >= kVendorStatusPipeline.length) return false;
+    if (kVendorLockedStatuses.contains(status)) return false;
+    final current = state.steps.firstWhere((s) => s.status == status, orElse: () => const VendorTrackStep(status: '', title: ''));
+    if (current.status.isEmpty) return false;
 
     state = state.copyWith(isUpdatingStatus: true);
     try {
-      await api.updateOrderStatus(state.orderId, kVendorStatusPipeline[i]);
-      state = state.copyWith(
-        step: i,
-        status: kVendorStatusPipeline[i],
-        isUpdatingStatus: false,
-      );
+      await api.updateOrderStatus(state.orderId, status, done: !current.done);
+      await _refreshSteps();
+      state = state.copyWith(isUpdatingStatus: false);
       // Refresh the orders list so the Incoming/In progress/Ready tabs
-      // (bucketed server-side from `status`) pick up the new stage.
+      // (bucketed server-side from `status`) pick up any stage change.
+      ref.read(vendorOrdersProvider.notifier).loadOrders();
+      return true;
+    } on ApiException {
+      state = state.copyWith(isUpdatingStatus: false);
+      return false;
+    }
+  }
+
+  /// Stamps every remaining step (Washing..Delivered) done with one shared
+  /// timestamp, after capturing the current on/off pattern so it can be
+  /// restored by [undoMarkAllComplete].
+  Future<bool> markAllComplete() async {
+    if (state.isUpdatingStatus || !state.hasOrder) return false;
+
+    final snapshot = state.steps;
+    state = state.copyWith(isUpdatingStatus: true);
+    try {
+      await api.bulkCompleteOrderStatus(state.orderId);
+      await _refreshSteps();
+      state = state.copyWith(bulkSnapshot: () => snapshot, isUpdatingStatus: false);
+      ref.read(vendorOrdersProvider.notifier).loadOrders();
+      return true;
+    } on ApiException {
+      state = state.copyWith(isUpdatingStatus: false);
+      return false;
+    }
+  }
+
+  /// Restores the exact on/off pattern [markAllComplete] captured. Steps
+  /// that go back "on" get a fresh timestamp (the moment of the undo, not
+  /// their original one) — replaying the original times would require the
+  /// backend to accept client-supplied timestamps, which isn't worth the
+  /// integrity risk for what's fundamentally a same-session convenience
+  /// action.
+  Future<bool> undoMarkAllComplete() async {
+    if (state.isUpdatingStatus || !state.hasOrder) return false;
+    final snapshot = state.bulkSnapshot;
+    if (snapshot == null) return false;
+
+    state = state.copyWith(isUpdatingStatus: true);
+    try {
+      for (final status in kVendorToggleableStatuses) {
+        final wasDone = snapshot.firstWhere((s) => s.status == status).done;
+        final isDone = state.steps.firstWhere((s) => s.status == status).done;
+        if (wasDone == isDone) continue;
+        await api.updateOrderStatus(state.orderId, status, done: wasDone);
+        await _refreshSteps();
+      }
+      state = state.copyWith(bulkSnapshot: () => null, isUpdatingStatus: false);
       ref.read(vendorOrdersProvider.notifier).loadOrders();
       return true;
     } on ApiException {
