@@ -304,9 +304,11 @@ class _EdgedHeroImageState extends State<_EdgedHeroImage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 450),
-            child: RemoteImage(key: ValueKey(url), url: url, fallback: widget.shop.name, fit: BoxFit.cover),
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 450),
+              child: RemoteImage(key: ValueKey(url), url: url, fallback: widget.shop.name, fit: BoxFit.cover),
+            ),
           ),
           Container(
             decoration: BoxDecoration(
