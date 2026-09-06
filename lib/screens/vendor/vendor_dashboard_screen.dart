@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/notification_item.dart';
 import '../../state/vendor_dashboard_state.dart';
 import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
@@ -176,22 +177,38 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(8)),
                           child: Text(
-                            dash.planStatus.isEmpty ? 'PLAN' : dash.planStatus.toUpperCase(),
+                            dash.planStatus.isEmpty ? 'ACTIVE' : dash.planStatus.toUpperCase(),
                             style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.cream, letterSpacing: 1),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            dash.planName.isEmpty ? 'No active plan' : dash.planName,
+                            dash.planName.isEmpty
+                                ? (dash.isLoading ? 'Loading plan…' : 'Basic')
+                                : dash.planName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cream),
                           ),
                         ),
+                        if (dash.unreadCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(10)),
+                            child: Text(
+                              '${dash.unreadCount}',
+                              style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+                    Text(
+                      _planDetailLine(dash),
+                      style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.75)),
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
@@ -224,27 +241,44 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                       _renewalLabel(dash.periodEnd),
                       style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.5)),
                     ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => _showChangePlanSheet(context, ref),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.cream,
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Change plan'),
+                      ),
+                    ),
                   ],
                 ),
               ),
 
               // ── Notifications ───────────────────────────────────────
-              const _SectionLabel('Recent notifications'),
+              _SectionHeaderRow(
+                title: 'Recent notifications',
+                actionLabel: dash.unreadCount > 0 ? '${dash.unreadCount} new' : null,
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: dash.isLoading && dash.alerts.isEmpty
+                child: dash.isLoading && dash.notifications.isEmpty
                     ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                    : dash.alerts.isEmpty
+                    : dash.notifications.isEmpty
                         ? Text(
                             'You are all caught up.',
                             style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
                           )
                         : Column(
                             children: [
-                              for (var i = 0; i < dash.alerts.length; i++)
-                                _NotificationTile(
-                                  alert: dash.alerts[i],
-                                  isLast: i == dash.alerts.length - 1,
+                              for (var i = 0; i < dash.notifications.length; i++)
+                                _VendorNotificationTile(
+                                  notif: dash.notifications[i],
+                                  isLast: i == dash.notifications.length - 1,
+                                  onTap: () => _showNotificationPopup(context, ref, dash.notifications[i].id),
                                 ),
                             ],
                           ),
@@ -267,6 +301,170 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
 }
 
 const _kDonutColors = [AppColors.teal, AppColors.amber, AppColors.mint, AppColors.creamDark, AppColors.slate];
+
+String _planDetailLine(VendorDashboardState dash) {
+  final parts = <String>[];
+  if (dash.planPriceTzs > 0) {
+    parts.add('TZS ${dash.planPriceTzs.toStringAsFixed(0)}/${dash.billingPeriod.isEmpty ? 'mo' : dash.billingPeriod}');
+  } else {
+    parts.add('Free plan');
+  }
+  parts.add(dash.maxOrders > 0 ? 'max ${dash.maxOrders} orders/mo' : 'unlimited orders');
+  return parts.join(' · ');
+}
+
+/// Bottom sheet listing all plans with a request-change action.
+void _showChangePlanSheet(BuildContext context, WidgetRef ref) {
+  final dash = ref.read(vendorDashboardProvider);
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Change your plan', style: AppText.serif(fontSize: 20)),
+            const SizedBox(height: 4),
+            Text(
+              'Currently on ${dash.planName.isEmpty ? 'your plan' : dash.planName} · ${dash.ordersUsed}/${dash.maxOrders > 0 ? dash.maxOrders : '∞'} orders used',
+              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+            ),
+            const SizedBox(height: 14),
+            if (dash.plans.isEmpty)
+              Text(
+                'Plans could not be loaded. Check your connection and try again.',
+                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+              )
+            else
+              for (final p in dash.plans) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: p.isCurrent ? AppColors.tealMuted : Colors.white,
+                    border: Border.all(color: p.isCurrent ? AppColors.teal : AppColors.creamDark),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(p.displayName, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 2),
+                            Text(
+                              p.priceTzs > 0
+                                  ? 'TZS ${p.priceTzs.toStringAsFixed(0)}/mo · ${p.maxOrders > 0 ? 'max ${p.maxOrders} orders' : 'unlimited orders'}'
+                                  : 'Free · ${p.maxOrders > 0 ? 'max ${p.maxOrders} orders' : 'unlimited orders'}',
+                              style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (p.isCurrent)
+                        Text('CURRENT', style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.teal))
+                      else
+                        FilledButton(
+                          onPressed: () async {
+                            final ok = await ref.read(vendorDashboardProvider.notifier).requestPlanChange(p.id);
+                            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(ok ? 'Request sent for ${p.displayName}.' : 'Request failed — try again.'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Request'),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Popup body with the full notification details.
+void _showNotificationPopup(BuildContext context, WidgetRef ref, String id) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => FutureBuilder<Map<String, dynamic>?>(
+      future: ref.read(vendorDashboardProvider.notifier).notificationDetail(id),
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        final order = data?['order'] as Map<String, dynamic>?;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('${data?['title'] ?? 'Notification'}', style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                else ...[
+                  Text(
+                    '${data?['body'] ?? ''}',
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate, height: 1.5),
+                  ),
+                  if (data?['created_at'] != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${data?['created_at']}',
+                      style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    ),
+                  ],
+                  if (order != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(12)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Order ${order['order_number'] ?? ''}', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Status: ${order['status'] ?? ''} · Total: TZS ${order['total_tzs'] ?? 0}',
+                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Close')),
+            if (order != null)
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  context.push('/vendor/order-detail');
+                },
+                child: const Text('View order'),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
 class _Header extends StatelessWidget {
   const _Header({required this.dash, required this.shopTitle, required this.onAccount});
@@ -384,35 +582,113 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.alert, required this.isLast});
-  final DashboardAlert alert;
-  final bool isLast;
+class _SectionHeaderRow extends StatelessWidget {
+  const _SectionHeaderRow({required this.title, this.actionLabel});
+  final String title;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: isLast ? Colors.transparent : AppColors.cream)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 26, 22, 11),
       child: Row(
         children: [
-          Icon(Icons.notifications_active_outlined, size: 16, color: alert.accentColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              alert.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.slate),
+          Expanded(child: Text(title.toUpperCase(), style: AppText.eyebrow())),
+          if (actionLabel != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: AppColors.amberLight, borderRadius: BorderRadius.circular(8)),
+              child: Text(actionLabel!, style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.amber)),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(alert.tag, style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.muted)),
         ],
       ),
     );
+  }
+}
+
+class _VendorNotificationTile extends StatelessWidget {
+  const _VendorNotificationTile({required this.notif, required this.isLast, required this.onTap});
+  final NotificationItem notif;
+  final bool isLast;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: isLast ? Colors.transparent : AppColors.cream)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: notif.isRead ? AppColors.cream : AppColors.tealMuted,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(_iconFor(notif.type), size: 16, color: notif.isRead ? AppColors.muted : AppColors.teal),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notif.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(
+                      fontSize: 12.5,
+                      fontWeight: notif.isRead ? FontWeight.w600 : FontWeight.w800,
+                      color: AppColors.slate,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    notif.body,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!notif.isRead)
+                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.amber, shape: BoxShape.circle)),
+                const SizedBox(height: 4),
+                Text(
+                  notif.time,
+                  style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _iconFor(String type) {
+    switch (type) {
+      case 'order':
+        return Icons.shopping_bag_outlined;
+      case 'payment':
+        return Icons.payments_outlined;
+      case 'vendor':
+        return Icons.storefront_outlined;
+      default:
+        return Icons.notifications_active_outlined;
+    }
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 class NotificationItem {
   const NotificationItem({
+    this.id = '',
     required this.initial,
     required this.title,
     required this.body,
@@ -9,8 +10,12 @@ class NotificationItem {
     required this.bg,
     required this.iconBg,
     required this.iconFg,
+    this.type = 'system',
+    this.isRead = false,
+    this.data = const {},
   });
 
+  final String id;
   final String initial;
   final String title;
   final String body;
@@ -18,4 +23,27 @@ class NotificationItem {
   final Color bg;
   final Color iconBg;
   final Color iconFg;
+
+  /// Backend `notifications.type`: order | vendor | payment | system.
+  final String type;
+
+  /// Whether the notification has been read.
+  final bool isRead;
+
+  /// Raw backend `data` payload (order ids, ratings, ...).
+  final Map<String, dynamic> data;
+
+  NotificationItem copyWith({bool? isRead}) => NotificationItem(
+        id: id,
+        initial: initial,
+        title: title,
+        body: body,
+        time: time,
+        bg: bg,
+        iconBg: iconBg,
+        iconFg: iconFg,
+        type: type,
+        isRead: isRead ?? this.isRead,
+        data: data,
+      );
 }

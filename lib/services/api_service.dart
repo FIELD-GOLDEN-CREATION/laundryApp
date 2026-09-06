@@ -556,6 +556,25 @@ class ApiService {
     return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   }
 
+  Future<Map<String, dynamic>> getNotificationDetail(String id) =>
+      get('/notifications/$id');
+
+  Future<List<Map<String, dynamic>>> getVendorNotifications({int? limit}) async {
+    final data = await get('/vendor/notifications', query: {
+      if (limit != null) 'limit': limit.toString(),
+    });
+    return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  Future<Map<String, dynamic>> getVendorNotificationDetail(String id) =>
+      get('/vendor/notifications/$id');
+
+  Future<Map<String, dynamic>> markVendorNotificationRead(String id) =>
+      patch('/vendor/notifications/$id/read');
+
+  Future<Map<String, dynamic>> markAllVendorNotificationsRead() =>
+      patch('/vendor/notifications/read-all');
+
   Future<Map<String, dynamic>> markNotificationRead(String id) =>
       patch('/notifications/$id/read');
 
@@ -575,7 +594,13 @@ class ApiService {
       get('/vendor/subscription');
 
   Future<Map<String, dynamic>> subscribe(String planId) =>
-      post('/subscriptions/subscribe', body: {'plan_id': planId});
+      post('/vendor/subscribe', body: {'plan_id': int.tryParse(planId) ?? planId});
+
+  Future<Map<String, dynamic>> requestPlanChange(String planId, {String? note}) =>
+      post('/vendor/subscription/request-change', body: {
+        'plan_id': int.tryParse(planId) ?? planId,
+        if (note != null && note.isNotEmpty) 'note': note,
+      });
 
   Future<Map<String, dynamic>> cancelSubscription() =>
       post('/subscriptions/cancel');
@@ -591,6 +616,12 @@ class ApiService {
     final data = await get('/vendor/payouts', query: {
       if (page != null) 'page': page.toString(),
     });
+    return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Per-order money details behind the earnings totals.
+  Future<List<Map<String, dynamic>>> getVendorTransactions() async {
+    final data = await get('/vendor/transactions');
     return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   }
 

@@ -90,6 +90,82 @@ class _VendorEarningsScreenState extends ConsumerState<VendorEarningsScreen> {
               ),
             ),
 
+            // ── Earnings details (per completed order) ───────────────
+            const _SectionLabel('Earnings details'),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.creamDark),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: state.lines.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: Text(
+                          state.isLoading ? '' : 'No completed orders yet — amounts appear here when orders are delivered.',
+                          textAlign: TextAlign.center,
+                          style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < state.lines.length; i++)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                            decoration: BoxDecoration(
+                              border: Border(bottom: BorderSide(color: i == state.lines.length - 1 ? Colors.transparent : AppColors.cream)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: state.lines[i].isCredit ? AppColors.tealMuted : AppColors.amberLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    state.lines[i].isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                    size: 18,
+                                    color: state.lines[i].isCredit ? AppColors.teal : AppColors.amber,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        state.lines[i].label,
+                                        style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        state.lines[i].sub,
+                                        style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${state.lines[i].isCredit ? '+' : '-'}${formatTzs(state.lines[i].amountTzs)}',
+                                  style: AppText.sans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: state.lines[i].isCredit ? AppColors.teal : AppColors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+
             // ── Monthly payout trend ─────────────────────────────────
             const _SectionLabel('Payout trends'),
             Container(

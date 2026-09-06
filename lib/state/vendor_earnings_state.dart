@@ -40,6 +40,23 @@ class MonthBar {
   final double fraction;
 }
 
+/// One row of the per-order money details table.
+class EarningLine {
+  const EarningLine({
+    required this.label,
+    required this.sub,
+    required this.amountTzs,
+    required this.isCredit,
+    required this.date,
+  });
+
+  final String label;
+  final String sub;
+  final double amountTzs;
+  final bool isCredit;
+  final String date;
+}
+
 class VendorEarningsState {
   const VendorEarningsState({
     this.balance = 0,
@@ -48,6 +65,7 @@ class VendorEarningsState {
     this.pendingPayouts = 0,
     this.totalCommission = 0,
     this.payouts = const [],
+    this.lines = const [],
     this.reviews = const [],
     this.isLoading = false,
   });
@@ -58,6 +76,7 @@ class VendorEarningsState {
   final double pendingPayouts;
   final double totalCommission;
   final List<VendorPayout> payouts;
+  final List<EarningLine> lines;
   final List<ReviewItem> reviews;
   final bool isLoading;
 
@@ -93,6 +112,7 @@ class VendorEarningsState {
     double? pendingPayouts,
     double? totalCommission,
     List<VendorPayout>? payouts,
+    List<EarningLine>? lines,
     List<ReviewItem>? reviews,
     bool? isLoading,
   }) =>
@@ -103,6 +123,7 @@ class VendorEarningsState {
         pendingPayouts: pendingPayouts ?? this.pendingPayouts,
         totalCommission: totalCommission ?? this.totalCommission,
         payouts: payouts ?? this.payouts,
+        lines: lines ?? this.lines,
         reviews: reviews ?? this.reviews,
         isLoading: isLoading ?? this.isLoading,
       );
@@ -115,7 +136,8 @@ class VendorEarningsNotifier extends Notifier<VendorEarningsState> {
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
     try {
-      final data = await api.getEarnings();
+      final response = await api.getEarnings();
+      final data = response['data'] as Map<String, dynamic>? ?? {};
       state = state.copyWith(
         balance: parseDouble(data['balance']) ?? 0,
         totalRevenue: parseDouble(data['total_revenue']) ?? 0,
@@ -129,10 +151,10 @@ class VendorEarningsNotifier extends Notifier<VendorEarningsState> {
     }
 
     try {
-      final rows = await api.getPayouts();
+      final data = await api.getPayouts();
       state = state.copyWith(
         payouts: [
-          for (final j in rows)
+          for (final j in data)
             VendorPayout(
               amountTzs: parseDouble(j['amount_tzs']) ?? 0,
               method: j['method'] as String? ?? '',
@@ -144,6 +166,31 @@ class VendorEarningsNotifier extends Notifier<VendorEarningsState> {
       );
     } on ApiException {
       // Payout list stays empty; the summary above still renders.
+    }
+
+    try {
+      final txns = await api.getVendorTransactions();
+      state = state.copyWith(
+        lines: [
+          for (final j in txns)
+            EarningLine(
+              label: (j['order_number'] as String?)?.isNotEmpty == true
+                  ? 'Order ${j['order_number']}'
+                  : (j['type'] as String? ?? 'Transaction'),
+              sub: [
+                if ((j['type'] as String?) != null) j['type'] as String,
+                if ((j['method'] as String?)?.isNotEmpty == true) j['method'] as String,
+                if ((j['created_at'] as String?)?.isNotEmpty == true)
+                  (j['created_at'] as String).substring(0, 10),
+              ].join(' · '),
+              amountTzs: parseDouble(j['amount_tzs']) ?? 0,
+              isCredit: (j['type'] as String?) == 'order_payment',
+              date: j['created_at'] as String? ?? '',
+            ),
+        ],
+      );
+    } on ApiException {
+      // Earnings details stay empty; the summary above still renders.
     }
 
     // Reviews are best-effort: they need the vendor's shop id, which only

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/notification_item.dart';
 import '../services/api_service.dart';
 import '../utils/num_helper.dart';
 import '../theme/colors.dart';
+import 'notifications_state.dart' show notificationFromJson;
 
 /// One "needs attention" row from GET /vendor/dashboard's `alerts`.
 class DashboardAlert {
@@ -33,6 +35,25 @@ class WeekBar {
   final double fraction;
 }
 
+/// One available subscription plan (for the change-plan sheet).
+class PlanOption {
+  const PlanOption({
+    required this.id,
+    required this.name,
+    required this.displayName,
+    required this.priceTzs,
+    required this.maxOrders,
+    required this.isCurrent,
+  });
+
+  final String id;
+  final String name;
+  final String displayName;
+  final double priceTzs;
+  final int maxOrders;
+  final bool isCurrent;
+}
+
 class VendorDashboardState {
   const VendorDashboardState({
     this.shopName = '',
@@ -45,11 +66,18 @@ class VendorDashboardState {
     this.ratingCount = 0,
     this.weekBars = const [],
     this.alerts = const [],
+    this.notifications = const [],
+    this.unreadCount = 0,
     this.planName = '',
+    this.planSlug = '',
     this.planStatus = '',
+    this.planPriceTzs = 0,
+    this.billingPeriod = '',
     this.ordersUsed = 0,
     this.maxOrders = 0,
+    this.periodStart = '',
     this.periodEnd = '',
+    this.plans = const [],
     this.isLoading = false,
   });
 
@@ -63,14 +91,25 @@ class VendorDashboardState {
   final int ratingCount;
   final List<WeekBar> weekBars;
   final List<DashboardAlert> alerts;
+  final List<NotificationItem> notifications;
+  final int unreadCount;
 
   final String planName;
+  final String planSlug;
   final String planStatus;
+  final double planPriceTzs;
+  final String billingPeriod;
   final int ordersUsed;
   final int maxOrders;
+  final String periodStart;
   final String periodEnd;
+  final List<PlanOption> plans;
 
   final bool isLoading;
+
+  /// Never show "No active plan": while loading keep the previous name,
+  /// and after load the backend always provisions a plan.
+  bool get hasPlan => planName.isNotEmpty;
 
   /// 0..1 subscription usage for the plan progress bar.
   double get usageFraction =>
@@ -90,11 +129,18 @@ class VendorDashboardState {
     int? ratingCount,
     List<WeekBar>? weekBars,
     List<DashboardAlert>? alerts,
+    List<NotificationItem>? notifications,
+    int? unreadCount,
     String? planName,
+    String? planSlug,
     String? planStatus,
+    double? planPriceTzs,
+    String? billingPeriod,
     int? ordersUsed,
     int? maxOrders,
+    String? periodStart,
     String? periodEnd,
+    List<PlanOption>? plans,
     bool? isLoading,
   }) =>
       VendorDashboardState(
@@ -108,11 +154,18 @@ class VendorDashboardState {
         ratingCount: ratingCount ?? this.ratingCount,
         weekBars: weekBars ?? this.weekBars,
         alerts: alerts ?? this.alerts,
+        notifications: notifications ?? this.notifications,
+        unreadCount: unreadCount ?? this.unreadCount,
         planName: planName ?? this.planName,
+        planSlug: planSlug ?? this.planSlug,
         planStatus: planStatus ?? this.planStatus,
+        planPriceTzs: planPriceTzs ?? this.planPriceTzs,
+        billingPeriod: billingPeriod ?? this.billingPeriod,
         ordersUsed: ordersUsed ?? this.ordersUsed,
         maxOrders: maxOrders ?? this.maxOrders,
+        periodStart: periodStart ?? this.periodStart,
         periodEnd: periodEnd ?? this.periodEnd,
+        plans: plans ?? this.plans,
         isLoading: isLoading ?? this.isLoading,
       );
 }
@@ -128,9 +181,14 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
       final data = response['data'] as Map<String, dynamic>? ?? {};
       final shop = data['shop'] as Map<String, dynamic>? ?? {};
       final sub = data['subscription'] as Map<String, dynamic>? ?? {};
+      final notifs = (data['recent_notifications'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(notificationFromJson)
+              .toList() ??
+          const [];
 
-      state = VendorDashboardState(
-        shopName: shop['name'] as String? ?? '',
+      state = state.copyWith(
+        shopName: shop['name'] as String? ?? state.shopName,
         ordersToday: parseInt(data['orders_today']) ?? 0,
         revenueTodayTzs: parseInt(data['revenue_today']) ?? 0,
         activeOrders: parseInt(data['active_orders']) ?? 0,
@@ -140,15 +198,81 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
         ratingCount: parseInt(data['rating_count']) ?? 0,
         weekBars: _weekBars(data['week_bars'] as List?),
         alerts: _alerts(data['alerts'] as List?),
-        planName: sub['plan_name'] as String? ?? '',
-        planStatus: sub['status'] as String? ?? '',
+        notifications: notifs,
+        unreadCount: parseInt(data['unread_count']) ?? 0,
+        planName: (sub['plan_name'] as String?)?.isNotEmpty == true
+            ? sub['plan_name'] as String
+            : state.planName,
+        planSlug: sub['plan_slug'] as String? ?? state.planSlug,
+        planStatus: sub['status'] as String? ?? state.planStatus,
+        planPriceTzs: parseDouble(sub['price_tzs']) ?? state.planPriceTzs,
+        billingPeriod: sub['billing_period'] as String? ?? state.billingPeriod,
         ordersUsed: parseInt(sub['orders_used']) ?? 0,
         maxOrders: parseInt(sub['max_orders_per_month']) ?? 0,
-        periodEnd: sub['current_period_end'] as String? ?? '',
+        periodStart: sub['current_period_start'] as String? ?? state.periodStart,
+        periodEnd: sub['current_period_end'] as String? ?? state.periodEnd,
+        isLoading: false,
       );
     } on ApiException {
       // Keep prior state — a stale dashboard beats an empty one.
       state = state.copyWith(isLoading: false);
+    }
+
+    // Plans + full subscription details for the change-plan sheet.
+    try {
+      final subRes = await api.getVendorSubscription();
+      final current = subRes['data'] as Map<String, dynamic>?;
+      final plans = (subRes['plans'] as List?)?.whereType<Map<String, dynamic>>().toList() ??
+          ((await api.getSubscriptionPlans()).whereType<Map<String, dynamic>>().toList());
+      final currentId = '${current?['plan_id'] ?? current?['plan']?['id'] ?? ''}';
+      final sub = current ?? {};
+      state = state.copyWith(
+        plans: [
+          for (final p in plans)
+            PlanOption(
+              id: '${p['id']}',
+              name: p['name'] as String? ?? '',
+              displayName: p['display_name'] as String? ?? p['name'] as String? ?? '',
+              priceTzs: parseDouble(p['price_tzs']) ?? 0,
+              maxOrders: parseInt(p['max_orders_per_month']) ?? 0,
+              isCurrent: '${p['id']}' == currentId,
+            ),
+        ],
+        planName: (sub['plan'] as Map?)?['display_name'] as String? ??
+            (sub['plan'] as Map?)?['name'] as String? ??
+            state.planName,
+      );
+    } on ApiException {
+      // Plans sheet stays empty; dashboard still renders.
+    }
+  }
+
+  Future<bool> requestPlanChange(String planId, {String? note}) async {
+    try {
+      await api.requestPlanChange(planId, note: note);
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> notificationDetail(String id) async {
+    try {
+      final res = await api.getVendorNotificationDetail(id);
+      final payload = res['data'] as Map<String, dynamic>?;
+      if (payload != null) {
+        final wasUnread = state.notifications.any((n) => n.id == id && !n.isRead);
+        state = state.copyWith(
+          notifications: [
+            for (final n in state.notifications)
+              n.id == id ? n.copyWith(isRead: true) : n,
+          ],
+          unreadCount: wasUnread && state.unreadCount > 0 ? state.unreadCount - 1 : state.unreadCount,
+        );
+      }
+      return payload;
+    } on ApiException {
+      return null;
     }
   }
 
