@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
@@ -100,12 +102,37 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
               if (showMap) ...[
                 const _SectionLabel('Delivery location'),
                 _OrderMap(
+                  shopName: shopProfile.shopTitle.isEmpty ? 'Your shop' : shopProfile.shopTitle,
                   shopLat: shopProfile.latitude,
                   shopLng: shopProfile.longitude,
                   clientLat: state.deliveryLat,
                   clientLng: state.deliveryLng,
+                  clientTag: state.customerName.isEmpty ? 'Customer' : state.customerName,
                   label: state.deliveryAddress.isEmpty ? 'Delivery address' : state.deliveryAddress,
                 ),
+                const SizedBox(height: 12),
+                if (shopProfile.latitude != null && shopProfile.longitude != null && state.deliveryLat != null && state.deliveryLng != null)
+                  _RouteStats(
+                    distanceKm: Geolocator.distanceBetween(
+                          shopProfile.latitude!,
+                          shopProfile.longitude!,
+                          state.deliveryLat!,
+                          state.deliveryLng!,
+                        ) /
+                        1000,
+                  ),
+                if (state.deliveryLat != null && state.deliveryLng != null) ...[
+                  const SizedBox(height: 12),
+                  _OpenInMapsButton(
+                    onTap: () => _openGoogleMaps(
+                      originLat: shopProfile.latitude,
+                      originLng: shopProfile.longitude,
+                      destLat: state.deliveryLat!,
+                      destLng: state.deliveryLng!,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
               ],
               // Only the sections the customer actually picked from render —
               // an empty package/add-ons/items card is just noise.
@@ -188,17 +215,23 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
 /// customer app's `_OrderMap` in order_detail_screen.dart.
 class _OrderMap extends StatelessWidget {
   const _OrderMap({
+    required this.shopName,
     required this.shopLat,
     required this.shopLng,
     required this.clientLat,
     required this.clientLng,
+    required this.clientTag,
     required this.label,
   });
 
+  final String shopName;
   final double? shopLat;
   final double? shopLng;
   final double? clientLat;
   final double? clientLng;
+
+  /// Short caption under the delivery-point pin (the customer's name).
+  final String clientTag;
   final String label;
 
   @override
@@ -240,29 +273,47 @@ class _OrderMap extends StatelessWidget {
                   if (shopLat != null && shopLng != null)
                     Marker(
                       point: ll.LatLng(shopLat!, shopLng!),
-                      width: 36,
-                      height: 36,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: AppColors.teal,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
-                        ),
-                        child: const Icon(Icons.store, color: Colors.white, size: 18),
+                      width: 90,
+                      height: 58,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: AppColors.teal,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
+                            ),
+                            child: const Icon(Icons.store, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(height: 2),
+                          _MarkerTag(text: shopName),
+                        ],
                       ),
                     ),
                   if (clientLat != null && clientLng != null)
                     Marker(
                       point: ll.LatLng(clientLat!, clientLng!),
-                      width: 32,
-                      height: 32,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
-                        ),
-                        child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                      width: 70,
+                      height: 54,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                            ),
+                            child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                          ),
+                          const SizedBox(height: 2),
+                          _MarkerTag(text: clientTag),
+                        ],
                       ),
                     ),
                 ]),
@@ -287,6 +338,125 @@ class _OrderMap extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small name pill under a map marker's icon (the shop name or customer name).
+class _MarkerTag extends StatelessWidget {
+  const _MarkerTag({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.creamDark),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+/// Straight-line distance and a rough 3 min/km driving estimate between the
+/// shop and the delivery point — mirrors the customer app's `_RouteStats`.
+class _RouteStats extends StatelessWidget {
+  const _RouteStats({required this.distanceKm});
+  final double distanceKm;
+
+  @override
+  Widget build(BuildContext context) {
+    final estMin = (distanceKm * 3).round();
+    return Row(
+      children: [
+        _RouteStat(icon: Icons.straighten, value: '${distanceKm.toStringAsFixed(1)} km', label: 'Distance'),
+        const SizedBox(width: 20),
+        _RouteStat(icon: Icons.schedule, value: '$estMin min', label: 'Est. time', color: AppColors.amber),
+      ],
+    );
+  }
+}
+
+class _RouteStat extends StatelessWidget {
+  const _RouteStat({required this.icon, required this.value, required this.label, this.color = AppColors.teal});
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800)),
+            Text(label, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Opens turn-by-turn directions in Google Maps from the shop to the
+/// delivery point — mirrors the customer app's direction screen, reversed
+/// since the vendor is the one travelling to drop the order off.
+Future<void> _openGoogleMaps({double? originLat, double? originLng, required double destLat, required double destLng}) async {
+  final String url;
+  if (originLat != null && originLng != null) {
+    url = 'https://www.google.com/maps/dir/?api=1&origin=$originLat,$originLng&destination=$destLat,$destLng&travelmode=driving';
+  } else {
+    url = 'https://www.google.com/maps/search/?api=1&query=$destLat,$destLng';
+  }
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+class _OpenInMapsButton extends StatelessWidget {
+  const _OpenInMapsButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: Material(
+        color: AppColors.teal,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.directions, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Open in Google Maps', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Colors.white)),
+            ],
+          ),
         ),
       ),
     );
