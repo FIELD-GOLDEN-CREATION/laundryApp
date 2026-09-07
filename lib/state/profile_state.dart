@@ -109,9 +109,13 @@ class ProfileNotifier extends Notifier<ProfileState> {
     }
   }
 
-  Future<bool> updateAddress(String id, String line) async {
+  Future<bool> updateAddress(String id, String line, {double? latitude, double? longitude}) async {
     try {
-      await api.updateAddress(id, {'line': line});
+      await api.updateAddress(id, {
+        'line': line,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
+      });
       await loadAddresses();
       return true;
     } on ApiException {
@@ -155,12 +159,12 @@ class ProfileNotifier extends Notifier<ProfileState> {
     }
   }
 
-  Future<void> updateAddressLine(int i, String line) async {
+  Future<void> updateAddressLine(int i, String line, {double? latitude, double? longitude}) async {
     final current = state.addresses[i];
     final next = List.of(state.addresses);
-    next[i] = Address(id: current.id, label: current.label, line: line);
+    next[i] = Address(id: current.id, label: current.label, line: line, latitude: latitude, longitude: longitude);
     state = state.copyWith(addresses: next);
-    if (current.id != null) await updateAddress(current.id!, line);
+    if (current.id != null) await updateAddress(current.id!, line, latitude: latitude, longitude: longitude);
   }
 
   /// Removes the address at [i] from local state immediately, then deletes
