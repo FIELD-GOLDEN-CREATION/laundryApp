@@ -39,6 +39,12 @@ class RealtimeService {
   void Function(String action, Map<String, dynamic> order)? onOrderEvent;
   void Function(Map<String, dynamic> notification)? onNotificationEvent;
 
+  /// `action` is currently always 'redeemed' — fired when a customer's order
+  /// applies this shop's promo code, the one promo change that doesn't
+  /// originate from the vendor's own app and so can't just update local
+  /// state on a successful request the way create/toggle/delete already do.
+  void Function(String action, Map<String, dynamic> promo)? onPromoEvent;
+
   /// Ensures the socket is open and subscribed to exactly
   /// `private-user.{userId}` plus `private-vendor-shop.{shopId}` (when
   /// [shopId] is known). Safe to call repeatedly — e.g. once at login with
@@ -139,6 +145,12 @@ class RealtimeService {
         onOrderEvent?.call(
           data['action'] as String? ?? '',
           order is Map ? order.cast<String, dynamic>() : const {},
+        );
+      case 'promo.updated':
+        final promo = data['promo'];
+        onPromoEvent?.call(
+          data['action'] as String? ?? '',
+          promo is Map ? promo.cast<String, dynamic>() : const {},
         );
       default:
         // pusher_internal:subscription_succeeded / subscription_error /

@@ -58,6 +58,19 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
   @override
   NotificationsState build() => const NotificationsState();
 
+  /// Called by [RealtimeService] for every `notification.created` socket
+  /// event on this user's private channel — patches state directly for an
+  /// instant bump since the payload already carries everything the list
+  /// needs, same as `VendorDashboardNotifier.handleRealtimeNotification`.
+  void handleRealtimeNotification(Map<String, dynamic> json) {
+    final notif = notificationFromJson(json);
+    if (state.items.any((n) => n.id == notif.id)) return;
+    state = state.copyWith(
+      items: [notif, ...state.items],
+      unreadCount: notif.isRead ? state.unreadCount : state.unreadCount + 1,
+    );
+  }
+
   Future<void> loadNotifications({bool vendor = false, String? type}) async {
     state = state.copyWith(isLoading: true);
     try {

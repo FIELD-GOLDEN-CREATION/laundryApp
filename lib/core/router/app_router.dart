@@ -35,7 +35,13 @@ import '../../screens/vendor/vendor_settings_screen.dart';
 import '../../models/user_role.dart';
 import '../../services/realtime_service.dart';
 import '../../state/auth_state.dart';
+import '../../state/notifications_state.dart';
+import '../../state/orders_state.dart';
 import '../../state/vendor_dashboard_state.dart';
+import '../../state/vendor_earnings_state.dart';
+import '../../state/vendor_order_detail_state.dart';
+import '../../state/vendor_orders_state.dart';
+import '../../state/vendor_promos_state.dart';
 import '../../widgets/bottom_tab_bar.dart';
 
 /// Root navigation graph.
@@ -132,27 +138,81 @@ final appRouter = GoRouter(
   ],
 );
 
-class _CustomerTabShell extends ConsumerWidget {
+/// Also owns the realtime (WebSocket) connection lifecycle for the customer
+/// role — same pattern as `_RoleTabShell` below, but scoped to just this
+/// user's private channel (no shop channel to join). The backend already
+/// pushes a `notification.created` event here on every order status change
+/// (accept/reject/in_wash/ready/out_for_delivery/delivered — see
+/// `VendorOrderController::notifyCustomerStatus`); it just wasn't being
+/// listened for anywhere before this.
+class _CustomerTabShell extends ConsumerStatefulWidget {
   const _CustomerTabShell({required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CustomerTabShell> createState() => _CustomerTabShellState();
+}
+
+class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
+  int? _connectedUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncRealtime();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AuthState>(authProvider, (_, _) => _syncRealtime());
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: shell,
+        child: widget.shell,
       ),
       bottomNavigationBar: FloatingCustomerNavBar(
-        currentIndex: shell.currentIndex,
+        currentIndex: widget.shell.currentIndex,
         onTap: (i) {
           final reason = kCustomerTabs[i].gateReason;
           if (reason != null && gateGuest(ref, context, reason)) return;
-          shell.goBranch(i, initialLocation: i == shell.currentIndex);
+          widget.shell.goBranch(i, initialLocation: i == widget.shell.currentIndex);
         },
       ),
     );
+  }
+
+  void _syncRealtime() {
+    final auth = ref.read(authProvider);
+    if (auth.role != UserRole.customer || auth.userId == 0) {
+      if (_connectedUserId != null) _disconnectRealtime();
+      return;
+    }
+    if (_connectedUserId == auth.userId) return;
+    _connectedUserId = auth.userId;
+
+    final realtime = RealtimeService.instance;
+    realtime.onNotificationEvent = (n) {
+      ref.read(notificationsProvider.notifier).handleRealtimeNotification(n);
+      final data = n['data'];
+      if (data is Map && data['order_id'] != null) {
+        ref.read(ordersProvider.notifier).handleRealtimeOrderNotification(n);
+        ref.read(completedOrdersProvider.notifier).handleRealtimeOrderNotification(n);
+      }
+    };
+    realtime.connect(userId: auth.userId);
+  }
+
+  void _disconnectRealtime() {
+    RealtimeService.instance.disconnect();
+    _connectedUserId = null;
+  }
+
+  @override
+  void dispose() {
+    _disconnectRealtime();
+    super.dispose();
   }
 }
 
@@ -165,6 +225,15 @@ class _CustomerTabShell extends ConsumerWidget {
 /// full reconnect, once the vendor dashboard's shop id resolves), and
 /// disconnects on dispose — i.e. when this whole shell is left, such as on
 /// logout. A no-op for any other role.
+///
+/// One socket, fanned out to every vendor screen's state — dashboard,
+/// orders list, order detail, and earnings all react to the same
+/// `order.updated`/`new_order` events (each ignoring or debouncing them as
+/// appropriate; see each notifier's `handleRealtimeOrderEvent`), since all
+/// four branches stay mounted (`IndexedStack`) and can go stale together
+/// from one backend action, e.g. accepting an order. Promos additionally
+/// react to `promo.updated`, fired when a customer's order redeems one of
+/// this shop's codes.
 class _RoleTabShell extends ConsumerStatefulWidget {
   const _RoleTabShell({required this.shell, required this.items});
 
@@ -217,10 +286,16 @@ class _RoleTabShellState extends ConsumerState<_RoleTabShell> {
     _connectedShopId = shopId;
 
     final realtime = RealtimeService.instance;
-    realtime.onOrderEvent = (action, order) =>
-        ref.read(vendorDashboardProvider.notifier).handleRealtimeOrderEvent(action, order);
+    realtime.onOrderEvent = (action, order) {
+      ref.read(vendorDashboardProvider.notifier).handleRealtimeOrderEvent(action, order);
+      ref.read(vendorOrdersProvider.notifier).handleRealtimeOrderEvent(action, order);
+      ref.read(vendorOrderDetailProvider.notifier).handleRealtimeOrderEvent(action, order);
+      ref.read(vendorEarningsProvider.notifier).handleRealtimeOrderEvent(action, order);
+    };
     realtime.onNotificationEvent = (n) =>
         ref.read(vendorDashboardProvider.notifier).handleRealtimeNotification(n);
+    realtime.onPromoEvent = (action, promo) =>
+        ref.read(vendorPromosProvider.notifier).handleRealtimePromoEvent(action, promo);
     realtime.connect(userId: auth.userId, shopId: shopId);
   }
 

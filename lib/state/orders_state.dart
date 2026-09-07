@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order.dart';
@@ -12,9 +14,24 @@ import '../utils/num_helper.dart';
 class OrdersNotifier extends Notifier<List<Order>> {
   bool _loading = false;
   bool get isLoading => _loading;
+  Timer? _refreshDebounce;
 
   @override
-  List<Order> build() => [];
+  List<Order> build() {
+    ref.onDispose(() => _refreshDebounce?.cancel());
+    return [];
+  }
+
+  /// Called by [RealtimeService] for any order-related `notification.created`
+  /// event on this customer's private channel (accepted/rejected/in_wash/
+  /// ready/out_for_delivery/delivered) — the backend only pushes a generic
+  /// notification here, not a full order payload, so this just triggers a
+  /// debounced reload rather than trying to patch fields from `data`. Same
+  /// reasoning as `VendorDashboardNotifier.handleRealtimeOrderEvent`.
+  void handleRealtimeOrderNotification(Map<String, dynamic> data) {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), loadOrders);
+  }
 
   Future<void> loadOrders() async {
     _loading = true;
@@ -217,8 +234,21 @@ final ordersProvider = NotifierProvider<OrdersNotifier, List<Order>>(OrdersNotif
 
 /// Delivered orders for the Orders screen's Completed tab.
 class CompletedOrdersNotifier extends Notifier<List<Order>> {
+  Timer? _refreshDebounce;
+
   @override
-  List<Order> build() => [];
+  List<Order> build() {
+    ref.onDispose(() => _refreshDebounce?.cancel());
+    return [];
+  }
+
+  /// See [OrdersNotifier.handleRealtimeOrderNotification] — an order turning
+  /// 'delivered' moves it into this list, so both notifiers need to hear
+  /// about every order-related notification, not just the active one.
+  void handleRealtimeOrderNotification(Map<String, dynamic> data) {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), loadOrders);
+  }
 
   Future<void> loadOrders() async {
     try {
