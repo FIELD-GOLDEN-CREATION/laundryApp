@@ -45,7 +45,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final isGuest = ref.watch(authProvider.select((s) => s.role == UserRole.guest));
     final language = ref.watch(clientPreferencesProvider).language;
-    final shops = ref.watch(shopsProvider).items;
+    final shops = ref.watch(shopsWithDistanceProvider);
     final offers = ref.watch(offersProvider).items;
 
     // Latest in-progress order for the tracking banner.

@@ -165,10 +165,37 @@ class ShopListTile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    ShopLocationLabel(
-                      shop: shop,
-                       style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: ShopLocationLabel(
+                            shop: shop,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                          ),
+                        ),
+                        if (shop.distanceKm >= 0) ...[
+                          const SizedBox(width: 6),
+                          const AppIcon(AppIcons.locationPin, size: 10),
+                          const SizedBox(width: 2),
+                          Text(
+                            shop.distance,
+                            style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal),
+                          ),
+                        ],
+                      ],
                     ),
+                    if (shop.description.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        shop.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                      ),
+                    ],
                     const SizedBox(height: 9),
                     Wrap(
                       spacing: 6,

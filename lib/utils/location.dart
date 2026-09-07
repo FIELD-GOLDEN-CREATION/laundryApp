@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -138,6 +139,22 @@ bool looksLikeCoordinates(String text) {
   if (parts.length != 2) return false;
   return double.tryParse(parts[0].trim()) != null && double.tryParse(parts[1].trim()) != null;
 }
+
+/// Straight-line distance between two GPS points in kilometers. Mirrors
+/// `DeliveryFee::haversineKm` in the Laravel backend (same radius, same
+/// formula) so a customer's "X km away" here never disagrees with the
+/// delivery fee they're quoted at checkout for the same shop.
+double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+  const earthRadiusKm = 6371.0;
+  final dLat = _degToRad(lat2 - lat1);
+  final dLng = _degToRad(lng2 - lng1);
+  final a = math.pow(math.sin(dLat / 2), 2) +
+      math.cos(_degToRad(lat1)) * math.cos(_degToRad(lat2)) * math.pow(math.sin(dLng / 2), 2);
+  final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+double _degToRad(double deg) => deg * (math.pi / 180);
 
 final _reverseGeocodeCache = <String, Future<String>>{};
 
