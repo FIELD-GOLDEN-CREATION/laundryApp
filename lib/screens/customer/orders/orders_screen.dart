@@ -25,17 +25,30 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref.read(ordersProvider.notifier).loadOrders();
-      ref.read(completedOrdersProvider.notifier).loadOrders();
-      ref.read(shopsProvider.notifier).load();
-    });
+    Future.microtask(_refresh);
+  }
+
+  // The customer shell keeps this screen alive in an IndexedStack, so
+  // initState only ever fires once per app session — without an explicit
+  // refresh hook, an order that turns 'delivered' after the user's first
+  // visit here would never appear (Completed tab depends on a separate,
+  // never-repeated fetch). Pull-to-refresh and tab switches both call this.
+  Future<void> _refresh() async {
+    await Future.wait([
+      ref.read(ordersProvider.notifier).loadOrders(),
+      ref.read(completedOrdersProvider.notifier).loadOrders(),
+      ref.read(shopsProvider.notifier).load(),
+    ]);
+  }
+
+  void _pickTab(int i) {
+    ref.read(ordersTabProvider.notifier).pick(i);
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     final tab = ref.watch(ordersTabProvider);
-    final notifier = ref.read(ordersTabProvider.notifier);
     // Delivered/collected orders belong on the Completed tab, not Active —
     // even though ordersProvider's unfiltered API fetch can still include them.
     final activeOrders = ref.watch(ordersProvider).where((o) => o.trackStep != 4).toList();
@@ -46,33 +59,36 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
-          children: [
-             Text(clientLabel('Your orders', 'Oda zako', language), style: AppText.serif(fontSize: 28, color: AppColors.clientText(context))),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(4),
-               decoration: BoxDecoration(color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.creamDark, borderRadius: BorderRadius.circular(999)),
-              child: Row(
-                children: [
-                   Expanded(child: _TabButton(label: clientLabel('Active', 'Inayoendelea', language), active: tab == 0, onTap: () => notifier.pick(0))),
-                   Expanded(child: _TabButton(label: clientLabel('Completed', 'Imekamilika', language), active: tab == 1, onTap: () => notifier.pick(1))),
-                ],
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
+            children: [
+              Text(clientLabel('Your orders', 'Oda zako', language), style: AppText.serif(fontSize: 28, color: AppColors.clientText(context))),
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.creamDark, borderRadius: BorderRadius.circular(999)),
+                child: Row(
+                  children: [
+                    Expanded(child: _TabButton(label: clientLabel('Active', 'Inayoendelea', language), active: tab == 0, onTap: () => _pickTab(0))),
+                    Expanded(child: _TabButton(label: clientLabel('Completed', 'Imekamilika', language), active: tab == 1, onTap: () => _pickTab(1))),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            for (var i = 0; i < orders.length; i++) ...[
-              _OrderCard(
-                order: orders[i],
-                shop: _shopFor(shops, orders[i].shop),
-                showContact: tab == 0,
-                language: language,
-                          onTap: () => context.push('/order-detail', extra: orders[i].id),
-              ),
-              if (i != orders.length - 1) const SizedBox(height: 12),
+              const SizedBox(height: 18),
+              for (var i = 0; i < orders.length; i++) ...[
+                _OrderCard(
+                  order: orders[i],
+                  shop: _shopFor(shops, orders[i].shop),
+                  showContact: tab == 0,
+                  language: language,
+                  onTap: () => context.push('/order-detail', extra: orders[i].id),
+                ),
+                if (i != orders.length - 1) const SizedBox(height: 12),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
