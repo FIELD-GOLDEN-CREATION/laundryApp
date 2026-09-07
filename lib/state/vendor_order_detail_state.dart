@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api_service.dart';
@@ -159,8 +161,24 @@ List<VendorTrackStep> _stepsFromTracking(List? raw) {
 }
 
 class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
+  Timer? _refreshDebounce;
+
   @override
-  VendorOrderDetailState build() => const VendorOrderDetailState();
+  VendorOrderDetailState build() {
+    ref.onDispose(() => _refreshDebounce?.cancel());
+    return const VendorOrderDetailState();
+  }
+
+  /// Called by [RealtimeService] for any `order.updated`/`new_order` socket
+  /// event on this shop's channel. Ignores events for orders other than the
+  /// one currently open, and debounces so a burst of events (e.g.
+  /// bulk-complete) triggers one refetch — same reasoning as
+  /// [VendorDashboardNotifier.handleRealtimeOrderEvent].
+  void handleRealtimeOrderEvent(String action, Map<String, dynamic> order) {
+    if (!state.hasOrder || order['id']?.toString() != state.orderId) return;
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), _refreshSteps);
+  }
 
   Future<void> load(String rawOrderId) async {
     if (rawOrderId.isEmpty) return;

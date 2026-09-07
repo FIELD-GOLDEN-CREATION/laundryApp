@@ -92,6 +92,27 @@ class VendorPromosNotifier extends Notifier<VendorPromosState> {
   @override
   VendorPromosState build() => const VendorPromosState();
 
+  /// Called by [RealtimeService] when a customer's order redeems one of this
+  /// shop's promos — the payload already carries the fresh
+  /// `current_redemptions`/`is_active`, so this patches the matching card
+  /// directly instead of refetching the whole list.
+  void handleRealtimePromoEvent(String action, Map<String, dynamic> promo) {
+    final id = promo['id'] != null ? '${promo['id']}' : '';
+    if (id.isEmpty) return;
+    state = state.copyWith(
+      promos: [
+        for (final p in state.promos)
+          if (p.id == id)
+            p.copyWith(
+              currentRedemptions: parseInt(promo['current_redemptions']) ?? p.currentRedemptions,
+              isActive: promo['is_active'] as bool? ?? p.isActive,
+            )
+          else
+            p,
+      ],
+    );
+  }
+
   Future<void> loadPromos() async {
     state = state.copyWith(isLoading: true);
     try {

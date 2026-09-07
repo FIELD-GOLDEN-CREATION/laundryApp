@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/vendor_order.dart';
@@ -40,8 +42,22 @@ class VendorOrdersState {
 }
 
 class VendorOrdersNotifier extends Notifier<VendorOrdersState> {
+  Timer? _refreshDebounce;
+
   @override
-  VendorOrdersState build() => const VendorOrdersState();
+  VendorOrdersState build() {
+    ref.onDispose(() => _refreshDebounce?.cancel());
+    return const VendorOrdersState();
+  }
+
+  /// Called by [RealtimeService] for any `order.updated`/`new_order` socket
+  /// event on this shop's channel. Debounced so a burst of events (e.g.
+  /// bulk-complete) triggers one reload, not one per event — same reasoning
+  /// as [VendorDashboardNotifier.handleRealtimeOrderEvent].
+  void handleRealtimeOrderEvent(String action, Map<String, dynamic> order) {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), loadOrders);
+  }
 
   void pickTab(int i) => state = state.copyWith(tab: i);
 

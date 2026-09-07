@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/review_item.dart';
@@ -130,8 +132,24 @@ class VendorEarningsState {
 }
 
 class VendorEarningsNotifier extends Notifier<VendorEarningsState> {
+  Timer? _refreshDebounce;
+
   @override
-  VendorEarningsState build() => const VendorEarningsState();
+  VendorEarningsState build() {
+    ref.onDispose(() => _refreshDebounce?.cancel());
+    return const VendorEarningsState();
+  }
+
+  /// Called by [RealtimeService] for any `order.updated`/`new_order` socket
+  /// event on this shop's channel — order status changes (accept/complete)
+  /// bust the vendor's finance cache server-side, so balance/payouts/
+  /// transactions here can go stale the same way the dashboard's numbers
+  /// can. Debounced for the same reason as
+  /// [VendorDashboardNotifier.handleRealtimeOrderEvent].
+  void handleRealtimeOrderEvent(String action, Map<String, dynamic> order) {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), load);
+  }
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
