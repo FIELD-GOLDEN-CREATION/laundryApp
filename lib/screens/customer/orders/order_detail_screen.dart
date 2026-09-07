@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/order.dart';
 import '../../../models/review.dart';
@@ -104,8 +106,27 @@ class OrderDetailScreen extends ConsumerWidget {
                         shopLng: shopLng,
                         clientLat: clientLat,
                         clientLng: clientLng,
+                        clientTag: clientLabel('You', 'Wewe', language),
                         label: order.address.isEmpty ? clientLabel('Delivery address', 'Anwani ya kupeleka', language) : order.address,
                       ),
+                      const SizedBox(height: 12),
+                      if (shopLat != null && shopLng != null && clientLat != null && clientLng != null)
+                        _RouteStats(
+                          distanceKm: Geolocator.distanceBetween(shopLat, shopLng, clientLat, clientLng) / 1000,
+                          language: language,
+                        ),
+                      if (shopLat != null && shopLng != null) ...[
+                        const SizedBox(height: 12),
+                        _OpenInMapsButton(
+                          label: clientLabel('Open in Google Maps', 'Fungua Google Maps', language),
+                          onTap: () => _openGoogleMaps(
+                            originLat: clientLat,
+                            originLng: clientLng,
+                            destLat: shopLat,
+                            destLng: shopLng,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                     ],
                     _InfoRow(icon: Icons.location_on_outlined, label: order.fulfillment == 'self' ? clientLabel('Drop-off', 'Anwani ya kupeleka', language) : clientLabel('Pickup address', 'Anwani ya kuchukua', language), value: order.address.isEmpty ? clientLabel('Address from your schedule', 'Anwani kutoka kwenye ratiba yako', language) : order.address),
@@ -284,6 +305,7 @@ class _OrderMap extends StatelessWidget {
     required this.shopLng,
     required this.clientLat,
     required this.clientLng,
+    required this.clientTag,
     required this.label,
   });
 
@@ -292,6 +314,9 @@ class _OrderMap extends StatelessWidget {
   final double? shopLng;
   final double? clientLat;
   final double? clientLng;
+
+  /// Short caption under the delivery-point pin (e.g. "You").
+  final String clientTag;
   final String label;
 
   @override
@@ -333,29 +358,47 @@ class _OrderMap extends StatelessWidget {
                   if (shopLat != null && shopLng != null)
                     Marker(
                       point: ll.LatLng(shopLat!, shopLng!),
-                      width: 36,
-                      height: 36,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: AppColors.teal,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
-                        ),
-                        child: const Icon(Icons.store, color: Colors.white, size: 18),
+                      width: 90,
+                      height: 58,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: AppColors.teal,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
+                            ),
+                            child: const Icon(Icons.store, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(height: 2),
+                          _MarkerTag(text: shopName),
+                        ],
                       ),
                     ),
                   if (clientLat != null && clientLng != null)
                     Marker(
                       point: ll.LatLng(clientLat!, clientLng!),
-                      width: 32,
-                      height: 32,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
-                        ),
-                        child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                      width: 70,
+                      height: 54,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                            ),
+                            child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                          ),
+                          const SizedBox(height: 2),
+                          _MarkerTag(text: clientTag),
+                        ],
                       ),
                     ),
                 ]),
@@ -380,6 +423,139 @@ class _OrderMap extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small name pill under a map marker's icon (e.g. the shop name or "You").
+class _MarkerTag extends StatelessWidget {
+  const _MarkerTag({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.clientSurface(context),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.clientBorder(context)),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
+      ),
+    );
+  }
+}
+
+/// Straight-line distance and a rough 3 min/km driving estimate between the
+/// shop and the delivery point — mirrors `_DirectionBottomSheet` in
+/// direction_screen.dart.
+class _RouteStats extends StatelessWidget {
+  const _RouteStats({required this.distanceKm, required this.language});
+
+  final double distanceKm;
+  final String language;
+
+  @override
+  Widget build(BuildContext context) {
+    final estMin = (distanceKm * 3).round();
+    return Row(
+      children: [
+        _RouteStat(
+          icon: Icons.straighten,
+          value: '${distanceKm.toStringAsFixed(1)} km',
+          label: clientLabel('Distance', 'Umbali', language),
+        ),
+        const SizedBox(width: 20),
+        _RouteStat(
+          icon: Icons.schedule,
+          value: '$estMin min',
+          label: clientLabel('Est. time', 'Muda uliokadiriwa', language),
+          color: AppColors.amber,
+        ),
+      ],
+    );
+  }
+}
+
+class _RouteStat extends StatelessWidget {
+  const _RouteStat({required this.icon, required this.value, required this.label, this.color = AppColors.teal});
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+            Text(label, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Opens turn-by-turn directions in Google Maps between the two points on
+/// the map above — mirrors `_openGoogleMaps` in direction_screen.dart. When
+/// only the destination is known, falls back to a plain map search for it.
+Future<void> _openGoogleMaps({double? originLat, double? originLng, required double destLat, required double destLng}) async {
+  final String url;
+  if (originLat != null && originLng != null) {
+    url = 'https://www.google.com/maps/dir/?api=1&origin=$originLat,$originLng&destination=$destLat,$destLng&travelmode=driving';
+  } else {
+    url = 'https://www.google.com/maps/search/?api=1&query=$destLat,$destLng';
+  }
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+class _OpenInMapsButton extends StatelessWidget {
+  const _OpenInMapsButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: Material(
+        color: AppColors.teal,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.directions, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(label, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: Colors.white)),
+            ],
+          ),
         ),
       ),
     );
