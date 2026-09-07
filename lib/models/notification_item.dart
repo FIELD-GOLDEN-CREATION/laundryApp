@@ -11,6 +11,7 @@ class NotificationItem {
     required this.iconBg,
     required this.iconFg,
     this.type = 'system',
+    this.event,
     this.isRead = false,
     this.data = const {},
   });
@@ -26,6 +27,9 @@ class NotificationItem {
 
   /// Backend `notifications.type`: order | vendor | payment | system.
   final String type;
+
+  /// Canonical backend `notifications.event` (order.placed, promo.created, ...).
+  final String? event;
 
   /// Whether the notification has been read.
   final bool isRead;
@@ -43,6 +47,7 @@ class NotificationItem {
         iconBg: iconBg,
         iconFg: iconFg,
         type: type,
+        event: event,
         isRead: isRead ?? this.isRead,
         data: data,
       );

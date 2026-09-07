@@ -8,6 +8,7 @@ import '../../../models/user_role.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
+import '../../../state/notifications_state.dart';
 import '../../../state/orders_state.dart';
 import '../../../state/profile_state.dart';
 import '../../../theme/colors.dart';
@@ -36,6 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Future.microtask(() {
       ref.read(shopsProvider.notifier).load();
       ref.read(offersProvider.notifier).load();
+      ref.read(notificationsProvider.notifier).refreshUnread();
     });
   }
 
@@ -58,6 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Default pickup address: first saved address for this customer.
     final addresses = ref.watch(profileProvider.select((s) => s.addresses));
+    final unread = ref.watch(notificationsProvider.select((s) => s.unreadCount));
     final addressLine = addresses.isNotEmpty ? addresses.first.line : '';
 
     return Scaffold(
@@ -71,6 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                  isGuest: isGuest,
                  language: language,
                  addressLine: addressLine,
+                unreadCount: unread,
                 onProfile: () {
                   if (gateGuest(ref, context, 'Log in to see your profile, addresses and saved shops.')) return;
                   context.go('/profile');
@@ -161,7 +165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.isGuest, required this.language, required this.addressLine, required this.onProfile, required this.onNotifs, required this.onSearch});
+  const _Header({required this.isGuest, required this.language, required this.addressLine, required this.onProfile, required this.onNotifs, required this.onSearch, this.unreadCount = 0});
 
   final bool isGuest;
   final String language;
@@ -169,6 +173,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onProfile;
   final VoidCallback onNotifs;
   final VoidCallback onSearch;
+  final int unreadCount;
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +241,7 @@ class _Header extends StatelessWidget {
                           ],
                         ),
                       ),
-                      _HeaderIconButton(icon: AppIcons.bell, badge: true, onTap: onNotifs),
+                      _HeaderIconButton(icon: AppIcons.bell, badge: unreadCount > 0, count: unreadCount, onTap: onNotifs),
                     ],
                   ),
                 const SizedBox(height: 20),
@@ -279,11 +284,13 @@ class _HeaderIconButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.badge = false,
+    this.count = 0,
   });
 
   final String icon;
   final VoidCallback onTap;
   final bool badge;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -305,15 +312,19 @@ class _HeaderIconButton extends StatelessWidget {
               AppIcon(icon, size: 18, color: AppColors.cream),
               if (badge)
                 Positioned(
-                  top: 9,
-                  right: 10,
+                  top: 6,
+                  right: 6,
                   child: Container(
-                    width: 8,
-                    height: 8,
+                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: const BoxDecoration(
                       color: AppColors.amber,
                       shape: BoxShape.circle,
-                      border: Border.fromBorderSide(BorderSide(color: AppColors.teal, width: 2)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.black),
                     ),
                   ),
                 ),

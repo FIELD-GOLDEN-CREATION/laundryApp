@@ -549,21 +549,46 @@ class ApiService {
   // NOTIFICATIONS
   // =========================================================================
 
-  Future<List<Map<String, dynamic>>> getNotifications({int? page}) async {
+  Future<List<Map<String, dynamic>>> getNotifications({int? page, String? type, String? event, bool? unread, int? limit}) async {
     final data = await get('/notifications', query: {
       if (page != null) 'page': page.toString(),
+      if (type != null) 'type': type,
+      if (event != null) 'event': event,
+      if (unread != null) 'unread': unread.toString(),
+      if (limit != null) 'limit': limit.toString(),
     });
     return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  Future<int> getNotificationsUnreadCount() async {
+    try {
+      final data = await get('/notifications/unread-count');
+      return (data['unread_count'] as num?)?.toInt() ?? 0;
+    } on ApiException {
+      return 0;
+    }
   }
 
   Future<Map<String, dynamic>> getNotificationDetail(String id) =>
       get('/notifications/$id');
 
-  Future<List<Map<String, dynamic>>> getVendorNotifications({int? limit}) async {
+  Future<List<Map<String, dynamic>>> getVendorNotifications({int? limit, int? page, String? type, String? event}) async {
     final data = await get('/vendor/notifications', query: {
       if (limit != null) 'limit': limit.toString(),
+      if (page != null) 'page': page.toString(),
+      if (type != null) 'type': type,
+      if (event != null) 'event': event,
     });
     return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  Future<int> getVendorNotificationsUnreadCount() async {
+    try {
+      final data = await get('/vendor/notifications/unread-count');
+      return (data['unread_count'] as num?)?.toInt() ?? 0;
+    } on ApiException {
+      return 0;
+    }
   }
 
   Future<Map<String, dynamic>> getVendorNotificationDetail(String id) =>
@@ -580,6 +605,12 @@ class ApiService {
 
   Future<Map<String, dynamic>> markAllNotificationsRead() =>
       patch('/notifications/read-all');
+
+  Future<Map<String, dynamic>> deleteNotification(String id) =>
+      delete('/notifications/$id');
+
+  Future<Map<String, dynamic>> deleteVendorNotification(String id) =>
+      delete('/vendor/notifications/$id');
 
   // =========================================================================
   // SUBSCRIPTIONS
