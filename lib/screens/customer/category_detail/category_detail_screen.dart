@@ -41,7 +41,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
     final language = ref.watch(clientPreferencesProvider).language;
     final dark = AppColors.isClientDark(context);
     final offers = ref.watch(itemOffersProvider);
-    final shops = ref.watch(shopsProvider).items;
+    final shops = ref.watch(shopsWithDistanceProvider);
 
     return Scaffold(
       body: SingleChildScrollView(

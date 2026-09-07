@@ -6,6 +6,7 @@ import '../../../models/menu_item.dart';
 import '../../../models/shop.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
+import '../../../state/search_state.dart' show compareShopsByDistance;
 import '../../../state/vendor_basket.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -33,7 +34,7 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
   @override
   Widget build(BuildContext context) {
     final language = ref.watch(clientPreferencesProvider).language;
-    final allShops = ref.watch(shopsProvider).items;
+    final allShops = ref.watch(shopsWithDistanceProvider);
     final offersAsync = ref.watch(categoryShopsProvider(widget.categoryId));
 
     return Scaffold(
@@ -76,7 +77,7 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
                     }
                     if (match != null) entries.add((match, offer));
                   }
-                  entries.sort((a, b) => a.$1.distanceKm.compareTo(b.$1.distanceKm));
+                  entries.sort((a, b) => compareShopsByDistance(a.$1, b.$1));
 
                   if (entries.isEmpty) {
                     return Center(
@@ -127,7 +128,13 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
                               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                                 const SizedBox(height: 3),
-                                Text('${vendor.distanceKm} km · ${vendor.rating} ★', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
+                                Text(
+                                  [
+                                    if (vendor.distanceKm != kUnresolvedDistanceKm) '${vendor.distanceKm.toStringAsFixed(1)} km',
+                                    '${vendor.rating} ★',
+                                  ].join(' · '),
+                                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                                ),
                               ])),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

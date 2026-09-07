@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/laundry_category.dart';
@@ -9,8 +7,15 @@ import '../models/review_item.dart';
 import '../models/service_package.dart';
 import '../models/shop.dart';
 import '../services/api_service.dart';
+import '../state/browse_location_state.dart';
 import '../state/vendor_catalog_state.dart' show VendorAddon;
+import '../utils/location.dart' show haversineKm;
 import '../utils/num_helper.dart';
+
+/// `Shop.distanceKm` sentinel meaning "not yet computed against any
+/// customer location" — distinct from a real (always non-negative) distance
+/// so unresolved shops can't be mistaken for ones that happen to be 0km away.
+const kUnresolvedDistanceKm = -1.0;
 
 // ── JSON → model mappers shared by every catalog screen ─────────────────
 
@@ -46,7 +51,7 @@ Shop shopFromJson(Map<String, dynamic> j) {
     services: (j['services'] as List?)?.map((s) => s['name'] as String? ?? '').toList() ?? [],
     ratingValue: parseNum(j['rating_avg'])?.toDouble() ?? 0,
     priceFromTzs: 0,
-    distanceKm: _distanceKm(lat, lng),
+    distanceKm: kUnresolvedDistanceKm,
     is24h: is24h,
     isOpenNow: j['is_open'] as bool? ?? true,
     phone: j['phone'] as String? ?? '',
@@ -59,17 +64,6 @@ Shop shopFromJson(Map<String, dynamic> j) {
     latitude: lat,
     longitude: lng,
   );
-}
-
-/// Rough straight-line distance from a Dar es Salaam reference point
-/// (Masaki). Real GPS distance needs a location plugin — out of scope here.
-double _distanceKm(double? lat, double? lng) {
-  if (lat == null || lng == null) return 0;
-  const refLat = -6.7903;
-  const refLng = 39.2118;
-  final dLat = (lat - refLat) * 110.574;
-  final dLng = (lng - refLng) * 111.320;
-  return double.parse(math.sqrt(dLat * dLat + dLng * dLng).toStringAsFixed(1));
 }
 
 PromoOffer promoFromJson(Map<String, dynamic> j) {
@@ -213,6 +207,28 @@ class ShopsNotifier extends Notifier<AsyncCatalogState<Shop>> {
 
 final shopsProvider =
     NotifierProvider<ShopsNotifier, AsyncCatalogState<Shop>>(ShopsNotifier.new);
+
+/// [shopsProvider]'s shops with `distanceKm`/`distance` filled in against
+/// the customer's chosen browse location (browse_location_state.dart) —
+/// every shop's lat/lng is already in memory from `/shops`, so this is pure
+/// arithmetic, no network calls, and re-runs only when the shop list or the
+/// chosen location actually changes. Shops stay at [kUnresolvedDistanceKm]
+/// (never shown) until a location is known. Every screen that displays a
+/// shop's distance, or hands one off to Shop Detail/Direction via
+/// navigation `extra`, should read this instead of [shopsProvider] directly.
+final shopsWithDistanceProvider = Provider<List<Shop>>((ref) {
+  final shops = ref.watch(shopsProvider).items;
+  final loc = ref.watch(browseLocationProvider);
+  if (!loc.hasLocation) return shops;
+
+  return shops.map((shop) {
+    final lat = shop.latitude;
+    final lng = shop.longitude;
+    if (lat == null || lng == null) return shop;
+    final km = haversineKm(lat, lng, loc.lat!, loc.lng!);
+    return shop.copyWith(distanceKm: km, distance: '${km.toStringAsFixed(1)} km away');
+  }).toList();
+});
 
 class OffersNotifier extends Notifier<AsyncCatalogState<PromoOffer>> {
   @override

@@ -35,8 +35,10 @@ import '../../screens/vendor/vendor_settings_screen.dart';
 import '../../models/user_role.dart';
 import '../../services/realtime_service.dart';
 import '../../state/auth_state.dart';
+import '../../state/browse_location_state.dart';
 import '../../state/notifications_state.dart';
 import '../../state/orders_state.dart';
+import '../../state/profile_state.dart';
 import '../../state/vendor_dashboard_state.dart';
 import '../../state/vendor_earnings_state.dart';
 import '../../state/vendor_order_detail_state.dart';
@@ -95,7 +97,7 @@ final appRouter = GoRouter(
         final extra = state.extra as Shop?;
         if (extra != null) return ShopDetailScreen(shop: extra, initialTab: initialTab);
         // No explicit shop (e.g. an offer claim) — open the top-ranked one.
-        final shops = ref.watch(shopsProvider).items;
+        final shops = ref.watch(shopsWithDistanceProvider);
         return shops.isNotEmpty
             ? ShopDetailScreen(shop: shops.first, initialTab: initialTab)
             : const Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2)));
@@ -156,16 +158,36 @@ class _CustomerTabShell extends ConsumerStatefulWidget {
 
 class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
   int? _connectedUserId;
+  bool _addressesPrefetched = false;
 
   @override
   void initState() {
     super.initState();
     _syncRealtime();
+    // Deferred via `Future.microtask` — `prefetch()`/`loadAddresses()` both
+    // write provider state as their first synchronous statement, which
+    // Riverpod disallows from `initState` directly (same reason
+    // `shopsProvider.notifier.load()` is deferred like this on Home/Search).
+    Future.microtask(() {
+      // Warms up GPS the moment the customer's app session starts — well
+      // ahead of Search ever opening its location picker — so "Use my
+      // current location" there usually resolves instantly off this cache
+      // instead of waiting on a live GPS+geocode round trip. Works for
+      // guests too, no auth needed.
+      ref.read(browseLocationProvider.notifier).prefetch();
+      // Covers the case where the session was already restored (customer
+      // re-opening the app while still logged in) by the time this shell
+      // mounts — the `ref.listen` below only fires on later role changes.
+      _prefetchAddressesOnce(ref.read(authProvider));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthState>(authProvider, (_, _) => _syncRealtime());
+    ref.listen<AuthState>(authProvider, (_, next) {
+      _syncRealtime();
+      _prefetchAddressesOnce(next);
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -202,6 +224,19 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
       }
     };
     realtime.connect(userId: auth.userId);
+  }
+
+  /// Fires the customer's saved-address fetch once per login session, ahead
+  /// of Search opening its location picker, so the "use a saved address"
+  /// option there is populated with no loading spinner. Listener-driven
+  /// (not a one-shot `initState` check) because session restore is async —
+  /// `auth.role` may still read `guest` at the moment this shell first
+  /// mounts.
+  void _prefetchAddressesOnce(AuthState auth) {
+    if (auth.role != UserRole.customer || auth.userId == 0) return;
+    if (_addressesPrefetched) return;
+    _addressesPrefetched = true;
+    ref.read(profileProvider.notifier).loadAddresses();
   }
 
   void _disconnectRealtime() {

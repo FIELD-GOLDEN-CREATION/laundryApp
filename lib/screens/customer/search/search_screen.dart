@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/icons/app_icons.dart';
 import '../../../state/auth_state.dart';
+import '../../../state/browse_location_state.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/search_state.dart' show kFilterOptions, filteredShops, searchProvider;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../widgets/browse_location_sheet.dart';
 import '../home/widgets/shop_card.dart';
 import '../../../widgets/round_back_button.dart';
 
@@ -27,6 +29,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     Future.microtask(() async {
       await ref.read(shopsProvider.notifier).load();
       if (mounted) setState(() => _loading = false);
+      if (mounted && !ref.read(browseLocationProvider).hasPrompted) {
+        showBrowseLocationSheet(context, ref);
+      }
     });
   }
 
@@ -35,8 +40,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final ref = this.ref;
     final search = ref.watch(searchProvider);
     final notifier = ref.read(searchProvider.notifier);
-    final allShops = ref.watch(shopsProvider).items;
+    final allShops = ref.watch(shopsWithDistanceProvider);
     final shops = filteredShops(allShops, search);
+    final browseLocation = ref.watch(browseLocationProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -79,7 +85,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+              child: _LocationPill(
+                label: browseLocation.hasLocation ? browseLocation.label : 'Set your location',
+                onTap: () => showBrowseLocationSheet(context, ref),
+              ),
+            ),
+            const SizedBox(height: 14),
             SizedBox(
               height: 40,
               child: ListView.separated(
@@ -194,6 +207,50 @@ class _FilterChip extends StatelessWidget {
               fontWeight: FontWeight.w800,
               color: active ? AppColors.cream : AppColors.muted,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shows the customer's chosen distance-measuring location (saved address or
+/// GPS) and reopens `showBrowseLocationSheet` to change it.
+class _LocationPill extends StatelessWidget {
+  const _LocationPill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(999),
+        side: const BorderSide(color: AppColors.creamDark),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppIcon(AppIcons.locationPin, size: 12),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const AppIcon(AppIcons.chevronDownSmall, size: 8, color: AppColors.muted),
+            ],
           ),
         ),
       ),
