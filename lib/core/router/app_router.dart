@@ -32,7 +32,10 @@ import '../../screens/vendor/vendor_promos_screen.dart';
 import '../../screens/vendor/vendor_order_detail_screen.dart';
 import '../../screens/vendor/vendor_orders_screen.dart';
 import '../../screens/vendor/vendor_settings_screen.dart';
+import '../../models/user_role.dart';
+import '../../services/realtime_service.dart';
 import '../../state/auth_state.dart';
+import '../../state/vendor_dashboard_state.dart';
 import '../../widgets/bottom_tab_bar.dart';
 
 /// Root navigation graph.
@@ -156,24 +159,80 @@ class _CustomerTabShell extends ConsumerWidget {
 /// Shared by the Vendor and Admin shells — neither has any gated tabs (you
 /// only ever land in one by having already logged in), so unlike the
 /// customer shell this is a plain role-agnostic tab switcher.
-class _RoleTabShell extends StatelessWidget {
+///
+/// Also owns the realtime (WebSocket) connection lifecycle for the vendor
+/// role: connects once the signed-in user is known (and again, without a
+/// full reconnect, once the vendor dashboard's shop id resolves), and
+/// disconnects on dispose — i.e. when this whole shell is left, such as on
+/// logout. A no-op for any other role.
+class _RoleTabShell extends ConsumerStatefulWidget {
   const _RoleTabShell({required this.shell, required this.items});
 
   final StatefulNavigationShell shell;
   final List<TabBarItem> items;
 
   @override
+  ConsumerState<_RoleTabShell> createState() => _RoleTabShellState();
+}
+
+class _RoleTabShellState extends ConsumerState<_RoleTabShell> {
+  int? _connectedUserId;
+  int? _connectedShopId;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncRealtime();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authProvider, (_, _) => _syncRealtime());
+    ref.listen<int>(vendorDashboardProvider.select((s) => s.shopId), (_, _) => _syncRealtime());
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: shell,
+        child: widget.shell,
       ),
       bottomNavigationBar: AppBottomTabBar(
-        items: items,
-        currentIndex: shell.currentIndex,
-        onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        items: widget.items,
+        currentIndex: widget.shell.currentIndex,
+        onTap: (i) => widget.shell.goBranch(i, initialLocation: i == widget.shell.currentIndex),
       ),
     );
+  }
+
+  void _syncRealtime() {
+    final auth = ref.read(authProvider);
+    if (auth.role != UserRole.vendor || auth.userId == 0) {
+      if (_connectedUserId != null) _disconnectRealtime();
+      return;
+    }
+
+    final rawShopId = ref.read(vendorDashboardProvider).shopId;
+    final shopId = rawShopId == 0 ? null : rawShopId;
+    if (_connectedUserId == auth.userId && _connectedShopId == shopId) return;
+    _connectedUserId = auth.userId;
+    _connectedShopId = shopId;
+
+    final realtime = RealtimeService.instance;
+    realtime.onOrderEvent = (action, order) =>
+        ref.read(vendorDashboardProvider.notifier).handleRealtimeOrderEvent(action, order);
+    realtime.onNotificationEvent = (n) =>
+        ref.read(vendorDashboardProvider.notifier).handleRealtimeNotification(n);
+    realtime.connect(userId: auth.userId, shopId: shopId);
+  }
+
+  void _disconnectRealtime() {
+    RealtimeService.instance.disconnect();
+    _connectedUserId = null;
+    _connectedShopId = null;
+  }
+
+  @override
+  void dispose() {
+    _disconnectRealtime();
+    super.dispose();
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -56,6 +58,7 @@ class PlanOption {
 
 class VendorDashboardState {
   const VendorDashboardState({
+    this.shopId = 0,
     this.shopName = '',
     this.ordersToday = 0,
     this.revenueTodayTzs = 0,
@@ -81,6 +84,10 @@ class VendorDashboardState {
     this.isLoading = false,
   });
 
+  /// Backend `shops.id` — 0 until the first dashboard load resolves it.
+  /// Needed client-side for the realtime service's per-shop private channel
+  /// (`private-vendor-shop.{id}`).
+  final int shopId;
   final String shopName;
   final int ordersToday;
   final int revenueTodayTzs;
@@ -119,6 +126,7 @@ class VendorDashboardState {
       weekBars.fold(0, (sum, bar) => sum + bar.count);
 
   VendorDashboardState copyWith({
+    int? shopId,
     String? shopName,
     int? ordersToday,
     int? revenueTodayTzs,
@@ -144,6 +152,7 @@ class VendorDashboardState {
     bool? isLoading,
   }) =>
       VendorDashboardState(
+        shopId: shopId ?? this.shopId,
         shopName: shopName ?? this.shopName,
         ordersToday: ordersToday ?? this.ordersToday,
         revenueTodayTzs: revenueTodayTzs ?? this.revenueTodayTzs,
@@ -171,8 +180,38 @@ class VendorDashboardState {
 }
 
 class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
+  Timer? _refreshDebounce;
+
   @override
-  VendorDashboardState build() => const VendorDashboardState();
+  VendorDashboardState build() {
+    ref.onDispose(() => _refreshDebounce?.cancel());
+    return const VendorDashboardState();
+  }
+
+  /// Called by [RealtimeService] whenever a `order.updated` (or `new_order`)
+  /// socket event lands on this shop's channel. Deliberately doesn't try to
+  /// patch the dashboard's aggregate numbers (revenue, week bars, alerts)
+  /// from the small event payload — those stay sourced from one place
+  /// (`load()`/`VendorDashboardController`) so they can't drift out of sync.
+  /// Debounced so a burst of events (e.g. bulk-complete touching several
+  /// orders) triggers one refetch, not one per event.
+  void handleRealtimeOrderEvent(String action, Map<String, dynamic> order) {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), load);
+  }
+
+  /// Called by [RealtimeService] for a `notification.created` socket event.
+  /// Unlike order events, a notification's payload is already everything
+  /// the "Recent notifications" list needs, so this patches state directly
+  /// for an instant bump instead of waiting on a refetch.
+  void handleRealtimeNotification(Map<String, dynamic> json) {
+    final notif = notificationFromJson(json);
+    if (state.notifications.any((n) => n.id == notif.id)) return;
+    state = state.copyWith(
+      notifications: [notif, ...state.notifications].take(10).toList(),
+      unreadCount: notif.isRead ? state.unreadCount : state.unreadCount + 1,
+    );
+  }
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
@@ -188,6 +227,7 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
           const [];
 
       state = state.copyWith(
+        shopId: parseInt(shop['id']) ?? state.shopId,
         shopName: shop['name'] as String? ?? state.shopName,
         ordersToday: parseInt(data['orders_today']) ?? 0,
         revenueTodayTzs: parseInt(data['revenue_today']) ?? 0,

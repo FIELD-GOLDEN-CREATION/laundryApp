@@ -15,6 +15,7 @@ const kLastActiveKey = 'last_active_timestamp';
 class AuthState {
   const AuthState({
     this.role = UserRole.guest,
+    this.userId = 0,
     this.authEmail = '',
     this.userName = '',
     this.userPhotoUrl,
@@ -22,11 +23,17 @@ class AuthState {
   });
 
   final UserRole role;
+
+  /// Backend `users.id` — 0 while signed out. Needed client-side for the
+  /// realtime service's per-user private channel (`private-user.{id}`).
+  final int userId;
   final String authEmail;
   final String userName;
   final String? userPhotoUrl;
   final bool isLoading;
 }
+
+int _parseUserId(Map<String, dynamic> userData) => (userData['id'] as num?)?.toInt() ?? 0;
 
 class AuthNotifier extends Notifier<AuthState> {
   @override
@@ -65,6 +72,7 @@ class AuthNotifier extends Notifier<AuthState> {
         final role = _parseRole(userData['role'] as String);
         state = AuthState(
           role: role,
+          userId: _parseUserId(userData),
           authEmail: firebaseUser.email ?? '',
           userName: userData['name'] as String? ?? firebaseUser.displayName ?? '',
           userPhotoUrl: userData['photo_url'] as String? ?? firebaseUser.photoURL,
@@ -108,6 +116,7 @@ class AuthNotifier extends Notifier<AuthState> {
         final role = _parseRole(userData['role'] as String);
         state = AuthState(
           role: role,
+          userId: _parseUserId(userData),
           authEmail: e,
           userName: userData['name'] as String? ?? '',
           userPhotoUrl: userData['photo_url'] as String?,
@@ -163,6 +172,7 @@ class AuthNotifier extends Notifier<AuthState> {
         final role = _parseRole(userData['role'] as String);
         state = AuthState(
           role: role,
+          userId: _parseUserId(userData),
           authEmail: userData['email'] as String? ?? '',
           userName: userData['name'] as String? ?? '',
           userPhotoUrl: userData['photo_url'] as String?,
@@ -225,6 +235,7 @@ class AuthNotifier extends Notifier<AuthState> {
         final role = _parseRole(userData['role'] as String);
         state = AuthState(
           role: role,
+          userId: _parseUserId(userData),
           authEmail: e,
           userName: name,
         );
