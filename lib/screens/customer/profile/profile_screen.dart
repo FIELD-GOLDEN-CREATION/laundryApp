@@ -12,6 +12,7 @@ import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/location.dart';
+import '../../../widgets/address_search_field.dart';
 import '../../../widgets/card_brand_tag.dart';
 import '../../../widgets/link_card_sheet.dart';
 import '../../../widgets/profile_action_tile.dart';
@@ -277,7 +278,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       key: ValueKey(profile.addresses[i].id ?? 'addr-$i'),
                       label: profile.addresses[i].label,
                       line: profile.addresses[i].line,
-                      onSave: (line) => notifier.updateAddressLine(i, line),
+                      latitude: profile.addresses[i].latitude,
+                      longitude: profile.addresses[i].longitude,
+                      onSave: (line, latitude, longitude) => notifier.updateAddressLine(i, line, latitude: latitude, longitude: longitude),
                       onDelete: () => notifier.removeAddressAt(i),
                     ),
                     if (i != profile.addresses.length - 1) const SizedBox(height: 10),
@@ -479,11 +482,21 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _AddressRow extends StatefulWidget {
-  const _AddressRow({super.key, required this.label, required this.line, required this.onSave, required this.onDelete});
+  const _AddressRow({
+    super.key,
+    required this.label,
+    required this.line,
+    this.latitude,
+    this.longitude,
+    required this.onSave,
+    required this.onDelete,
+  });
 
   final String label;
   final String line;
-  final ValueChanged<String> onSave;
+  final double? latitude;
+  final double? longitude;
+  final void Function(String line, double? latitude, double? longitude) onSave;
   final Future<bool> Function() onDelete;
 
   @override
@@ -493,6 +506,8 @@ class _AddressRow extends StatefulWidget {
 class _AddressRowState extends State<_AddressRow> {
   bool _editing = false;
   late final _controller = TextEditingController(text: widget.line);
+  late double? _latitude = widget.latitude;
+  late double? _longitude = widget.longitude;
 
   @override
   void dispose() {
@@ -504,12 +519,14 @@ class _AddressRowState extends State<_AddressRow> {
 
   void _cancel() {
     _controller.text = widget.line;
+    _latitude = widget.latitude;
+    _longitude = widget.longitude;
     setState(() => _editing = false);
   }
 
   void _save() {
     final value = _controller.text.trim();
-    if (value.isNotEmpty) widget.onSave(value);
+    if (value.isNotEmpty) widget.onSave(value, _latitude, _longitude);
     setState(() => _editing = false);
   }
 
@@ -517,6 +534,8 @@ class _AddressRowState extends State<_AddressRow> {
     try {
       final resolved = await locateUserWithAddress();
       _controller.text = resolved.displayLabel;
+      _latitude = resolved.point.latitude;
+      _longitude = resolved.point.longitude;
       setState(() {});
     } on LocationException catch (e) {
       if (!mounted) return;
@@ -615,24 +634,14 @@ class _AddressRowState extends State<_AddressRow> {
           ),
           if (_editing) ...[
             const SizedBox(height: 12),
-            Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.cream,
-                border: Border.all(color: AppColors.creamDark),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              alignment: Alignment.centerLeft,
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
-                decoration: InputDecoration.collapsed(
-                  hintText: 'Enter new address',
-                  hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.muted),
-                ),
-              ),
+            AddressSearchField(
+              controller: _controller,
+              hint: 'Enter new address',
+              autofocus: true,
+              onSelected: (suggestion) {
+                _latitude = suggestion.latitude;
+                _longitude = suggestion.longitude;
+              },
             ),
             const SizedBox(height: 10),
             InkWell(
@@ -815,7 +824,16 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                 const SizedBox(height: 16),
                 _AddAddressField(label: 'Label', hint: 'Home, Work, ...', controller: _labelCtrl),
                 const SizedBox(height: 12),
-                _AddAddressField(label: 'Address', hint: 'Street, area, city', controller: _lineCtrl),
+                Text('Address', style: AppText.eyebrow()),
+                const SizedBox(height: 7),
+                AddressSearchField(
+                  controller: _lineCtrl,
+                  hint: 'Street, ward, district...',
+                  onSelected: (suggestion) {
+                    _latitude = suggestion.latitude;
+                    _longitude = suggestion.longitude;
+                  },
+                ),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: _locating ? null : _useCurrentLocation,

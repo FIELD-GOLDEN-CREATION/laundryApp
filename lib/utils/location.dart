@@ -156,6 +156,80 @@ double haversineKm(double lat1, double lng1, double lat2, double lng2) {
 
 double _degToRad(double deg) => deg * (math.pi / 180);
 
+/// One forward-geocoding result from Nominatim's `/search` endpoint —
+/// a typed address candidate with the coordinates needed to pin it on
+/// [flutter_map] later (schedule screen, direction screen).
+class AddressSuggestion {
+  const AddressSuggestion({required this.label, required this.latitude, required this.longitude});
+
+  final String label;
+  final double latitude;
+  final double longitude;
+}
+
+/// Dar es Salaam's bounding box (left,top,right,bottom) — biases Nominatim
+/// results toward the city without excluding the rest of Tanzania, so a
+/// customer typing a Dar street sees it ranked above a same-named one
+/// elsewhere in the country.
+const _darEsSalaamViewbox = '39.05,-7.05,39.55,-6.55';
+
+/// Address autocomplete via OpenStreetMap's free Nominatim `/search` API —
+/// the forward-geocoding counterpart to [_reverseGeocodeViaHttp]. Returns at
+/// most 5 candidates; empty (never throws) on a short query, network error,
+/// or no matches, so callers can just hide the suggestion list.
+Future<List<AddressSuggestion>> searchAddressSuggestions(String query) async {
+  final trimmed = query.trim();
+  if (trimmed.length < 3) return const [];
+  try {
+    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+      'q': trimmed,
+      'format': 'jsonv2',
+      'addressdetails': '1',
+      'limit': '5',
+      'countrycodes': 'tz',
+      'viewbox': _darEsSalaamViewbox,
+      'bounded': '0', // bias toward Dar, don't hard-exclude the rest of TZ
+    });
+    final response = await http
+        .get(uri, headers: {'User-Agent': 'LaundryApp/1.0'})
+        .timeout(const Duration(seconds: 6));
+    if (response.statusCode != 200) return const [];
+    final results = jsonDecode(response.body) as List<dynamic>;
+    return results
+        .map((r) => _parseSuggestion(r as Map<String, dynamic>))
+        .whereType<AddressSuggestion>()
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
+AddressSuggestion? _parseSuggestion(Map<String, dynamic> json) {
+  final lat = double.tryParse('${json['lat']}');
+  final lon = double.tryParse('${json['lon']}');
+  if (lat == null || lon == null) return null;
+  return AddressSuggestion(label: _formatSuggestion(json), latitude: lat, longitude: lon);
+}
+
+/// Builds a "street, ward/suburb, district, city, region" label from
+/// Nominatim's address parts, narrowest first (mirrors
+/// [_reverseGeocodeViaHttp]'s ordering) — falls back to Nominatim's own
+/// `display_name` when structured fields are missing.
+String _formatSuggestion(Map<String, dynamic> json) {
+  final address = json['address'] as Map<String, dynamic>?;
+  if (address != null) {
+    final parts = [
+      address['road'],
+      address['suburb'] ?? address['quarter'] ?? address['neighbourhood'],
+      address['city_district'] ?? address['county'],
+      address['city'] ?? address['town'] ?? address['village'],
+      address['state'],
+    ].whereType<String>().where((s) => s.trim().isNotEmpty).toSet().toList();
+    if (parts.isNotEmpty) return parts.join(', ');
+  }
+  return json['display_name'] as String? ?? '';
+}
+
 final _reverseGeocodeCache = <String, Future<String>>{};
 
 /// Memoized wrapper around [addressFromCoordinates] — widgets that display
