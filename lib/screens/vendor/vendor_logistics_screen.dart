@@ -28,7 +28,8 @@ class VendorLogisticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(vendorLogisticsProvider);
     final notifier = ref.read(vendorLogisticsProvider.notifier);
-    final tagId = ref.watch(vendorOrderDetailProvider.select((s) => s.tagId));
+    final orderId = ref.watch(vendorOrderDetailProvider.select((s) => s.orderId));
+    final tagId = orderId.isEmpty ? '' : '#LD-$orderId';
 
     final driverDist = '${((100 - state.driverPct) * 18).round()} m';
     final driverEta = '${max(1, ((100 - state.driverPct) / 12).round())} min';
