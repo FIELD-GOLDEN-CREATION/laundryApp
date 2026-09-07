@@ -203,6 +203,8 @@ Order orderFromJson(Map<String, dynamic> j) {
     customerPhone: j['customer_phone'] as String? ?? '',
     tracking: tracking,
     review: orderReviewFromJson(j['review'] as Map<String, dynamic>?),
+    deliveryLat: parseDouble(j['delivery_lat']),
+    deliveryLng: parseDouble(j['delivery_lng']),
   );
 }
 

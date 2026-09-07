@@ -81,8 +81,12 @@ class VendorOrderDetailState {
   const VendorOrderDetailState({
     this.orderId = '',
     this.status = '',
+    this.fulfillment = 'delivery',
     this.customerName = '',
     this.itemsSummary = '',
+    this.deliveryAddress = '',
+    this.deliveryLat,
+    this.deliveryLng,
     this.lines = const [],
     this.addons = const [],
     this.steps = const [],
@@ -95,8 +99,18 @@ class VendorOrderDetailState {
 
   /// Raw backend `orders.status` (e.g. `in_wash`, `ready`) for the loaded order.
   final String status;
+
+  /// `delivery` or `self` — the map only makes sense for the former.
+  final String fulfillment;
   final String customerName;
   final String itemsSummary;
+
+  /// Delivery address text and the exact coordinates captured when the
+  /// customer placed the order (GPS or their picked saved address) — null
+  /// for self-pickup orders.
+  final String deliveryAddress;
+  final double? deliveryLat;
+  final double? deliveryLng;
   final List<DetailLine> lines;
   final List<DetailAddon> addons;
 
@@ -116,14 +130,23 @@ class VendorOrderDetailState {
 
   bool get hasOrder => orderId.isNotEmpty;
 
+  /// True once the vendor has accepted the order (or moved it further along)
+  /// — pending orders have no accept/reject action on this screen, so the
+  /// delivery map only makes sense from this point on.
+  bool get isAccepted => status.isNotEmpty && status != 'pending';
+
   List<DetailLine> get packageLines => lines.where((l) => l.lineType == 'package').toList();
   List<DetailLine> get itemLines => lines.where((l) => l.lineType == 'item').toList();
 
   VendorOrderDetailState copyWith({
     String? orderId,
     String? status,
+    String? fulfillment,
     String? customerName,
     String? itemsSummary,
+    String? deliveryAddress,
+    double? deliveryLat,
+    double? deliveryLng,
     List<DetailLine>? lines,
     List<DetailAddon>? addons,
     List<VendorTrackStep>? steps,
@@ -134,8 +157,12 @@ class VendorOrderDetailState {
       VendorOrderDetailState(
         orderId: orderId ?? this.orderId,
         status: status ?? this.status,
+        fulfillment: fulfillment ?? this.fulfillment,
         customerName: customerName ?? this.customerName,
         itemsSummary: itemsSummary ?? this.itemsSummary,
+        deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+        deliveryLat: deliveryLat ?? this.deliveryLat,
+        deliveryLng: deliveryLng ?? this.deliveryLng,
         lines: lines ?? this.lines,
         addons: addons ?? this.addons,
         steps: steps ?? this.steps,
@@ -202,11 +229,15 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
       state = state.copyWith(
         orderId: rawOrderId,
         status: data['status'] as String? ?? '',
+        fulfillment: data['fulfillment'] as String? ?? 'delivery',
         customerName: customer['name'] as String? ?? '',
         itemsSummary: lines
             .where((l) => l.lineType == 'item')
             .map((l) => '${l.qty}× ${l.name}')
             .join(', '),
+        deliveryAddress: data['delivery_address'] as String? ?? '',
+        deliveryLat: parseDouble(data['delivery_lat']),
+        deliveryLng: parseDouble(data['delivery_lng']),
         lines: lines,
         addons: [
           for (final j in (data['addons'] as List?)?.whereType<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[])

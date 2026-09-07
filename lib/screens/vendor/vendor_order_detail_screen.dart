@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
+import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/currency.dart';
@@ -29,6 +32,7 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
               ? orders.wipOrders.first.id
               : orders.newOrders.isNotEmpty ? orders.newOrders.first.id : '');
       ref.read(vendorOrderDetailProvider.notifier).load(normalizeVendorOrderId(id));
+      ref.read(vendorProfileProvider.notifier).loadProfile();
     });
   }
 
@@ -52,6 +56,10 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
     final itemLines = state.itemLines;
     final addons = state.addons;
     final bulkApplied = state.bulkSnapshot != null;
+    final shopProfile = ref.watch(vendorProfileProvider);
+    final showMap = state.isAccepted &&
+        state.fulfillment == 'delivery' &&
+        (shopProfile.latitude != null || state.deliveryLat != null);
 
     return Scaffold(
       body: SafeArea(
@@ -89,6 +97,16 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                 child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               )
             else ...[
+              if (showMap) ...[
+                const _SectionLabel('Delivery location'),
+                _OrderMap(
+                  shopLat: shopProfile.latitude,
+                  shopLng: shopProfile.longitude,
+                  clientLat: state.deliveryLat,
+                  clientLng: state.deliveryLng,
+                  label: state.deliveryAddress.isEmpty ? 'Delivery address' : state.deliveryAddress,
+                ),
+              ],
               // Only the sections the customer actually picked from render —
               // an empty package/add-ons/items card is just noise.
               if (packageLines.isNotEmpty) ...[
@@ -155,6 +173,116 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                       ),
                     ),
                   ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A real OpenStreetMap preview showing this shop and the order's delivery
+/// point — both with markers when coordinates are available. Mirrors the
+/// customer app's `_OrderMap` in order_detail_screen.dart.
+class _OrderMap extends StatelessWidget {
+  const _OrderMap({
+    required this.shopLat,
+    required this.shopLng,
+    required this.clientLat,
+    required this.clientLng,
+    required this.label,
+  });
+
+  final double? shopLat;
+  final double? shopLng;
+  final double? clientLat;
+  final double? clientLng;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final points = <ll.LatLng>[];
+    if (shopLat != null && shopLng != null) points.add(ll.LatLng(shopLat!, shopLng!));
+    if (clientLat != null && clientLng != null) points.add(ll.LatLng(clientLat!, clientLng!));
+
+    final center = points.isNotEmpty
+        ? points.reduce((a, b) => ll.LatLng(
+            (a.latitude + b.latitude) / 2,
+            (a.longitude + b.longitude) / 2,
+          ))
+        : const ll.LatLng(-6.7924, 39.2083); // Dar es Salaam fallback
+
+    final zoom = points.length == 2 ? 13.0 : 15.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 180,
+        width: double.infinity,
+        child: Stack(
+          children: [
+            FlutterMap(
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: zoom,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.freshfold.laundry',
+                ),
+                MarkerLayer(markers: [
+                  if (shopLat != null && shopLng != null)
+                    Marker(
+                      point: ll.LatLng(shopLat!, shopLng!),
+                      width: 36,
+                      height: 36,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: AppColors.teal,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
+                        ),
+                        child: const Icon(Icons.store, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  if (clientLat != null && clientLng != null)
+                    Marker(
+                      point: ll.LatLng(clientLat!, clientLng!),
+                      width: 32,
+                      height: 32,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                        ),
+                        child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                      ),
+                    ),
+                ]),
+              ],
+            ),
+            Positioned(
+              left: 12,
+              bottom: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800),
                 ),
               ),
             ),

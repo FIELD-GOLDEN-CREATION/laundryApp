@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 import '../../../models/order.dart';
 import '../../../models/review.dart';
@@ -8,6 +10,7 @@ import '../../../services/api_service.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/orders_state.dart';
+import '../../../state/profile_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
@@ -36,6 +39,7 @@ class OrderDetailScreen extends ConsumerWidget {
       ref.read(ordersProvider.notifier).loadOrders();
       ref.read(completedOrdersProvider.notifier).loadOrders();
       ref.read(shopsProvider.notifier).load();
+      ref.read(profileProvider.notifier).loadAddresses();
     });
     final order = _findOrder(ref);
     final language = ref.watch(clientPreferencesProvider).language;
@@ -47,6 +51,21 @@ class OrderDetailScreen extends ConsumerWidget {
     final dark = AppColors.isClientDark(context);
     final surface = AppColors.clientSurface(context);
     final status = order.fulfillment == 'self' ? selfOrderStatusForStep(order.trackStep) : orderStatusForStep(order.trackStep);
+
+    // Shop coordinates come from the catalog. The delivery point is the
+    // exact coordinates captured when this order was placed; for older
+    // orders placed before that was recorded, fall back to matching the
+    // order's saved address text against the customer's saved addresses.
+    final matchedShop = ref.watch(shopsProvider).items.where((s) => s.name == order.shop).firstOrNull;
+    final shopLat = matchedShop?.latitude;
+    final shopLng = matchedShop?.longitude;
+    double? clientLat = order.deliveryLat;
+    double? clientLng = order.deliveryLng;
+    if (clientLat == null || clientLng == null) {
+      final matchedAddress = ref.watch(profileProvider).addresses.where((a) => a.line == order.address).firstOrNull;
+      clientLat = matchedAddress?.latitude;
+      clientLng = matchedAddress?.longitude;
+    }
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF080D12) : AppColors.cream,
@@ -78,6 +97,17 @@ class OrderDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text('${order.date} · ${order.items}', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
                     const SizedBox(height: 18),
+                    if (order.fulfillment == 'delivery' && (shopLat != null || clientLat != null)) ...[
+                      _OrderMap(
+                        shopName: order.shop,
+                        shopLat: shopLat,
+                        shopLng: shopLng,
+                        clientLat: clientLat,
+                        clientLng: clientLng,
+                        label: order.address.isEmpty ? clientLabel('Delivery address', 'Anwani ya kupeleka', language) : order.address,
+                      ),
+                      const SizedBox(height: 18),
+                    ],
                     _InfoRow(icon: Icons.location_on_outlined, label: order.fulfillment == 'self' ? clientLabel('Drop-off', 'Anwani ya kupeleka', language) : clientLabel('Pickup address', 'Anwani ya kuchukua', language), value: order.address.isEmpty ? clientLabel('Address from your schedule', 'Anwani kutoka kwenye ratiba yako', language) : order.address),
                     const SizedBox(height: 10),
                     _InfoRow(icon: Icons.schedule_rounded, label: order.fulfillment == 'self' ? clientLabel('Drop-off window', 'Muda wa kupeleka', language) : clientLabel('Pickup window', 'Muda wa kuchukua', language), value: order.pickup.isEmpty ? clientLabel('Scheduled pickup', 'Kuchukua kulikopangwa', language) : order.pickup),
@@ -238,6 +268,118 @@ class OrderDetailScreen extends ConsumerWidget {
               ),
             ),
           ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// A real OpenStreetMap preview showing the vendor shop and the order's
+/// delivery point — both with markers when coordinates are available.
+/// Mirrors `_ScheduleMap` in schedule_screen.dart.
+class _OrderMap extends StatelessWidget {
+  const _OrderMap({
+    required this.shopName,
+    required this.shopLat,
+    required this.shopLng,
+    required this.clientLat,
+    required this.clientLng,
+    required this.label,
+  });
+
+  final String shopName;
+  final double? shopLat;
+  final double? shopLng;
+  final double? clientLat;
+  final double? clientLng;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final points = <ll.LatLng>[];
+    if (shopLat != null && shopLng != null) points.add(ll.LatLng(shopLat!, shopLng!));
+    if (clientLat != null && clientLng != null) points.add(ll.LatLng(clientLat!, clientLng!));
+
+    final center = points.isNotEmpty
+        ? points.reduce((a, b) => ll.LatLng(
+            (a.latitude + b.latitude) / 2,
+            (a.longitude + b.longitude) / 2,
+          ))
+        : const ll.LatLng(-6.7924, 39.2083); // Dar es Salaam fallback
+
+    final zoom = points.length == 2 ? 13.0 : 15.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 180,
+        width: double.infinity,
+        child: Stack(
+          children: [
+            FlutterMap(
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: zoom,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.freshfold.laundry',
+                ),
+                MarkerLayer(markers: [
+                  if (shopLat != null && shopLng != null)
+                    Marker(
+                      point: ll.LatLng(shopLat!, shopLng!),
+                      width: 36,
+                      height: 36,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: AppColors.teal,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: AppColors.teal, blurRadius: 8, spreadRadius: 2)],
+                        ),
+                        child: const Icon(Icons.store, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  if (clientLat != null && clientLng != null)
+                    Marker(
+                      point: ll.LatLng(clientLat!, clientLng!),
+                      width: 32,
+                      height: 32,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                        ),
+                        child: const Icon(Icons.person, color: AppColors.teal, size: 16),
+                      ),
+                    ),
+                ]),
+              ],
+            ),
+            Positioned(
+              left: 12,
+              bottom: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

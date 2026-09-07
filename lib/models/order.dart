@@ -31,6 +31,8 @@ class Order {
     this.customerPhone = '',
     this.tracking = const [],
     this.review,
+    this.deliveryLat,
+    this.deliveryLng,
   });
 
   final String shop;
@@ -54,6 +56,12 @@ class Order {
   final List<OrderTrackingEvent> tracking;
   final Review? review;
 
+  /// Exact delivery coordinates captured when the order was placed (GPS or
+  /// the saved address picked on the Schedule screen) — null for self
+  /// pickup orders or ones placed before this was recorded.
+  final double? deliveryLat;
+  final double? deliveryLng;
+
   Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep, int? deliveryFeeTzs}) => Order(
     shop: shop,
     id: id,
@@ -75,6 +83,8 @@ class Order {
     customerPhone: customerPhone,
     tracking: tracking,
     review: review,
+    deliveryLat: deliveryLat,
+    deliveryLng: deliveryLng,
   );
 
   /// Separate from [copyWith] since a review's presence is meaningfully
@@ -100,6 +110,8 @@ class Order {
     customerPhone: customerPhone,
     tracking: tracking,
     review: review,
+    deliveryLat: deliveryLat,
+    deliveryLng: deliveryLng,
   );
 }
 
