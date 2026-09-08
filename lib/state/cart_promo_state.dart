@@ -1,4 +1,15 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/promo_offer.dart';
+
+/// Set when the customer explicitly claims a promo (taps "Copy Code" on a
+/// home-screen offer card) and read once by the cart screen to prefill its
+/// promo field. Consuming code must clear it back to null after reading —
+/// this is a one-shot signal, not persistent state, and deliberately never
+/// derived from the OS clipboard, which can hold unrelated text (e.g. a
+/// phone number copied for some other reason) that happens to also look
+/// like a code.
+final claimedPromoCodeProvider = StateProvider<String?>((ref) => null);
 
 /// One vendor basket's promo-code state. Nested inside `VendorBasket`
 /// (see `vendor_basket.dart`) — the resolution logic that used to live on a

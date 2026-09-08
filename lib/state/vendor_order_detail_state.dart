@@ -138,6 +138,22 @@ class VendorOrderDetailState {
   List<DetailLine> get packageLines => lines.where((l) => l.lineType == 'package').toList();
   List<DetailLine> get itemLines => lines.where((l) => l.lineType == 'item').toList();
 
+  /// Whether [status] can be toggled right now without leaving a "skipped"
+  /// step behind in the pipeline. Turning a step *on* requires every earlier
+  /// step in [kVendorToggleableStatuses] to already be done; turning a step
+  /// *off* requires every later step to still be pending (undoing it while a
+  /// later step is done would leave that later step active with a gap
+  /// before it).
+  bool canToggleStep(String status) {
+    final idx = kVendorToggleableStatuses.indexOf(status);
+    if (idx == -1) return true;
+    bool doneAt(String s) => steps.firstWhere((step) => step.status == s).done;
+    if (doneAt(status)) {
+      return kVendorToggleableStatuses.skip(idx + 1).every((s) => !doneAt(s));
+    }
+    return kVendorToggleableStatuses.take(idx).every(doneAt);
+  }
+
   VendorOrderDetailState copyWith({
     String? orderId,
     String? status,
@@ -278,14 +294,17 @@ class VendorOrderDetailNotifier extends Notifier<VendorOrderDetailState> {
   }
 
   /// Toggles one processing-status step on/off. No-op for locked statuses
-  /// (order placed/accepted), while a request is already in flight, or
-  /// before an order has loaded. Returns false on any of those or an API
-  /// failure.
+  /// (order placed/accepted), while a request is already in flight, before
+  /// an order has loaded, or when the toggle would break the pipeline's
+  /// strict order (see [VendorOrderDetailState.canToggleStep]). Returns
+  /// false on any of those or an API failure.
   Future<bool> toggleStep(String status) async {
     if (state.isUpdatingStatus || !state.hasOrder) return false;
     if (kVendorLockedStatuses.contains(status)) return false;
     final current = state.steps.firstWhere((s) => s.status == status, orElse: () => const VendorTrackStep(status: '', title: ''));
     if (current.status.isEmpty) return false;
+
+    if (!state.canToggleStep(status)) return false;
 
     state = state.copyWith(isUpdatingStatus: true);
     try {

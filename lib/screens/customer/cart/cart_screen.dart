@@ -1,5 +1,4 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -595,24 +594,24 @@ class _PromoCodeSection extends ConsumerStatefulWidget {
 class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  static final _looksLikeCode = RegExp(r'^[A-Z0-9-]{4,20}$');
 
   @override
   void initState() {
     super.initState();
-    // If the customer just claimed a promo on the home screen, its code is
-    // sitting in the clipboard — save them retyping it here. Only a prefill,
-    // never an auto-apply, and only when they haven't already typed/applied
-    // something themselves.
-    Future.microtask(() async {
-      bool hasPromo() => ref.read(basketsProvider)[widget.shopId]?.promo.hasPromo ?? false;
-      if (!mounted || _controller.text.isNotEmpty || hasPromo()) return;
-      final data = await Clipboard.getData(Clipboard.kTextPlain);
-      final text = data?.text?.trim().toUpperCase() ?? '';
-      if (!mounted || text.isEmpty || !_looksLikeCode.hasMatch(text)) return;
-      if (_controller.text.isNotEmpty || hasPromo()) return;
-      _controller.text = text;
-      ref.read(basketsProvider.notifier).setPromo(widget.shopId, text);
+    // If the customer just claimed a promo on the home screen (tapped "Copy
+    // Code" on an offer), prefill it here once. Only a prefill, never an
+    // auto-apply, and only when they haven't already typed/applied something
+    // themselves. Sourced from an explicit one-shot signal set at the claim
+    // site — never sniffed from the OS clipboard, which can hold unrelated
+    // text (e.g. the customer's own phone number) that isn't a promo code.
+    Future.microtask(() {
+      final code = ref.read(claimedPromoCodeProvider);
+      if (code == null || code.isEmpty) return;
+      ref.read(claimedPromoCodeProvider.notifier).state = null;
+      final hasPromo = ref.read(basketsProvider)[widget.shopId]?.promo.hasPromo ?? false;
+      if (!mounted || _controller.text.isNotEmpty || hasPromo) return;
+      _controller.text = code;
+      ref.read(basketsProvider.notifier).setPromo(widget.shopId, code);
     });
   }
 
