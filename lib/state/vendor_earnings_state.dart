@@ -31,17 +31,6 @@ class VendorPayout {
   }
 }
 
-/// One month bucket of the earnings chart: payouts (and their amounts)
-/// grouped by calendar month.
-class MonthBar {
-  const MonthBar({required this.label, required this.amountTzs, required this.fraction});
-  final String label;
-  final double amountTzs;
-
-  /// Height fraction relative to the biggest month (1.0 for the max).
-  final double fraction;
-}
-
 /// One row of the per-order money details table.
 class EarningLine {
   const EarningLine({
@@ -57,6 +46,31 @@ class EarningLine {
   final double amountTzs;
   final bool isCredit;
   final String date;
+}
+
+/// One point of the order-amount trend chart.
+class TrendPoint {
+  const TrendPoint({required this.label, required this.amountTzs});
+  final String label;
+  final double amountTzs;
+}
+
+/// Trend range for the order-amount chart: daily totals for the last
+/// 7 days, daily totals for the last 30 days, or monthly totals for the
+/// last 12 months.
+enum TrendRange { week, month, year }
+
+extension TrendRangeLabel on TrendRange {
+  String get label {
+    switch (this) {
+      case TrendRange.week:
+        return 'Week';
+      case TrendRange.month:
+        return 'Month';
+      case TrendRange.year:
+        return 'Year';
+    }
+  }
 }
 
 class VendorEarningsState {
@@ -76,33 +90,84 @@ class VendorEarningsState {
   final double totalRevenue;
   final double totalPayouts;
   final double pendingPayouts;
+
+  /// Kept for API parity only — the platform takes no commission and the
+  /// UI never shows this. Commission rows are filtered out of [orderLines].
   final double totalCommission;
   final List<VendorPayout> payouts;
   final List<EarningLine> lines;
   final List<ReviewItem> reviews;
   final bool isLoading;
 
-  List<MonthBar> get monthBars {
-    final byMonth = <String, double>{};
-    for (final p in payouts) {
-      final d = p.paidAt;
-      if (d == null) continue;
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      final key = '${months[d.month - 1]} ${d.year}';
-      byMonth[key] = (byMonth[key] ?? 0) + p.amountTzs;
+  /// Order-payment credits only (commission / adjustment rows excluded).
+  /// This is what the order list, the trend chart and the export use.
+  List<EarningLine> get orderLines =>
+      lines.where((l) => l.isCredit).toList();
+
+  /// Average rating across all reviews (0 when there are none).
+  double get avgRating {
+    if (reviews.isEmpty) return 0;
+    var sum = 0;
+    for (final r in reviews) {
+      sum += r.stars.length.clamp(1, 5);
     }
-    if (byMonth.isEmpty) return const [];
-    // Chronological order, last 6 months at most.
-    final entries = byMonth.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    final recent = entries.length <= 6 ? entries : entries.sublist(entries.length - 6);
-    final peak = recent.fold<double>(0, (m, e) => e.value > m ? e.value : m);
+    return sum / reviews.length;
+  }
+
+  /// Count of reviews per star level, keys 5..1 (always present).
+  Map<int, int> get starCounts {
+    final counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+    for (final r in reviews) {
+      final s = r.stars.length.clamp(1, 5);
+      counts[s] = (counts[s] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /// Order-amount trend buckets built from order-payment lines only.
+  /// Week → daily totals for the last 7 days, Month → daily totals for the
+  /// last 30 days, Year → monthly totals for the last 12 months.
+  List<TrendPoint> trendFor(TrendRange range) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (range == TrendRange.year) {
+      final totals = List<double>.filled(12, 0);
+      for (final l in orderLines) {
+        final d = DateTime.tryParse(l.date);
+        if (d == null) continue;
+        final diff = (now.year - d.year) * 12 + (now.month - d.month);
+        if (diff < 0 || diff > 11) continue;
+        totals[11 - diff] += l.amountTzs;
+      }
+      return [
+        for (var i = 0; i < 12; i++)
+          TrendPoint(
+            label: months[DateTime(now.year, now.month - 11 + i).month - 1],
+            amountTzs: totals[i],
+          ),
+      ];
+    }
+
+    final days = range == TrendRange.week ? 7 : 30;
+    final totals = List<double>.filled(days, 0.0);
+    for (final l in orderLines) {
+      final d = DateTime.tryParse(l.date);
+      if (d == null) continue;
+      final diff = today.difference(DateTime(d.year, d.month, d.day)).inDays;
+      if (diff < 0 || diff >= days) continue;
+      totals[days - 1 - diff] += l.amountTzs;
+    }
     return [
-      for (final e in recent)
-        MonthBar(
-          label: e.key.split(' ').first,
-          amountTzs: e.value,
-          fraction: peak == 0 ? 0.0 : (e.value / peak).clamp(0.04, 1.0),
+      for (var i = 0; i < days; i++)
+        TrendPoint(
+          label: days == 7
+              ? weekdays[today.subtract(Duration(days: days - 1 - i)).weekday - 1]
+              : '${today.subtract(Duration(days: days - 1 - i)).day}',
+          amountTzs: totals[i],
         ),
     ];
   }

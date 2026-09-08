@@ -52,6 +52,10 @@ dependencies:
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   web_socket_channel: ^3.0.3
+  pdf: ^3.13.0
+  printing: ^5.15.0
+  share_plus: ^13.3.0
+  screenshot: ^3.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
