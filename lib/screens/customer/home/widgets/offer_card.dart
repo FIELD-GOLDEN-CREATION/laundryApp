@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../models/promo_offer.dart';
 import '../../../../models/shop.dart';
+import '../../../../state/cart_promo_state.dart';
 import '../../../../state/catalog_state.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
@@ -215,7 +216,7 @@ class _OfferCardState extends ConsumerState<OfferCard> {
   }
 }
 
-class _PromoPopupSheet extends StatelessWidget {
+class _PromoPopupSheet extends ConsumerWidget {
   const _PromoPopupSheet({required this.offer, this.onShopNow});
 
   final PromoOffer offer;
@@ -225,7 +226,7 @@ class _PromoPopupSheet extends StatelessWidget {
   final VoidCallback? onShopNow;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
@@ -301,6 +302,7 @@ class _PromoPopupSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                         onTap: () async {
                           await Clipboard.setData(ClipboardData(text: offer.code));
+                          ref.read(claimedPromoCodeProvider.notifier).state = offer.code;
                           if (!context.mounted) return;
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(

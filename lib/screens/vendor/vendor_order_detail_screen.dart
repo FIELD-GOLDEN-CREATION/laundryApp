@@ -166,6 +166,12 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                       onTap: state.isUpdatingStatus || kVendorLockedStatuses.contains(step.status)
                           ? null
                           : () async {
+                              if (!state.canToggleStep(step.status)) {
+                                _showStatusError(
+                                  step.done ? 'Undo the later steps first' : 'Complete the previous steps first',
+                                );
+                                return;
+                              }
                               final ok = await notifier.toggleStep(step.status);
                               if (!ok) _showStatusError('Could not update status to "${step.title}"');
                             },

@@ -8,7 +8,7 @@ import '../../state/vendor_order_detail_state.dart' show normalizeVendorOrderId;
 import '../../state/vendor_orders_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
-import 'vendor_chat_screen.dart';
+import '../../utils/contact_launcher.dart';
 
 const _kTabLabels = ['Incoming', 'In progress', 'Ready'];
 
@@ -84,8 +84,8 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
                   },
                   onReject: orders[i].stage == 'new' ? () => _showRejectDialog(context, ref, orders[i]) : null,
                   onOpen: () => openDetail(orders[i]),
-                  onChat: orders[i].stage == 'wip' && orders[i].customerId.isNotEmpty
-                      ? () => showVendorChatPanel(context, customerId: orders[i].customerId, customerName: orders[i].customer)
+                  onWhatsApp: orders[i].stage == 'wip' && orders[i].customerPhone.isNotEmpty
+                      ? () => _openWhatsApp(context, orders[i])
                       : null,
                 ),
                 if (i != orders.length - 1) const SizedBox(height: 12),
@@ -100,6 +100,20 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
   void openDetail(VendorOrder order) {
     ref.read(vendorOrdersProvider.notifier).openOrder(order);
     context.push('/vendor/order-detail');
+  }
+
+  Future<void> _openWhatsApp(BuildContext context, VendorOrder order) async {
+    final ok = await launchWhatsAppChat(order.customerPhone);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Couldn't open WhatsApp."),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   void _showAcceptDialog(BuildContext context, WidgetRef ref, VendorOrder order) {
@@ -247,14 +261,14 @@ class _OrderCard extends StatelessWidget {
     required this.onToggle,
     required this.onOpen,
     this.onReject,
-    this.onChat,
+    this.onWhatsApp,
   });
 
   final VendorOrder order;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
   final VoidCallback? onReject;
-  final VoidCallback? onChat;
+  final VoidCallback? onWhatsApp;
 
   @override
   Widget build(BuildContext context) {
@@ -343,17 +357,17 @@ class _OrderCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (onChat != null) ...[
+                  if (onWhatsApp != null) ...[
                     Material(
                       color: AppColors.tealMuted,
                       borderRadius: BorderRadius.circular(12),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
-                        onTap: onChat,
+                        onTap: onWhatsApp,
                         child: SizedBox(
                           width: 36,
                           height: 36,
-                          child: Center(child: AppIcon(AppIcons.chatBubble, size: 17, color: AppColors.teal)),
+                          child: Center(child: AppIcon(AppIcons.whatsapp, size: 17, color: AppColors.teal)),
                         ),
                       ),
                     ),
