@@ -81,6 +81,7 @@ Future<Order> placeCurrentOrder(
         packageId: cartPackageId(qty, priced),
         deliveryLat: deliveryLat,
         deliveryLng: deliveryLng,
+        deliveryAddress: basket.isDelivery ? address : null,
       );
       if (order != null) {
         ref.read(basketsProvider.notifier).clearBasket(shopId);
