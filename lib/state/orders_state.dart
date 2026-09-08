@@ -160,11 +160,15 @@ Order orderFromJson(Map<String, dynamic> j) {
     unitPrice: parseDouble(l['price'] ?? l['unit_price_tzs']) ?? 0,
   )).toList();
 
-  // Backend nests shop as an object; extract the name
+  // Backend nests shop as an object; extract the name (and id, needed to
+  // open/find the chat thread with this shop).
   final shopData = j['shop'];
   final shopName = shopData is Map<String, dynamic>
       ? shopData['name'] as String? ?? ''
       : j['shop_name'] as String? ?? j['shop'] as String? ?? '';
+  final shopId = shopData is Map<String, dynamic> && shopData['id'] != null
+      ? '${shopData['id']}'
+      : (j['shop_id'] != null ? '${j['shop_id']}' : '');
 
   // Backend uses 'total_tzs' (decimal string), fallback to 'total'
   final totalVal = parseDouble(j['total_tzs'] ?? j['total']) ?? 0;
@@ -184,6 +188,7 @@ Order orderFromJson(Map<String, dynamic> j) {
 
   return Order(
     shop: shopName,
+    shopId: shopId,
     id: j['id'] != null ? '#LD-${j['id']}' : (j['order_number'] as String? ?? ''),
     items: itemsSummary,
     status: labelFromStatus(statusStr),

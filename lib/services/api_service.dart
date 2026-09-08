@@ -542,8 +542,15 @@ class ApiService {
   Future<Map<String, dynamic>> sendChatMessage(String threadId, String text) =>
       post('/chat/threads/$threadId/messages', body: {'text': text});
 
-  Future<Map<String, dynamic>> createChatThread(String orderId) =>
-      post('/chat/threads', body: {'order_id': orderId});
+  /// Opens (or finds) the chat thread between a customer and a shop.
+  /// Pass [shopId] as the customer, [customerId] as the vendor — the
+  /// backend infers which side is calling from the authenticated user's
+  /// role and expects exactly the matching one.
+  Future<Map<String, dynamic>> openChatThread({String? shopId, String? customerId}) =>
+      post('/chat/threads', body: {
+        if (shopId != null) 'shop_id': int.tryParse(shopId),
+        if (customerId != null) 'customer_id': int.tryParse(customerId),
+      });
 
   // =========================================================================
   // NOTIFICATIONS

@@ -2,9 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/chat_message.dart';
 import '../services/api_service.dart';
+import '../utils/num_helper.dart';
+import 'auth_state.dart';
 
+/// Chat threads from the API, keyed by the backend's real numeric thread id
+/// (as a string) — never the customer's display name, which was never a
+/// valid id the backend could look anything up by.
 class VendorChatState {
-  const VendorChatState({required this.threads, this.draft = '', this.isLoading = false});
+  const VendorChatState({this.threads = const {}, this.draft = '', this.isLoading = false});
 
   final Map<String, List<ChatMessage>> threads;
   final String draft;
@@ -22,35 +27,28 @@ class VendorChatState {
 
 class VendorChatNotifier extends Notifier<VendorChatState> {
   @override
-  VendorChatState build() => const VendorChatState(threads: {});
+  VendorChatState build() => const VendorChatState();
 
-  Future<void> loadThreads() async {
-    state = state.copyWith(isLoading: true);
+  /// Resolves the real thread id for this vendor's conversation with
+  /// customer [customerId], creating it on the backend if this customer has
+  /// never messaged this shop before. Null on failure (network error, shop
+  /// not found).
+  Future<String?> ensureThread(String customerId) async {
     try {
-      final data = await api.getChatThreads();
-      final threads = <String, List<ChatMessage>>{};
-      for (final t in data) {
-        final threadId = t['id'] as String? ?? '';
-        if (threadId.isNotEmpty) {
-          threads[threadId] = const <ChatMessage>[];
-        }
-      }
-      state = state.copyWith(threads: threads, isLoading: false);
+      final data = await api.openChatThread(customerId: customerId);
+      final thread = data['data'] as Map<String, dynamic>? ?? data;
+      return thread['id'] != null ? '${thread['id']}' : null;
     } on ApiException {
-      state = state.copyWith(isLoading: false);
+      return null;
     }
   }
 
   Future<void> loadMessages(String threadId) async {
     try {
       final data = await api.getChatMessages(threadId);
-      final messages = data.map((j) => ChatMessage(
-        isMe: j['is_mine'] as bool? ?? j['sender_type'] == 'vendor',
-        text: j['text'] as String? ?? j['message'] as String? ?? '',
-        time: j['created_at'] as String? ?? '',
-      )).toList();
+      final myId = ref.read(authProvider).userId;
       state = state.copyWith(
-        threads: {...state.threads, threadId: messages},
+        threads: {...state.threads, threadId: data.map((j) => _fromJson(j, myId)).toList()},
       );
     } on ApiException {
       // Keep existing state
@@ -74,6 +72,7 @@ class VendorChatNotifier extends Notifier<VendorChatState> {
       final data = await api.sendChatMessage(threadId, text);
       final saved = data['data'] as Map<String, dynamic>? ?? data;
       final savedMessage = ChatMessage(
+        id: saved['id'] != null ? '${saved['id']}' : '',
         isMe: true,
         text: saved['text'] as String? ?? text,
         time: saved['created_at'] as String? ?? 'now',
@@ -84,6 +83,43 @@ class VendorChatNotifier extends Notifier<VendorChatState> {
     } on ApiException {
       // Keep optimistic message on failure
     }
+  }
+
+  /// Called by [RealtimeService] for a `message.created` event on this
+  /// thread's channel — the customer just replied. De-dupes on id so an
+  /// echo of a message this side already added doesn't show up twice.
+  void handleRealtimeMessage(String threadId, Map<String, dynamic> json) {
+    final id = json['id'] != null ? '${json['id']}' : '';
+    final current = state.messagesFor(threadId);
+    if (id.isNotEmpty && current.any((m) => m.id == id)) return;
+
+    final myId = ref.read(authProvider).userId;
+    final senderId = parseInt(json['sender_id']);
+    state = state.copyWith(
+      threads: {
+        ...state.threads,
+        threadId: [
+          ...current,
+          ChatMessage(
+            id: id,
+            isMe: senderId != null && senderId == myId,
+            text: json['text'] as String? ?? '',
+            time: json['created_at'] as String? ?? 'now',
+          ),
+        ],
+      },
+    );
+  }
+
+  ChatMessage _fromJson(Map<String, dynamic> j, int myId) {
+    final sender = j['sender'] as Map<String, dynamic>?;
+    final senderId = parseInt(j['sender_id'] ?? sender?['id']);
+    return ChatMessage(
+      id: j['id'] != null ? '${j['id']}' : '',
+      isMe: senderId != null && senderId == myId,
+      text: j['text'] as String? ?? '',
+      time: j['created_at'] as String? ?? '',
+    );
   }
 }
 

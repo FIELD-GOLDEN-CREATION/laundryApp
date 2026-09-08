@@ -107,9 +107,13 @@ class VendorOrdersNotifier extends Notifier<VendorOrdersState> {
   }
 
   VendorOrder _fromJson(Map<String, dynamic> j) {
+    final customer = j['customer'] as Map<String, dynamic>?;
     return VendorOrder(
       id: j['id'] != null ? '#LD-${j['id']}' : (j['order_number'] as String? ?? ''),
       customer: j['customer_name'] as String? ?? '',
+      customerId: customer?['id'] != null
+          ? '${customer!['id']}'
+          : (j['customer_id'] != null ? '${j['customer_id']}' : ''),
       items: j['items_summary'] as String? ?? '',
       dist: j['distance'] as String? ?? '',
       priority: j['priority'] as String? ?? 'Standard',

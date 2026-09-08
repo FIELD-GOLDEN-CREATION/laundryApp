@@ -35,6 +35,14 @@ class RealtimeService {
   Timer? _reconnectTimer;
   bool _disposed = true;
 
+  /// Chat-thread channels joined on demand (a panel opening/closing), keyed
+  /// by the full `private-chat-thread.{id}` channel name — unlike the fixed
+  /// per-session channels above, these come and go independently of
+  /// [connect], so they're tracked separately and re-added to
+  /// [_wantedChannels] on every [connect] call so a base reconnect doesn't
+  /// drop whichever thread is currently open.
+  final Map<String, void Function(Map<String, dynamic>)> _chatHandlers = {};
+
   /// `action` is one of 'new_order' | 'accepted' | 'rejected' | 'status_updated'.
   void Function(String action, Map<String, dynamic> order)? onOrderEvent;
   void Function(Map<String, dynamic> notification)? onNotificationEvent;
@@ -55,6 +63,7 @@ class RealtimeService {
     _wantedChannels = {
       'private-user.$userId',
       if (shopId != null) 'private-vendor-shop.$shopId',
+      ..._chatHandlers.keys,
     };
 
     if (_channel == null) {
@@ -85,6 +94,31 @@ class RealtimeService {
     _socketId = null;
     _wantedChannels = {};
     _subscribedChannels.clear();
+    _chatHandlers.clear();
+  }
+
+  /// Joins the private channel for one chat thread — call when a chat panel
+  /// opens. [onMessage] receives every `message.created` event on that
+  /// thread until [leaveChatThread] is called. Safe to call before the base
+  /// socket is even open (e.g. right after [connect]); the channel just
+  /// joins once the connection handshake completes.
+  void joinChatThread(int threadId, void Function(Map<String, dynamic> message) onMessage) {
+    final channel = 'private-chat-thread.$threadId';
+    _chatHandlers[channel] = onMessage;
+    _wantedChannels = {..._wantedChannels, channel};
+    if (_socketId != null && !_subscribedChannels.contains(channel)) {
+      _subscribe(channel);
+    }
+  }
+
+  /// Leaves one chat thread's channel — call when its panel closes.
+  void leaveChatThread(int threadId) {
+    final channel = 'private-chat-thread.$threadId';
+    _chatHandlers.remove(channel);
+    _wantedChannels = {..._wantedChannels}..remove(channel);
+    if (_subscribedChannels.remove(channel)) {
+      _send({'event': 'pusher:unsubscribe', 'data': {'channel': channel}});
+    }
   }
 
   void _open() {
@@ -152,6 +186,12 @@ class RealtimeService {
           data['action'] as String? ?? '',
           promo is Map ? promo.cast<String, dynamic>() : const {},
         );
+      case 'message.created':
+        // Routed by channel (not a single fixed callback like the events
+        // above) since more than one chat-thread channel could in principle
+        // be joined — Reverb echoes the source channel on every frame.
+        final channel = msg['channel'] as String?;
+        if (channel != null) _chatHandlers[channel]?.call(data);
       default:
         // pusher_internal:subscription_succeeded / subscription_error /
         // pusher:error — best-effort channel, nothing to act on here.
