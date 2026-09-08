@@ -64,30 +64,60 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final value = datum.heightFraction.clamp(0.02, 1.0);
+    final topRadius = Radius.circular(radius);
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Expanded(
-          // flex must stay >0 on both sides even at the 0%/100% extremes
-          // the real data hits (several bars are exactly 100%).
-          flex: (datum.heightFraction.clamp(0.02, 0.98) * 1000).round(),
-          child: ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
-            child: Container(
-              color: datum.color,
-              alignment: Alignment.bottomCenter,
-              child: datum.stackedFraction == null
-                  ? null
-                  : FractionallySizedBox(
-                      heightFactor: (datum.stackedFraction! / datum.heightFraction).clamp(0, 1),
-                      child: Container(color: datum.stackedColor),
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // Faint full-height track so every column reads against a
+              // shared baseline instead of floating at an arbitrary height.
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: datum.color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.vertical(top: topRadius),
+                  ),
+                ),
+              ),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: value),
+                duration: const Duration(milliseconds: 650),
+                curve: Curves.easeOutCubic,
+                builder: (context, animatedValue, _) => FractionallySizedBox(
+                  heightFactor: animatedValue,
+                  widthFactor: 1,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.vertical(top: topRadius),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [datum.color.withValues(alpha: 0.82), datum.color],
+                        ),
+                      ),
+                      child: datum.stackedFraction == null
+                          ? null
+                          : Align(
+                              alignment: Alignment.bottomCenter,
+                              child: FractionallySizedBox(
+                                heightFactor: datum.heightFraction <= 0
+                                    ? 0
+                                    : (datum.stackedFraction! / datum.heightFraction).clamp(0.0, 1.0),
+                                child: DecoratedBox(decoration: BoxDecoration(color: datum.stackedColor)),
+                              ),
+                            ),
                     ),
-            ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        Expanded(
-          flex: ((1 - datum.heightFraction.clamp(0.02, 0.98)) * 1000).round(),
-          child: const SizedBox.shrink(),
         ),
         if (datum.label != null) ...[
           const SizedBox(height: 6),

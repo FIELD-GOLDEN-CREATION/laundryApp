@@ -476,21 +476,63 @@ class _TrendCard extends StatelessWidget {
   }
 }
 
-class _TrendChart extends StatelessWidget {
+class _TrendChart extends StatefulWidget {
   const _TrendChart({required this.points});
   final List<TrendPoint> points;
 
   @override
+  State<_TrendChart> createState() => _TrendChartState();
+}
+
+class _TrendChartState extends State<_TrendChart> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 750));
+    _progress = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TrendChart old) {
+    super.didUpdateWidget(old);
+    if (!_samePoints(old.points, widget.points)) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  bool _samePoints(List<TrendPoint> a, List<TrendPoint> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].amountTzs != b[i].amountTzs || a[i].label != b[i].label) return false;
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final max = points.fold<double>(0, (m, p) => p.amountTzs > m ? p.amountTzs : m);
+    final max = widget.points.fold<double>(0, (m, p) => p.amountTzs > m ? p.amountTzs : m);
     return Column(
       children: [
         SizedBox(
           height: 130,
           width: double.infinity,
-          child: CustomPaint(
-            painter: _TrendPainter(
-              values: [for (final p in points) max == 0 ? 0.0 : (p.amountTzs / max).clamp(0.0, 1.0)],
+          child: AnimatedBuilder(
+            animation: _progress,
+            builder: (context, _) => CustomPaint(
+              painter: _TrendPainter(
+                values: [for (final p in widget.points) max == 0 ? 0.0 : (p.amountTzs / max).clamp(0.0, 1.0)],
+                progress: _progress.value,
+              ),
             ),
           ),
         ),
@@ -508,19 +550,20 @@ class _TrendChart extends StatelessWidget {
 
   /// First / middle / last labels so the axis stays readable on all ranges.
   List<String> _axisLabels() {
-    if (points.isEmpty) return const [];
-    if (points.length <= 3) return [for (final p in points) p.label];
+    if (widget.points.isEmpty) return const [];
+    if (widget.points.length <= 3) return [for (final p in widget.points) p.label];
     return [
-      points.first.label,
-      points[points.length ~/ 2].label,
-      points.last.label,
+      widget.points.first.label,
+      widget.points[widget.points.length ~/ 2].label,
+      widget.points.last.label,
     ];
   }
 }
 
 class _TrendPainter extends CustomPainter {
-  _TrendPainter({required this.values});
+  _TrendPainter({required this.values, this.progress = 1.0});
   final List<double> values;
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -528,6 +571,7 @@ class _TrendPainter extends CustomPainter {
     const pad = 8.0;
     final w = size.width - pad * 2;
     final h = size.height - pad * 2;
+    final animated = [for (final v in values) v * progress];
 
     // Faint gridlines.
     final grid = Paint()
@@ -540,7 +584,7 @@ class _TrendPainter extends CustomPainter {
 
     Offset pointAt(int i) {
       final x = values.length == 1 ? pad + w / 2 : pad + w * i / (values.length - 1);
-      final y = pad + h * (1 - values[i].clamp(0.0, 1.0));
+      final y = pad + h * (1 - animated[i].clamp(0.0, 1.0));
       return Offset(x, y);
     }
 
@@ -575,10 +619,11 @@ class _TrendPainter extends CustomPainter {
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
 
+    final lineAlpha = progress.clamp(0.0, 1.0);
     canvas.drawPath(
       line,
       Paint()
-        ..color = AppColors.teal
+        ..color = AppColors.teal.withValues(alpha: lineAlpha)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
         ..strokeCap = StrokeCap.round
@@ -587,20 +632,20 @@ class _TrendPainter extends CustomPainter {
 
     // End dot.
     final end = values.length == 1 ? Offset(pad + w / 2, pointAt(0).dy) : pointAt(values.length - 1);
-    canvas.drawCircle(end, 5, Paint()..color = Colors.white);
+    canvas.drawCircle(end, 5, Paint()..color = Colors.white.withValues(alpha: lineAlpha));
     canvas.drawCircle(
       end,
       5,
       Paint()
-        ..color = AppColors.teal
+        ..color = AppColors.teal.withValues(alpha: lineAlpha)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
-    canvas.drawCircle(end, 2, Paint()..color = AppColors.teal);
+    canvas.drawCircle(end, 2, Paint()..color = AppColors.teal.withValues(alpha: lineAlpha));
   }
 
   @override
-  bool shouldRepaint(covariant _TrendPainter old) => old.values != values;
+  bool shouldRepaint(covariant _TrendPainter old) => old.values != values || old.progress != progress;
 }
 
 // ── Ratings card ───────────────────────────────────────────────────────
@@ -636,32 +681,7 @@ class _RatingsCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SizedBox(
-                      width: 128,
-                      height: 128,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CustomPaint(
-                            size: const Size(128, 128),
-                            painter: _DonutPainter(counts: counts, total: total),
-                          ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                state.avgRating.toStringAsFixed(1),
-                                style: AppText.serif(fontSize: 26),
-                              ),
-                              Text(
-                                '$total review${total == 1 ? '' : 's'}',
-                                style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.muted),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _RatingsDonut(counts: counts, total: total, avgRating: state.avgRating),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -712,10 +732,91 @@ class _RatingsCard extends StatelessWidget {
   }
 }
 
-class _DonutPainter extends CustomPainter {
-  _DonutPainter({required this.counts, required this.total});
+/// Rating donut + centered average, with a clockwise reveal animation that
+/// replays whenever the counts it's fed change (fresh data on screen open).
+class _RatingsDonut extends StatefulWidget {
+  const _RatingsDonut({required this.counts, required this.total, required this.avgRating});
+
   final Map<int, int> counts;
   final int total;
+  final double avgRating;
+
+  @override
+  State<_RatingsDonut> createState() => _RatingsDonutState();
+}
+
+class _RatingsDonutState extends State<_RatingsDonut> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 750));
+    _progress = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RatingsDonut old) {
+    super.didUpdateWidget(old);
+    if (old.total != widget.total || !_sameCounts(old.counts, widget.counts)) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  bool _sameCounts(Map<int, int> a, Map<int, int> b) {
+    for (var s = 1; s <= 5; s++) {
+      if ((a[s] ?? 0) != (b[s] ?? 0)) return false;
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 128,
+      height: 128,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _progress,
+            builder: (context, _) => CustomPaint(
+              size: const Size(128, 128),
+              painter: _DonutPainter(counts: widget.counts, total: widget.total, progress: _progress.value),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.avgRating.toStringAsFixed(1),
+                style: AppText.serif(fontSize: 26),
+              ),
+              Text(
+                '${widget.total} review${widget.total == 1 ? '' : 's'}',
+                style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  _DonutPainter({required this.counts, required this.total, this.progress = 1.0});
+  final Map<int, int> counts;
+  final int total;
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -734,6 +835,17 @@ class _DonutPainter extends CustomPainter {
         ..strokeCap = StrokeCap.butt,
     );
     if (total == 0) return;
+
+    final reveal = math.pi * 2 * progress.clamp(0.0, 1.0);
+    canvas.save();
+    if (reveal < math.pi * 2) {
+      final clip = Path()
+        ..moveTo(size.width / 2, size.height / 2)
+        ..arcTo(rect, -math.pi / 2, reveal, false)
+        ..close();
+      canvas.clipPath(clip);
+    }
+
     var start = -math.pi / 2;
     for (var s = 5; s >= 1; s--) {
       final frac = (counts[s] ?? 0) / total;
@@ -754,11 +866,12 @@ class _DonutPainter extends CustomPainter {
       );
       start += frac * math.pi * 2;
     }
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant _DonutPainter old) =>
-      old.counts != counts || old.total != total;
+      old.counts != counts || old.total != total || old.progress != progress;
 }
 
 // ── Shared bits ────────────────────────────────────────────────────────
