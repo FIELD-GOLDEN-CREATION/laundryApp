@@ -21,6 +21,14 @@ class VendorDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
+  // The vendor tabs live in a StatefulShellRoute.indexedStack, which keeps
+  // this screen mounted and just flips TickerMode off/on when you switch
+  // tabs — so `initState` only ever fires once. Watching TickerMode lets us
+  // notice each time this tab becomes visible again and bump this key to
+  // remount the header chart, replaying its grow-in animation.
+  bool? _wasTicking;
+  int _chartAnimGen = 0;
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +36,16 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       ref.read(vendorDashboardProvider.notifier).load();
       ref.read(vendorProfileProvider.notifier).loadProfile();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ticking = TickerMode.valuesOf(context).enabled;
+    if (ticking && _wasTicking == false) {
+      setState(() => _chartAnimGen++);
+    }
+    _wasTicking = ticking;
   }
 
   @override
@@ -43,7 +61,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(dash: dash, shopTitle: shopTitle, onAccount: () => showAccountSheet(context, ref)),
+              _Header(dash: dash, shopTitle: shopTitle, chartAnimGen: _chartAnimGen, onAccount: () => showAccountSheet(context, ref)),
 
               // ── Order stats row ────────────────────────────────────
               const SizedBox(height: 18),
@@ -467,10 +485,11 @@ void _showNotificationPopup(BuildContext context, WidgetRef ref, String id) {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.dash, required this.shopTitle, required this.onAccount});
+  const _Header({required this.dash, required this.shopTitle, required this.chartAnimGen, required this.onAccount});
 
   final VendorDashboardState dash;
   final String shopTitle;
+  final int chartAnimGen;
   final VoidCallback onAccount;
 
   @override
@@ -556,19 +575,22 @@ class _Header extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      BarChartRow(
-                        height: 64,
-                        gap: 7,
-                        barRadius: 4,
-                        labelColor: AppColors.cream.withValues(alpha: 0.5),
-                        bars: [
-                          for (var i = 0; i < dash.weekBars.length; i++)
-                            BarDatum(
-                              heightFraction: dash.weekBars[i].fraction,
-                              color: i == dash.weekBars.length - 1 ? AppColors.amber : Colors.white.withValues(alpha: 0.34),
-                              label: dash.weekBars[i].day,
-                            ),
-                        ],
+                      KeyedSubtree(
+                        key: ValueKey(chartAnimGen),
+                        child: BarChartRow(
+                          height: 64,
+                          gap: 7,
+                          barRadius: 4,
+                          labelColor: AppColors.cream.withValues(alpha: 0.5),
+                          bars: [
+                            for (var i = 0; i < dash.weekBars.length; i++)
+                              BarDatum(
+                                heightFraction: dash.weekBars[i].fraction,
+                                color: i == dash.weekBars.length - 1 ? AppColors.amber : Colors.white.withValues(alpha: 0.34),
+                                label: dash.weekBars[i].day,
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

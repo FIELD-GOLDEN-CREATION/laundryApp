@@ -52,14 +52,20 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
-    final basket = ref.watch(basketsProvider.select((m) => m[shop.slotId])) ?? VendorBasket.empty(shop.slotId);
+    final basket =
+        ref.watch(basketsProvider.select((m) => m[shop.slotId])) ??
+        VendorBasket.empty(shop.slotId);
     final qty = basket.qty;
     final fav = ref.watch(profileProvider.select((s) => s.fav));
 
     final displayName = shop.name;
     final displayDescription = shop.description;
-    final displayHours = shop.isOpenNow ? (shop.hours.isNotEmpty ? shop.hours : 'Open') : 'Closed now';
-    final displayHoursColor = shop.isOpenNow ? AppColors.teal : AppColors.danger;
+    final displayHours = shop.isOpenNow
+        ? (shop.hours.isNotEmpty ? shop.hours : 'Open')
+        : 'Closed now';
+    final displayHoursColor = shop.isOpenNow
+        ? AppColors.teal
+        : AppColors.danger;
 
     final detailAsync = ref.watch(shopDetailProvider(shop.listSlotId));
     final packagesAsync = ref.watch(shopPackagesProvider(shop.slotId));
@@ -72,12 +78,16 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
     // state this could ever collide with or need to defer to.
     if (!_catalogRegistered && priceList.isNotEmpty) {
       _catalogRegistered = true;
-      Future.microtask(() => ref.read(basketsProvider.notifier).setShopCatalog(
-            shop.slotId,
-            shopName: shop.name,
-            shopSlug: shop.listSlotId,
-            items: priceList,
-          ));
+      Future.microtask(
+        () => ref
+            .read(basketsProvider.notifier)
+            .setShopCatalog(
+              shop.slotId,
+              shopName: shop.name,
+              shopSlug: shop.listSlotId,
+              items: priceList,
+            ),
+      );
     }
 
     final pricedItems = basket.pricedItems;
@@ -101,7 +111,10 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                 children: [
                   Text(
                     displayName,
-                    style: AppText.serif(fontSize: 28, color: AppColors.clientText(context)),
+                    style: AppText.serif(
+                      fontSize: 28,
+                      color: AppColors.clientText(context),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   _InfoChips(
@@ -114,17 +127,28 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: shop.badges.map((badge) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.tealMuted,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          badge,
-                          style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.teal),
-                        ),
-                      )).toList(),
+                      children: shop.badges
+                          .map(
+                            (badge) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.tealMuted,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                badge,
+                                style: AppText.sans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.teal,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -139,62 +163,78 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                   ),
                   const SizedBox(height: 18),
                   if (_tab == 0)
-                    _AboutSection(
-                      description: displayDescription,
-                      shop: shop,
-                    )
+                    _AboutSection(description: displayDescription, shop: shop)
                   else if (_tab == 1)
                     loading
                         ? const Padding(
                             padding: EdgeInsets.symmetric(vertical: 40),
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           )
                         : packages.isEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Text(
-                                  'This shop hasn\'t listed any packages yet.',
-                                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'This shop hasn\'t listed any packages yet.',
+                              style: AppText.sans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.clientSecondaryText(context),
+                                height: 1.5,
+                              ),
+                            ),
+                          )
+                        : Column(
+                            children: [
+                              for (final package in packages) ...[
+                                PackageCard(
+                                  package: package,
+                                  inBasket:
+                                      (qty[package.cartKey(shop.slotId)] ?? 0) >
+                                      0,
+                                  onSelect: () =>
+                                      _selectPackage(context, package),
                                 ),
-                              )
-                            : Column(
-                                children: [
-                                  for (final package in packages) ...[
-                                    PackageCard(
-                                      package: package,
-                                      inBasket: (qty[package.cartKey(shop.slotId)] ?? 0) > 0,
-                                      onSelect: () => _selectPackage(context, package),
-                                    ),
-                                    if (package != packages.last) const SizedBox(height: 10),
-                                  ],
-                                ],
-                              )
+                                if (package != packages.last)
+                                  const SizedBox(height: 10),
+                              ],
+                            ],
+                          )
                   else
                     loading
                         ? const Padding(
                             padding: EdgeInsets.symmetric(vertical: 40),
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           )
                         : priceList.isEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Text(
-                                  'No price list available yet.',
-                                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.5),
-                                ),
-                              )
-                            : Column(
-                                children: [
-                                  for (final item in priceList) ...[
-                                    _MenuRow(
-                                      item: item,
-                                      checked: (qty[item.key] ?? 0) > 0,
-                                      onToggle: () => _toggleMenuItem(item),
-                                    ),
-                                    if (item != priceList.last) const SizedBox(height: 10),
-                                  ],
-                                ],
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No price list available yet.',
+                              style: AppText.sans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.clientSecondaryText(context),
+                                height: 1.5,
                               ),
+                            ),
+                          )
+                        : Column(
+                            children: [
+                              for (final item in priceList) ...[
+                                _MenuRow(
+                                  item: item,
+                                  checked: (qty[item.key] ?? 0) > 0,
+                                  onToggle: () => _toggleMenuItem(item),
+                                ),
+                                if (item != priceList.last)
+                                  const SizedBox(height: 10),
+                              ],
+                            ],
+                          ),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -300,14 +340,30 @@ class _EdgedHeroImageState extends State<_EdgedHeroImage> {
     final url = slides[_index.clamp(0, slides.length - 1)];
     return SizedBox(
       width: double.infinity,
-      height: 200,
+      height: 280,
       child: Stack(
         fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 450),
-              child: RemoteImage(key: ValueKey(url), url: url, fallback: widget.shop.name, fit: BoxFit.cover),
+              // Default layoutBuilder stacks children with StackFit.loose,
+              // which lets the image size itself to the photo's own aspect
+              // ratio instead of filling the box — forcing expand here is
+              // what makes BoxFit.cover actually fill full-bleed.
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                fit: StackFit.expand,
+                children: [
+                  ...previousChildren,
+                  ?currentChild,
+                ],
+              ),
+              child: RemoteImage(
+                key: ValueKey(url),
+                url: url,
+                fallback: widget.shop.name,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
           Container(
@@ -338,15 +394,14 @@ class _EdgedHeroImageState extends State<_EdgedHeroImage> {
                   Row(
                     children: [
                       _GlassButton(
-                        icon: widget.fav ? Icons.favorite : Icons.favorite_border,
+                        icon: widget.fav
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         onTap: widget.onFavToggle,
                         iconColor: widget.fav ? AppColors.danger : null,
                       ),
                       const SizedBox(width: 10),
-                      _GlassButton(
-                        icon: Icons.share_outlined,
-                        onTap: () {},
-                      ),
+                      _GlassButton(icon: Icons.share_outlined, onTap: () {}),
                     ],
                   ),
                 ],
@@ -388,11 +443,7 @@ class _BottomEdgeClipper extends CustomClipper<Path> {
 }
 
 class _GlassButton extends StatelessWidget {
-  const _GlassButton({
-    required this.icon,
-    required this.onTap,
-    this.iconColor,
-  });
+  const _GlassButton({required this.icon, required this.onTap, this.iconColor});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -434,32 +485,35 @@ class _InfoChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _InfoChip(
-          icon: Icons.star,
-          text: shop.rating,
-          color: AppColors.amber,
-        ),
-        const SizedBox(width: 8),
-        _InfoChip(
-          icon: Icons.reviews_outlined,
-          text: '${shop.reviewCount} reviews',
-          color: AppColors.clientSecondaryText(context),
-        ),
-        const SizedBox(width: 8),
-        _InfoChip(
-          icon: Icons.location_on_outlined,
-          text: shop.distance,
-          color: AppColors.clientSecondaryText(context),
-        ),
-        const SizedBox(width: 8),
-        _InfoChip(
-          icon: Icons.schedule,
-          text: displayHours,
-          color: displayHoursColor,
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _InfoChip(
+            icon: Icons.star,
+            text: shop.rating,
+            color: AppColors.amber,
+          ),
+          const SizedBox(width: 8),
+          _InfoChip(
+            icon: Icons.reviews_outlined,
+            text: '${shop.reviewCount} reviews',
+            color: AppColors.clientSecondaryText(context),
+          ),
+          const SizedBox(width: 8),
+          _InfoChip(
+            icon: Icons.location_on_outlined,
+            text: shop.distance,
+            color: AppColors.clientSecondaryText(context),
+          ),
+          const SizedBox(width: 8),
+          _InfoChip(
+            icon: Icons.schedule,
+            text: displayHours,
+            color: displayHoursColor,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -491,7 +545,11 @@ class _InfoChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             text,
-            style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
+            style: AppText.sans(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.clientText(context),
+            ),
           ),
         ],
       ),
@@ -525,7 +583,11 @@ class _DirectionButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'Get Directions',
-                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+                style: AppText.sans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.teal,
+                ),
               ),
             ],
           ),
@@ -536,10 +598,7 @@ class _DirectionButton extends StatelessWidget {
 }
 
 class _AboutSection extends StatelessWidget {
-  const _AboutSection({
-    required this.description,
-    required this.shop,
-  });
+  const _AboutSection({required this.description, required this.shop});
 
   final String description;
   final Shop shop;
@@ -551,12 +610,21 @@ class _AboutSection extends StatelessWidget {
       children: [
         Text(
           'About ${shop.name}',
-          style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
+          style: AppText.sans(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.clientText(context),
+          ),
         ),
         const SizedBox(height: 10),
         Text(
           description,
-          style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context), height: 1.6),
+          style: AppText.sans(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.clientSecondaryText(context),
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 16),
         if (shop.services.isNotEmpty) ...[
@@ -565,11 +633,19 @@ class _AboutSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline, size: 18, color: AppColors.teal),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: AppColors.teal,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     service,
-                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientText(context)),
+                    style: AppText.sans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.clientText(context),
+                    ),
                   ),
                 ],
               ),
@@ -579,11 +655,19 @@ class _AboutSection extends StatelessWidget {
         if (shop.hours.isNotEmpty) ...[
           Row(
             children: [
-              Icon(Icons.schedule_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
+              Icon(
+                Icons.schedule_outlined,
+                size: 16,
+                color: AppColors.clientSecondaryText(context),
+              ),
               const SizedBox(width: 8),
               Text(
                 shop.hours,
-                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                style: AppText.sans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.clientSecondaryText(context),
+                ),
               ),
             ],
           ),
@@ -591,17 +675,29 @@ class _AboutSection extends StatelessWidget {
         ],
         Row(
           children: [
-            Icon(Icons.location_on_outlined, size: 16, color: AppColors.clientSecondaryText(context)),
+            Icon(
+              Icons.location_on_outlined,
+              size: 16,
+              color: AppColors.clientSecondaryText(context),
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: shop.distance.isNotEmpty
                   ? Text(
                       '${shop.distance} km away',
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                      style: AppText.sans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.clientSecondaryText(context),
+                      ),
                     )
                   : ShopLocationLabel(
                       shop: shop,
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                      style: AppText.sans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.clientSecondaryText(context),
+                      ),
                     ),
             ),
           ],
@@ -612,7 +708,11 @@ class _AboutSection extends StatelessWidget {
 }
 
 class _ShopTabBar extends StatelessWidget {
-  const _ShopTabBar({required this.labels, required this.index, required this.onChanged});
+  const _ShopTabBar({
+    required this.labels,
+    required this.index,
+    required this.onChanged,
+  });
 
   final List<String> labels;
   final int index;
@@ -630,7 +730,11 @@ class _ShopTabBar extends StatelessWidget {
         children: [
           for (var i = 0; i < labels.length; i++)
             Expanded(
-              child: _ShopTabButton(label: labels[i], active: index == i, onTap: () => onChanged(i)),
+              child: _ShopTabButton(
+                label: labels[i],
+                active: index == i,
+                onTap: () => onChanged(i),
+              ),
             ),
         ],
       ),
@@ -639,7 +743,11 @@ class _ShopTabBar extends StatelessWidget {
 }
 
 class _ShopTabButton extends StatelessWidget {
-  const _ShopTabButton({required this.label, required this.active, required this.onTap});
+  const _ShopTabButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -661,7 +769,9 @@ class _ShopTabButton extends StatelessWidget {
               style: AppText.sans(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                color: active ? AppColors.teal : AppColors.clientSecondaryText(context),
+                color: active
+                    ? AppColors.teal
+                    : AppColors.clientSecondaryText(context),
               ),
             ),
           ),
@@ -672,7 +782,11 @@ class _ShopTabButton extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.item, required this.checked, required this.onToggle});
+  const _MenuRow({
+    required this.item,
+    required this.checked,
+    required this.onToggle,
+  });
 
   final MenuItem item;
   final bool checked;
@@ -706,18 +820,33 @@ class _MenuRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+                Text(
+                  item.name,
+                  style: AppText.sans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.clientText(context),
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   item.unit,
-                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                  style: AppText.sans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.clientSecondaryText(context),
+                  ),
                 ),
               ],
             ),
           ),
           Text(
             formatMoney(item.price),
-            style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+            style: AppText.sans(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppColors.teal,
+            ),
           ),
           const SizedBox(width: 4),
           Material(
@@ -749,10 +878,15 @@ class _ItemCheckbox extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         color: checked ? AppColors.teal : Colors.transparent,
-        border: Border.all(color: checked ? AppColors.teal : AppColors.clientBorder(context), width: 2),
+        border: Border.all(
+          color: checked ? AppColors.teal : AppColors.clientBorder(context),
+          width: 2,
+        ),
         borderRadius: BorderRadius.circular(7),
       ),
-      child: checked ? const Icon(Icons.check, size: 15, color: Colors.white) : null,
+      child: checked
+          ? const Icon(Icons.check, size: 15, color: Colors.white)
+          : null,
     );
   }
 }
@@ -784,9 +918,7 @@ class _BottomBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
       decoration: BoxDecoration(
         color: AppColors.clientSurface(context),
-        border: Border(
-          top: BorderSide(color: AppColors.clientBorder(context)),
-        ),
+        border: Border(top: BorderSide(color: AppColors.clientBorder(context))),
       ),
       child: SafeArea(
         top: false,
@@ -802,7 +934,11 @@ class _BottomBar extends StatelessWidget {
               child: Center(
                 child: Text(
                   initials,
-                  style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  style: AppText.sans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.teal,
+                  ),
                 ),
               ),
             ),
@@ -814,11 +950,19 @@ class _BottomBar extends StatelessWidget {
                 children: [
                   Text(
                     shopName,
-                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
+                    style: AppText.sans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.clientText(context),
+                    ),
                   ),
                   Text(
                     cartTotal,
-                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                    style: AppText.sans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.clientSecondaryText(context),
+                    ),
                   ),
                 ],
               ),
@@ -836,7 +980,11 @@ class _BottomBar extends StatelessWidget {
                     child: Center(
                       child: Text(
                         'View basket',
-                        style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                        style: AppText.sans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
