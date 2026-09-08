@@ -4,6 +4,7 @@ class VendorOrder {
   const VendorOrder({
     required this.id,
     required this.customer,
+    this.customerId = '',
     required this.items,
     required this.dist,
     required this.priority,
@@ -20,6 +21,11 @@ class VendorOrder {
 
   final String id;
   final String customer;
+
+  /// Backend `users.id` of the customer who placed this order — needed to
+  /// open/find the chat thread with them (chat threads are keyed by
+  /// customer+shop, not by order).
+  final String customerId;
   final String items;
   final String dist;
   final String priority;
@@ -36,6 +42,7 @@ class VendorOrder {
   VendorOrder copyWith({
     String? id,
     String? customer,
+    String? customerId,
     String? items,
     String? dist,
     String? priority,
@@ -52,6 +59,7 @@ class VendorOrder {
       VendorOrder(
         id: id ?? this.id,
         customer: customer ?? this.customer,
+        customerId: customerId ?? this.customerId,
         items: items ?? this.items,
         dist: dist ?? this.dist,
         priority: priority ?? this.priority,

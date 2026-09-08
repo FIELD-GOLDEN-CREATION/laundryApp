@@ -84,7 +84,9 @@ class _VendorOrdersScreenState extends ConsumerState<VendorOrdersScreen> {
                   },
                   onReject: orders[i].stage == 'new' ? () => _showRejectDialog(context, ref, orders[i]) : null,
                   onOpen: () => openDetail(orders[i]),
-                  onChat: orders[i].stage == 'wip' ? () => showVendorChatPanel(context, orders[i].customer) : null,
+                  onChat: orders[i].stage == 'wip' && orders[i].customerId.isNotEmpty
+                      ? () => showVendorChatPanel(context, customerId: orders[i].customerId, customerName: orders[i].customer)
+                      : null,
                 ),
                 if (i != orders.length - 1) const SizedBox(height: 12),
               ],

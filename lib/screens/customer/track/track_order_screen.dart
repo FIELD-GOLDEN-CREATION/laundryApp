@@ -236,7 +236,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                               // The source wires this to goChat, which is
                               // also a tab-switch (this.tab('chat')), not a
                               // push.
-                               onTap: () => showChatPanel(context, order!.shop),
+                               onTap: () => showChatPanel(context, shopId: order!.shopId, shopName: order.shop),
                             ),
                             const SizedBox(width: 8),
                             _RoundIconButton(icon: AppIcons.phone, bg: AppColors.teal, iconColor: AppColors.cream, onTap: () {}),

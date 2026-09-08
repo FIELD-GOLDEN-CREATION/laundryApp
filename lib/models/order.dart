@@ -12,6 +12,7 @@ const kOrderPlacedStep = -1;
 class Order {
   const Order({
     required this.shop,
+    this.shopId = '',
     required this.id,
     required this.items,
     required this.status,
@@ -36,6 +37,10 @@ class Order {
   });
 
   final String shop;
+
+  /// Backend `shops.id` — needed to open/find the chat thread with this
+  /// shop (chat threads are keyed by customer+shop, not by order).
+  final String shopId;
   final String id;
   final String items;
   final String status;
@@ -64,6 +69,7 @@ class Order {
 
   Order copyWith({String? status, Color? statusFg, Color? statusBg, int? trackStep, int? deliveryFeeTzs}) => Order(
     shop: shop,
+    shopId: shopId,
     id: id,
     items: items,
     status: status ?? this.status,
@@ -91,6 +97,7 @@ class Order {
   /// `null` (deleted) — `copyWith`'s `??` pattern can't express "clear this".
   Order copyWithReview(Review? review) => Order(
     shop: shop,
+    shopId: shopId,
     id: id,
     items: items,
     status: status,
