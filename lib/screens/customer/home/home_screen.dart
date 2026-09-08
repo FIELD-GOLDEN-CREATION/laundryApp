@@ -15,6 +15,7 @@ import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/section_header.dart';
 import 'widgets/active_order_banner.dart';
+import 'widgets/create_basket_widget.dart';
 import 'widgets/offer_card.dart';
 import 'widgets/category_cards.dart';
 import 'widgets/delivery_widget.dart';
@@ -120,6 +121,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context.push('/category-detail', extra: category);
                 },
               ),
+              const SizedBox(height: 12),
+              const CreateBasketWidget(),
               const SizedBox(height: 12),
               const DeliveryWidget(),
               const SizedBox(height: 12),

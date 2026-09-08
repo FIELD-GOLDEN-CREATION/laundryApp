@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../screens/customer/cart/cart_screen.dart';
+import '../../screens/customer/basket/basket_builder_screen.dart';
+import '../../screens/customer/basket/vendor_results_screen.dart';
 import '../../models/shop.dart';
 import '../../models/laundry_category.dart';
 import '../../state/catalog_state.dart';
@@ -119,6 +121,8 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(path: '/cart', builder: (_, state) => CartScreen(shopId: state.extra as String? ?? '')),
+    GoRoute(path: '/basket-builder', builder: (_, _) => const BasketBuilderScreen()),
+    GoRoute(path: '/vendor-results', builder: (_, _) => const VendorResultsScreen()),
     GoRoute(path: '/schedule', builder: (_, state) => ScheduleScreen(shopId: state.extra as String? ?? '')),
     GoRoute(
       path: '/order-confirmation',
