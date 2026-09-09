@@ -435,8 +435,10 @@ Future<void> _openGoogleMaps({double? originLat, double? originLng, required dou
     url = 'https://www.google.com/maps/search/?api=1&query=$destLat,$destLng';
   }
   final uri = Uri.parse(url);
-  if (await canLaunchUrl(uri)) {
+  try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    // No app/browser could handle the link; nothing more we can do.
   }
 }
 

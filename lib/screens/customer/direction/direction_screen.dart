@@ -190,8 +190,10 @@ class _DirectionScreenState extends ConsumerState<DirectionScreen> {
     }
 
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // No app/browser could handle the link; nothing more we can do.
     }
   }
 }
