@@ -151,14 +151,14 @@ class _VendorEarningsScreenState extends ConsumerState<VendorEarningsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('AVAILABLE BALANCE', style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.62))),
+                  Text('NET REVENUE', style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.62))),
                   const SizedBox(height: 6),
                   state.isLoading
                       ? const Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mint),
                         )
-                      : Text(formatTzs(state.balance), style: AppText.serif(fontSize: 38, color: AppColors.cream)),
+                      : Text(formatTzs(state.totalRevenue), style: AppText.serif(fontSize: 38, color: AppColors.cream)),
                   if (state.pendingPayouts > 0) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -170,7 +170,7 @@ class _VendorEarningsScreenState extends ConsumerState<VendorEarningsScreen> {
               ),
             ),
 
-            // ── Earnings breakdown (no commission on this platform) ──
+            // ── Earnings breakdown ────────────────────────────────────
             const _SectionLabel('Earnings breakdown'),
             Container(
               padding: const EdgeInsets.all(18),
@@ -182,10 +182,8 @@ class _VendorEarningsScreenState extends ConsumerState<VendorEarningsScreen> {
               child: Column(
                 children: [
                   _MoneyLine(label: 'Gross revenue', value: formatTzs(state.totalRevenue)),
-                  const SizedBox(height: 9),
-                  _MoneyLine(label: 'Paid out', value: '-${formatTzs(state.totalPayouts)}', valueColor: AppColors.amber),
                   const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Divider(height: 1, color: AppColors.creamDark)),
-                  _MoneyLine(label: 'Net balance', value: formatTzs(state.balance), bold: true, valueColor: AppColors.teal),
+                  _MoneyLine(label: 'Net revenue', value: formatTzs(state.totalRevenue), bold: true, valueColor: AppColors.teal),
                 ],
               ),
             ),

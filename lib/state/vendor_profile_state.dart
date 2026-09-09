@@ -200,8 +200,12 @@ class VendorProfileNotifier extends Notifier<VendorProfileState> {
     saveProfile();
   }
 
-  void updateOfficeAddress(String v) {
-    state = state.copyWith(officeAddress: v);
+  /// Updates the office address text. When [latitude]/[longitude] are given
+  /// (picked from an [AddressSearchField] suggestion) they're saved
+  /// alongside it; otherwise any previously stored coordinates are left as
+  /// they are, matching the customer app's `updateAddressLine` contract.
+  void updateOfficeAddress(String v, {double? latitude, double? longitude}) {
+    state = state.copyWith(officeAddress: v, latitude: latitude ?? state.latitude, longitude: longitude ?? state.longitude);
     saveProfile();
   }
 
