@@ -91,8 +91,9 @@ class VendorEarningsState {
   final double totalPayouts;
   final double pendingPayouts;
 
-  /// Kept for API parity only — the platform takes no commission and the
-  /// UI never shows this. Commission rows are filtered out of [orderLines].
+  /// Kept for API parity only — the available balance shown to vendors is
+  /// gross order revenue, not netted against this. Commission rows are
+  /// filtered out of [orderLines].
   final double totalCommission;
   final List<VendorPayout> payouts;
   final List<EarningLine> lines;

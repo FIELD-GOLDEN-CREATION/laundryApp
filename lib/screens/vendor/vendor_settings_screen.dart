@@ -8,6 +8,7 @@ import '../../state/vendor_profile_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/location.dart';
+import '../../widgets/address_search_field.dart';
 import '../../widgets/placeholder_image.dart';
 import '../../widgets/remote_image.dart';
 import '../../widgets/round_back_button.dart';
@@ -38,7 +39,6 @@ class VendorSettingsScreen extends ConsumerStatefulWidget {
 
 class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
   final _imagePicker = ImagePicker();
-  bool _locating = false;
 
   void _chooseTime(String sheetTitle, String value, ValueChanged<String> onChanged) {
     showModalBottomSheet<void>(
@@ -208,33 +208,6 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
     );
   }
 
-  /// GPS fix → reverse-geocoded street address → saved as the office
-  /// address, mirroring the customer app's "use my current location" flow
-  /// in `schedule_screen.dart` (same [locateUserWithAddress] helper).
-  Future<void> _useCurrentLocation() async {
-    if (_locating) return;
-    final notifier = ref.read(vendorProfileProvider.notifier);
-    final language = ref.read(vendorProfileProvider).language;
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _locating = true);
-    try {
-      final resolved = await locateUserWithAddress();
-      notifier.setLocationFromGps(
-        address: resolved.displayLabel,
-        lat: resolved.point.latitude,
-        lng: resolved.point.longitude,
-      );
-    } on LocationException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (_) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(vendorLabel('Could not get your location.', 'Imeshindwa kupata mahali ulipo.', language))),
-      );
-    } finally {
-      if (mounted) setState(() => _locating = false);
-    }
-  }
-
   void _chooseLanguage() {
     final notifier = ref.read(vendorProfileProvider.notifier);
     final current = ref.read(vendorProfileProvider).language;
@@ -301,38 +274,19 @@ class _VendorSettingsScreenState extends ConsumerState<VendorSettingsScreen> {
                   ),
 
                   _SectionLabel(vendorLabel('Location', 'Mahali', language)),
-                  _EditableInfoCard(
-                    icon: const AppIcon(AppIcons.office, size: 16, color: AppColors.teal),
+                  _EditableAddressCard(
                     label: vendorLabel('Office address', 'Anwani ya ofisi', language),
                     value: vendor.officeAddress,
+                    latitude: vendor.latitude,
+                    longitude: vendor.longitude,
                     hint: vendorLabel('Enter office address', 'Weka anwani ya ofisi', language),
                     editLabel: vendorLabel('Edit', 'Hariri', language),
                     saveLabel: vendorLabel('Save', 'Hifadhi', language),
                     cancelLabel: vendorLabel('Cancel', 'Ghairi', language),
-                    onSave: notifier.updateOfficeAddress,
-                    footer: InkWell(
-                      onTap: _locating ? null : _useCurrentLocation,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_locating)
-                            const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal),
-                            )
-                          else
-                            const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
-                          const SizedBox(width: 6),
-                          Text(
-                            _locating
-                                ? vendorLabel('Locating…', 'Inatafuta mahali…', language)
-                                : vendorLabel('Use current location', 'Tumia mahali pa sasa', language),
-                            style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
-                          ),
-                        ],
-                      ),
-                    ),
+                    useLocationLabel: vendorLabel('Use current location', 'Tumia mahali pa sasa', language),
+                    locatingLabel: vendorLabel('Locating…', 'Inatafuta mahali…', language),
+                    locationErrorLabel: vendorLabel('Could not get your location.', 'Imeshindwa kupata mahali ulipo.', language),
+                    onSave: (line, latitude, longitude) => notifier.updateOfficeAddress(line, latitude: latitude, longitude: longitude),
                   ),
 
                   _SectionLabel(vendorLabel('Working schedule', 'Ratiba ya kazi', language)),
@@ -490,8 +444,8 @@ class _SectionLabel extends StatelessWidget {
 
 /// A "view text + Edit link" card: shows [label]/[value] at rest, and on
 /// tapping "Edit" swaps in a text box with Cancel/Save actions. Shared by
-/// every free-text vendor field (shop name, bio, office address) so they
-/// all edit the same way instead of always-open text fields.
+/// every free-text vendor field (shop name, bio) so they all edit the same
+/// way instead of always-open text fields.
 class _EditableInfoCard extends StatefulWidget {
   const _EditableInfoCard({
     required this.icon,
@@ -500,7 +454,6 @@ class _EditableInfoCard extends StatefulWidget {
     required this.onSave,
     this.hint,
     this.maxLines = 1,
-    this.footer,
     this.editLabel = 'Edit',
     this.saveLabel = 'Save',
     this.cancelLabel = 'Cancel',
@@ -512,7 +465,6 @@ class _EditableInfoCard extends StatefulWidget {
   final ValueChanged<String> onSave;
   final String? hint;
   final int maxLines;
-  final Widget? footer;
   final String editLabel;
   final String saveLabel;
   final String cancelLabel;
@@ -597,7 +549,191 @@ class _EditableInfoCardState extends State<_EditableInfoCard> {
                 ),
               ),
             ),
-            if (widget.footer != null) ...[const SizedBox(height: 10), widget.footer!],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: AppColors.creamDark, width: 1.5)),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: _cancel,
+                      child: Container(height: 44, alignment: Alignment.center, child: Text(widget.cancelLabel, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted))),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Material(
+                    color: AppColors.teal,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: _save,
+                      child: Container(height: 44, alignment: Alignment.center, child: Text(widget.saveLabel, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.cream))),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Office-address variant of [_EditableInfoCard]: same card chrome, but the
+/// edit view swaps the plain text field for an [AddressSearchField] (live
+/// Nominatim autocomplete) plus a "Use current location" GPS shortcut,
+/// saving lat/lng alongside the text — mirrors
+/// `screens/customer/profile/profile_screen.dart`'s `_AddressRow`.
+class _EditableAddressCard extends StatefulWidget {
+  const _EditableAddressCard({
+    required this.label,
+    required this.value,
+    required this.latitude,
+    required this.longitude,
+    required this.hint,
+    required this.editLabel,
+    required this.saveLabel,
+    required this.cancelLabel,
+    required this.useLocationLabel,
+    required this.locatingLabel,
+    required this.locationErrorLabel,
+    required this.onSave,
+  });
+
+  final String label;
+  final String value;
+  final double? latitude;
+  final double? longitude;
+  final String hint;
+  final String editLabel;
+  final String saveLabel;
+  final String cancelLabel;
+  final String useLocationLabel;
+  final String locatingLabel;
+  final String locationErrorLabel;
+  final void Function(String line, double? latitude, double? longitude) onSave;
+
+  @override
+  State<_EditableAddressCard> createState() => _EditableAddressCardState();
+}
+
+class _EditableAddressCardState extends State<_EditableAddressCard> {
+  bool _editing = false;
+  bool _locating = false;
+  late final _controller = TextEditingController(text: widget.value);
+  late double? _latitude = widget.latitude;
+  late double? _longitude = widget.longitude;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _cancel() {
+    _controller.text = widget.value;
+    _latitude = widget.latitude;
+    _longitude = widget.longitude;
+    setState(() => _editing = false);
+  }
+
+  void _save() {
+    final value = _controller.text.trim();
+    if (value.isNotEmpty) widget.onSave(value, _latitude, _longitude);
+    setState(() => _editing = false);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    try {
+      final resolved = await locateUserWithAddress();
+      _controller.text = resolved.displayLabel;
+      _latitude = resolved.point.latitude;
+      _longitude = resolved.point.longitude;
+      setState(() {});
+    } on LocationException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.locationErrorLabel)));
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(18)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(13)),
+                alignment: Alignment.center,
+                child: const AppIcon(AppIcons.office, size: 16, color: AppColors.teal),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 2),
+                    Text(widget.value, style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+              if (!_editing)
+                InkWell(
+                  onTap: () => setState(() => _editing = true),
+                  child: Text(widget.editLabel, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                ),
+            ],
+          ),
+          if (_editing) ...[
+            const SizedBox(height: 12),
+            AddressSearchField(
+              controller: _controller,
+              hint: widget.hint,
+              autofocus: true,
+              onSelected: (suggestion) {
+                _latitude = suggestion.latitude;
+                _longitude = suggestion.longitude;
+              },
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _locating ? null : _useCurrentLocation,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_locating)
+                    const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal))
+                  else
+                    const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
+                  const SizedBox(width: 6),
+                  Text(
+                    _locating ? widget.locatingLabel : widget.useLocationLabel,
+                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
