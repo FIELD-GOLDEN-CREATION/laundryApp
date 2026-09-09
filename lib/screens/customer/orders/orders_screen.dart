@@ -198,15 +198,23 @@ class _OrderCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    order.date,
-                     style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
+                  Flexible(
+                    child: Text(
+                      order.date,
+                      style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        order.total,
-                        style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      Flexible(
+                        child: Text(
+                          order.total,
+                          style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.teal),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (showContact && shop != null) ...[
                         const SizedBox(width: 10),

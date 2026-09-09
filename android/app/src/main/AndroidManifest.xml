@@ -56,5 +56,24 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Required for url_launcher's canLaunchUrl/launchUrl to work on
+             Android 11+ (API 30+): without declaring these, package
+             visibility restrictions make canLaunchUrl silently return false
+             for https/tel/geo links on installed builds, even though the
+             link would have opened fine (this is why "Open in Google Maps"
+             and phone/WhatsApp buttons worked in `flutter run -d chrome`
+             but did nothing on real devices). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="geo"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tel"/>
+        </intent>
     </queries>
 </manifest>
