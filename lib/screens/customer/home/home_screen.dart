@@ -105,7 +105,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
               const PackagesCarousel(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              const CreateBasketWidget(),
+              const SizedBox(height: 12),
                SectionHeader(title: clientLabel('Categories', 'Kategoria', language)),
               CategoryCardsWidget(
                 onCategoryTap: (category) {
@@ -121,8 +123,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context.push('/category-detail', extra: category);
                 },
               ),
-              const SizedBox(height: 12),
-              const CreateBasketWidget(),
               const SizedBox(height: 12),
               const DeliveryWidget(),
               const SizedBox(height: 12),

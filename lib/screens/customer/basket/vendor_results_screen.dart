@@ -5,17 +5,22 @@ import 'package:go_router/go_router.dart';
 import '../../../models/menu_item.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/basket_builder_state.dart';
+import '../../../state/browse_location_state.dart';
 import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../state/vendor_basket.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/currency.dart';
+import '../../../widgets/browse_location_sheet.dart';
+import '../../../widgets/skeleton_loader.dart';
 
 /// Step 2 of the basket flow: every nearby vendor priced for the exact
-/// basket — total, distance in km, coverage — with the nearest and cheapest
-/// given priority. Selecting a vendor fills their basket and continues to
-/// the basket page.
+/// basket — total, distance in km, coverage — ranked by Best match (blended
+/// rating+price+distance, rating weighted heaviest), Cheapest (price only),
+/// or Nearest (distance only), all measured from whichever browse location
+/// the customer has chosen (saved address or live GPS, see [LocationPill]).
+/// Selecting a vendor fills their basket and continues to the basket page.
 class VendorResultsScreen extends ConsumerStatefulWidget {
   const VendorResultsScreen({super.key});
 
@@ -70,6 +75,18 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
     final quotesAsync = ref.watch(vendorQuotesProvider);
     final categories = ref.watch(categoriesProvider).items;
     final itemById = {for (final c in categories) for (final i in c.items) i.id: i};
+    final browseLocation = ref.watch(browseLocationProvider);
+
+    // Re-quote when the resolved distance-measuring point changes (saved
+    // address ↔ GPS, or a fresh GPS fix) so "Nearest"/"Best match" reflect
+    // it — `search()` reads shop distance once per call, it isn't reactive.
+    ref.listen<BrowseLocationState>(browseLocationProvider, (prev, next) {
+      debugPrint('[VendorResults] listen fired prev=(${prev?.lat},${prev?.lng}) next=(${next.lat},${next.lng})');
+      if (prev?.lat != next.lat || prev?.lng != next.lng) {
+        debugPrint('[VendorResults] re-searching');
+        ref.read(vendorQuotesProvider.notifier).search();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -93,8 +110,16 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
                           ),
                     style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
                   ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: LocationPill(
+                      label: browseLocation.hasLocation ? browseLocation.label : 'Set your location',
+                      onTap: () => showBrowseLocationSheet(context, ref),
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  // ── Sort: nearest & cheapest get priority ──
+                  // ── Sort: best match blends rating+price+distance (rating weighted heaviest); cheapest/nearest are price-only/distance-only ──
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.cream,
@@ -137,76 +162,71 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: quotesAsync.when(
-                loading: () => ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(22, 4, 22, 16),
-                  itemCount: 4,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (_, _) => Container(
-                    height: 148,
-                    decoration: BoxDecoration(
-                      color: AppColors.cream,
-                      borderRadius: BorderRadius.circular(20),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: quotesAsync.when(
+                  loading: () => const _VendorResultsSkeleton(key: ValueKey('skeleton')),
+                  error: (e, _) => Center(
+                    key: const ValueKey('error'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            clientLabel(
+                              'Could not price vendors. Check connection and retry.',
+                              'Imeshindikana kuhesabu. Angalia mtandao ujaribu tena.',
+                              language,
+                            ),
+                            textAlign: TextAlign.center,
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: () => ref.read(vendorQuotesProvider.notifier).search(),
+                            style: FilledButton.styleFrom(backgroundColor: AppColors.teal),
+                            child: Text(clientLabel('Retry', 'Jaribu tena', language)),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                error: (e, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          clientLabel(
-                            'Could not price vendors. Check connection and retry.',
-                            'Imeshindikana kuhesabu. Angalia mtandao ujaribu tena.',
-                            language,
+                  data: (quotes) {
+                    final sorted = sortQuotes(quotes, _sort);
+                    if (sorted.isEmpty) {
+                      return Center(
+                        key: const ValueKey('empty'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            clientLabel(
+                              'No nearby vendor carries these items yet — try fewer items.',
+                              'Hakuna muuzaji karibu mwenye vitu hivi — jaribu vitu vichache.',
+                              language,
+                            ),
+                            textAlign: TextAlign.center,
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
                           ),
-                          textAlign: TextAlign.center,
-                          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
                         ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: () => ref.read(vendorQuotesProvider.notifier).search(),
-                          style: FilledButton.styleFrom(backgroundColor: AppColors.teal),
-                          child: Text(clientLabel('Retry', 'Jaribu tena', language)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                data: (quotes) {
-                  final sorted = sortQuotes(quotes, _sort);
-                  if (sorted.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(
-                          clientLabel(
-                            'No nearby vendor carries these items yet — try fewer items.',
-                            'Hakuna muuzaji karibu mwenye vitu hivi — jaribu vitu vichache.',
-                            language,
-                          ),
-                          textAlign: TextAlign.center,
-                          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
-                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      key: const ValueKey('data'),
+                      padding: const EdgeInsets.fromLTRB(22, 4, 22, 16),
+                      itemCount: sorted.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) => _QuoteCard(
+                        quote: sorted[i],
+                        rank: i + 1,
+                        language: language,
+                        itemById: itemById,
+                        quantities: draft.quantities,
+                        onSelect: () => _select(sorted[i], language),
                       ),
                     );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(22, 4, 22, 16),
-                    itemCount: sorted.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _QuoteCard(
-                      quote: sorted[i],
-                      rank: i + 1,
-                      language: language,
-                      itemById: itemById,
-                      quantities: draft.quantities,
-                      onSelect: () => _select(sorted[i], language),
-                    ),
-                  );
-                },
+                  },
+                ),
               ),
             ),
           ],
@@ -239,7 +259,7 @@ class _QuoteCard extends StatelessWidget {
     final distance = quote.distanceKm < 0
         ? clientLabel('Distance unknown', 'Umbali haujulikani', language)
         : '${quote.distanceKm.toStringAsFixed(1)} ${clientLabel('km away', 'km', language)}';
-    final highlight = quote.isRecommended || rank == 1 && quote.fullCoverage;
+    final highlight = quote.isRecommended || rank == 1;
 
     return Container(
       padding: const EdgeInsets.all(15),
@@ -419,4 +439,83 @@ class _Badge extends StatelessWidget {
       ),
     );
   }
+}
+
+class _VendorResultsSkeleton extends StatelessWidget {
+  const _VendorResultsSkeleton({super.key});
+
+  static const _cardCount = 4;
+
+  @override
+  Widget build(BuildContext context) => Skeleton(
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(22, 4, 22, 16),
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _cardCount,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (_, _) => const _QuoteCardSkeleton(),
+        ),
+      );
+}
+
+class _QuoteCardSkeleton extends StatelessWidget {
+  const _QuoteCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: AppColors.clientSurfaceRaised(context),
+          border: Border.all(color: AppColors.clientBorder(context)),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const SkeletonBox(width: 44, height: 44, borderRadius: 14),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      SkeletonLine(width: 120),
+                      SizedBox(height: 6),
+                      SkeletonLine(width: 150, height: 11),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: const [
+                SkeletonBox(width: 90, height: 22, borderRadius: 20),
+                SizedBox(width: 6),
+                SkeletonBox(width: 70, height: 22, borderRadius: 20),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const SkeletonLine(width: 130),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      SkeletonLine(width: 44, height: 9),
+                      SizedBox(height: 4),
+                      SkeletonLine(width: 90, height: 20),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const SkeletonBox(width: 84, height: 40, borderRadius: 13),
+              ],
+            ),
+          ],
+        ),
+      );
 }

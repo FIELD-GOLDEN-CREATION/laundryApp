@@ -87,7 +87,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-              child: _LocationPill(
+              child: LocationPill(
                 label: browseLocation.hasLocation ? browseLocation.label : 'Set your location',
                 onTap: () => showBrowseLocationSheet(context, ref),
               ),
@@ -214,46 +214,3 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-/// Shows the customer's chosen distance-measuring location (saved address or
-/// GPS) and reopens `showBrowseLocationSheet` to change it.
-class _LocationPill extends StatelessWidget {
-  const _LocationPill({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(999),
-        side: const BorderSide(color: AppColors.creamDark),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const AppIcon(AppIcons.locationPin, size: 12),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate),
-                ),
-              ),
-              const SizedBox(width: 4),
-              const AppIcon(AppIcons.chevronDownSmall, size: 8, color: AppColors.muted),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
