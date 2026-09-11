@@ -1,8 +1,13 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/laundry_category.dart';
 import '../models/menu_item.dart';
 import '../models/shop.dart';
+import '../utils/location.dart' show haversineKm;
+import 'browse_location_state.dart';
 import 'catalog_state.dart';
 
 // ── Draft: what the customer put in the basket ─────────────────────────────
@@ -52,10 +57,20 @@ final basketBuilderProvider =
 
 // ── Quotes: per-vendor totals for the draft ────────────────────────────────
 
-/// How vendor results are ordered. Best match gives cheapest price
-/// priority (nearest distance breaks ties); cheapest / nearest sort by
-/// that dimension only.
+/// How vendor results are ordered. Best match blends rating, price, and
+/// distance into one score (see [kBestMatchRatingWeight] /
+/// [kBestMatchPriceWeight] / [kBestMatchDistanceWeight]); cheapest / nearest
+/// sort by that one dimension only.
 enum QuoteSort { recommended, cheapest, nearest }
+
+/// Weight given to rating vs. price vs. distance in the "Best match"
+/// blended score. Rating dominates — outweighing price and distance even
+/// combined (0.6 > 0.25 + 0.15) — since a vendor customers consistently
+/// rate well beats one that's merely cheaper or closer; price matters more
+/// than distance among what's left. Weights sum to 1.
+const kBestMatchRatingWeight = 0.6;
+const kBestMatchPriceWeight = 0.25;
+const kBestMatchDistanceWeight = 0.15;
 
 extension QuoteSortLabel on QuoteSort {
   String get label {
@@ -80,6 +95,7 @@ class VendorQuote {
     required this.matched,
     required this.total,
     required this.missingNames,
+    this.matchScore = 0,
     this.isRecommended = false,
     this.isCheapest = false,
     this.isNearest = false,
@@ -98,6 +114,11 @@ class VendorQuote {
   final int matched;
   final int total;
   final List<String> missingNames;
+
+  /// Blended rating+price+distance score used by "Best match" (see
+  /// [kBestMatchRatingWeight]) — lower is better, computed across every
+  /// quote regardless of [fullCoverage].
+  final double matchScore;
   final bool isRecommended;
   final bool isCheapest;
   final bool isNearest;
@@ -111,8 +132,9 @@ String vendorItemId(MenuItem item) {
 }
 
 /// Pure quote builder — every vendor that can price at least one selected
-/// item, with cheapest/nearest/recommended flags assigned across the
-/// fully-covering set.
+/// item, with cheapest/nearest/recommended (blended rating+price+distance)
+/// flags assigned across the whole result set; coverage doesn't gate
+/// eligibility, it's surfaced separately via [VendorQuote.fullCoverage].
 List<VendorQuote> buildQuotes({
   required List<Shop> shops,
   required Map<String, int> selections,
@@ -153,28 +175,24 @@ List<VendorQuote> buildQuotes({
     ));
   }
 
-  // Flags across fully-covering vendors only.
-  final full = quotes.where((q) => q.fullCoverage).toList();
-  if (full.isNotEmpty) {
-    VendorQuote cheapest = full.first;
-    VendorQuote nearest = full.first;
-    for (final q in full.skip(1)) {
+  // Cheapest/nearest/recommended are absolute facts about the whole result
+  // set — coverage doesn't gate eligibility, it's surfaced separately via
+  // the "X/Y items" badge (see [VendorQuote.fullCoverage]) so a vendor
+  // missing an item can still legitimately be the cheapest or best match.
+  if (quotes.isNotEmpty) {
+    VendorQuote cheapest = quotes.first;
+    VendorQuote nearest = quotes.first;
+    for (final q in quotes.skip(1)) {
       if (q.totalTzs < cheapest.totalTzs) cheapest = q;
       if (_dist(q) < _dist(nearest)) nearest = q;
     }
-    // Best match = cheapest price gets priority, nearest distance breaks
-    // ties — the nearest vendor among the cheapest totals wins.
-    VendorQuote? recommended;
-    for (final q in full) {
-      if (recommended == null ||
-          q.totalTzs < recommended.totalTzs ||
-          (q.totalTzs == recommended.totalTzs && _dist(q) < _dist(recommended))) {
-        recommended = q;
-      }
+    final scores = _bestMatchScores(quotes);
+    VendorQuote recommended = quotes.first;
+    for (final q in quotes.skip(1)) {
+      if (scores[q]! < scores[recommended]!) recommended = q;
     }
     for (var i = 0; i < quotes.length; i++) {
       final q = quotes[i];
-      if (!q.fullCoverage) continue;
       quotes[i] = VendorQuote(
         shop: q.shop,
         catalog: q.catalog,
@@ -184,6 +202,7 @@ List<VendorQuote> buildQuotes({
         matched: q.matched,
         total: q.total,
         missingNames: q.missingNames,
+        matchScore: scores[q]!,
         isRecommended: identical(q, recommended),
         isCheapest: identical(q, cheapest),
         isNearest: identical(q, nearest),
@@ -196,32 +215,73 @@ List<VendorQuote> buildQuotes({
 /// Unknown distances sort last.
 double _dist(VendorQuote q) => q.distanceKm < 0 ? 1e9 : q.distanceKm;
 
-/// Full coverage first, then the requested ordering inside each group.
+/// Min-max normalizes [value] into its [0, 1] position between [lo] and
+/// [hi] — 0 = best, 1 = worst. A pool with no spread normalizes everything
+/// to 0 so that dimension stops influencing the blend instead of dividing
+/// by zero.
+double _normalize(double value, double lo, double hi) => hi > lo ? (value - lo) / (hi - lo) : 0.0;
+
+/// Blended rating+price+distance score for every quote in [pool] (coverage
+/// plays no part — a vendor missing an item competes on equal footing),
+/// normalized against that pool alone — lower is better. Vendors with
+/// unresolved distance (no browse location set, or the shop itself lacks
+/// coordinates) score worst on that dimension, so "unknown" never outranks
+/// "known-near".
+Map<VendorQuote, double> _bestMatchScores(List<VendorQuote> pool) {
+  if (pool.isEmpty) return {};
+  final prices = pool.map((q) => q.totalTzs);
+  final minPrice = prices.reduce(math.min);
+  final maxPrice = prices.reduce(math.max);
+
+  final ratings = pool.map((q) => q.shop.ratingValue);
+  final minRating = ratings.reduce(math.min);
+  final maxRating = ratings.reduce(math.max);
+
+  final knownDistances = pool.map((q) => q.distanceKm).where((d) => d >= 0).toList();
+  final minDist = knownDistances.isEmpty ? 0.0 : knownDistances.reduce(math.min);
+  final maxDist = knownDistances.isEmpty ? 0.0 : knownDistances.reduce(math.max);
+
+  return {
+    for (final q in pool)
+      q: // Rating is "higher is better" — invert so, like price/distance, 0 = best.
+          (1 - _normalize(q.shop.ratingValue, minRating, maxRating)) * kBestMatchRatingWeight +
+          _normalize(q.totalTzs, minPrice, maxPrice) * kBestMatchPriceWeight +
+          (q.distanceKm < 0
+                  ? (knownDistances.isEmpty ? 0.0 : 1.0)
+                  : _normalize(q.distanceKm, minDist, maxDist)) *
+              kBestMatchDistanceWeight,
+  };
+}
+
+/// Orders every quote by the requested metric alone — coverage never gates
+/// position (a vendor missing an item can rank above one with everything if
+/// it wins on price/distance/blend); it's surfaced only via the "X/Y items"
+/// badge on the card.
 List<VendorQuote> sortQuotes(List<VendorQuote> quotes, QuoteSort sort) {
-  final full = quotes.where((q) => q.fullCoverage).toList();
-  final partial = quotes.where((q) => !q.fullCoverage).toList()
-    ..sort((a, b) {
-      final c = b.matched.compareTo(a.matched);
-      if (c != 0) return c;
-      return a.totalTzs.compareTo(b.totalTzs);
-    });
+  final sorted = [...quotes];
+
+  int byPrice(VendorQuote a, VendorQuote b) {
+    final c = a.totalTzs.compareTo(b.totalTzs);
+    return c != 0 ? c : b.matched.compareTo(a.matched);
+  }
+
+  int byDistance(VendorQuote a, VendorQuote b) {
+    final c = _dist(a).compareTo(_dist(b));
+    return c != 0 ? c : b.matched.compareTo(a.matched);
+  }
+
   switch (sort) {
     case QuoteSort.cheapest:
-      full.sort((a, b) => a.totalTzs.compareTo(b.totalTzs));
+      sorted.sort(byPrice);
       break;
     case QuoteSort.nearest:
-      full.sort((a, b) => _dist(a).compareTo(_dist(b)));
+      sorted.sort(byDistance);
       break;
     case QuoteSort.recommended:
-      full.sort((a, b) {
-        if (a.isRecommended != b.isRecommended) return a.isRecommended ? -1 : 1;
-        final c = a.totalTzs.compareTo(b.totalTzs);
-        if (c != 0) return c;
-        return _dist(a).compareTo(_dist(b));
-      });
+      sorted.sort((a, b) => a.matchScore.compareTo(b.matchScore));
       break;
   }
-  return [...full, ...partial];
+  return sorted;
 }
 
 // ── Async search over the vendor network ───────────────────────────────────
@@ -231,16 +291,38 @@ List<VendorQuote> sortQuotes(List<VendorQuote> quotes, QuoteSort sort) {
 /// hammering the API on mobile data.
 const kQuoteCandidateShops = 12;
 
-class VendorQuotesNotifier extends Notifier<AsyncValue<List<VendorQuote>>> {
+/// Floor on how long the loading state stays visible. Shop catalogs are
+/// cached (see [shopDetailProvider]), so a repeat search against the same
+/// nearby shops can resolve in a few milliseconds — too fast for the
+/// skeleton to ever get painted. Padding every search out to this length
+/// keeps the loading UI perceptible and consistent on every visit, not just
+/// the first (cold) one.
+const _kMinSearchDuration = Duration(milliseconds: 500);
+
+class VendorQuotesNotifier extends AutoDisposeNotifier<AsyncValue<List<VendorQuote>>> {
   @override
   AsyncValue<List<VendorQuote>> build() => const AsyncValue.loading();
 
+  /// Bumped on every [search] call so a slower, superseded call can tell
+  /// it's stale and drop its result instead of overwriting a newer one —
+  /// e.g. the auto-search fired on screen load (before the browse location
+  /// has resolved) racing a re-search triggered moments later by the
+  /// customer picking their address/GPS. Without this, whichever call's
+  /// network fetches happen to finish last wins, even if it's the older,
+  /// location-less one.
+  int _generation = 0;
+
   Future<void> search() async {
+    final generation = ++_generation;
+    final loc = ref.read(browseLocationProvider);
+    debugPrint('[VendorQuotes] #$generation start hasLocation=${loc.hasLocation} lat=${loc.lat} lng=${loc.lng}');
     state = const AsyncValue.loading();
+    final stopwatch = Stopwatch()..start();
     try {
       final draft = ref.read(basketBuilderProvider);
       if (draft.isEmpty) {
-        state = const AsyncValue.data([]);
+        await _padToMinDuration(stopwatch);
+        if (generation == _generation) state = const AsyncValue.data([]);
         return;
       }
       final categories = ref.read(categoriesProvider).items;
@@ -250,8 +332,21 @@ class VendorQuotesNotifier extends Notifier<AsyncValue<List<VendorQuote>>> {
       };
 
       // Nearest first (unknown distances last), then price-check the top N.
-      final shops = [...ref.read(shopsWithDistanceProvider)]
-        ..sort((a, b) => _shopDist(a).compareTo(_shopDist(b)));
+      // Computed directly from the raw shop list + [loc] here rather than
+      // through [shopsWithDistanceProvider] — that provider is a separately
+      // memoized `Provider` with no active watcher on this screen, and
+      // reading it reentrantly (this whole call is itself a side effect of
+      // a `browseLocationProvider` state change) could observe it before
+      // it's recomputed for the new location. Reading the two primitives
+      // directly can't go stale the same way.
+      final rawShops = ref.read(shopsProvider).items;
+      final shops = [
+        for (final shop in rawShops)
+          if (loc.hasLocation && shop.latitude != null && shop.longitude != null)
+            shop.copyWith(distanceKm: haversineKm(shop.latitude!, shop.longitude!, loc.lat!, loc.lng!))
+          else
+            shop,
+      ]..sort((a, b) => _shopDist(a).compareTo(_shopDist(b)));
       final candidates = shops.take(kQuoteCandidateShops).toList();
 
       final catalogBySlot = <String, List<MenuItem>>{};
@@ -263,14 +358,28 @@ class VendorQuotesNotifier extends Notifier<AsyncValue<List<VendorQuote>>> {
               .catchError((_) => catalogBySlot[s.listSlotId] = const <MenuItem>[]),
       ]);
 
-      state = AsyncValue.data(buildQuotes(
+      final quotes = buildQuotes(
         shops: candidates,
         selections: draft.quantities,
         itemById: itemById,
         catalogBySlot: catalogBySlot,
-      ));
+      );
+      await _padToMinDuration(stopwatch);
+      final stale = generation != _generation;
+      debugPrint('[VendorQuotes] #$generation done stale=$stale '
+          'distances=${quotes.map((q) => q.distanceKm.toStringAsFixed(1)).toList()}');
+      if (!stale) state = AsyncValue.data(quotes);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      await _padToMinDuration(stopwatch);
+      debugPrint('[VendorQuotes] #$generation error: $e');
+      if (generation == _generation) state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> _padToMinDuration(Stopwatch stopwatch) async {
+    final remaining = _kMinSearchDuration - stopwatch.elapsed;
+    if (remaining > Duration.zero) {
+      await Future.delayed(remaining);
     }
   }
 }
@@ -278,5 +387,5 @@ class VendorQuotesNotifier extends Notifier<AsyncValue<List<VendorQuote>>> {
 double _shopDist(Shop s) => s.distanceKm < 0 ? 1e9 : s.distanceKm;
 
 final vendorQuotesProvider =
-    NotifierProvider<VendorQuotesNotifier, AsyncValue<List<VendorQuote>>>(
+    NotifierProvider.autoDispose<VendorQuotesNotifier, AsyncValue<List<VendorQuote>>>(
         VendorQuotesNotifier.new);

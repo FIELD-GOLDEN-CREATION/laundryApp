@@ -126,6 +126,51 @@ class _BrowseLocationSheet extends ConsumerWidget {
   }
 }
 
+/// Shows the customer's chosen distance-measuring location (saved address or
+/// GPS) and reopens [showBrowseLocationSheet] to change it. Shared by every
+/// screen that prices or ranks vendors by distance.
+class LocationPill extends StatelessWidget {
+  const LocationPill({super.key, required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(999),
+        side: const BorderSide(color: AppColors.creamDark),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppIcon(AppIcons.locationPin, size: 12),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const AppIcon(AppIcons.chevronDownSmall, size: 8, color: AppColors.muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LocationIcon extends StatelessWidget {
   const _LocationIcon({required this.icon, this.bg = AppColors.tealMuted, this.fg = AppColors.teal});
 

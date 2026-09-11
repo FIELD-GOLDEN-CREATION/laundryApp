@@ -10,6 +10,7 @@ import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/currency.dart';
 import '../../../widgets/remote_image.dart';
+import '../../../widgets/skeleton_loader.dart';
 
 /// Step 1 of the basket flow: type to find laundry items (with live
 /// suggestions as you type), pick each item and set how many of each, then
@@ -119,71 +120,87 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
                   // ── Category suggestions ──
                   SizedBox(
                     height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: catalog.items.length + 1,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final id = i == 0 ? 'all' : catalog.items[i - 1].id;
-                        final label = i == 0
-                            ? clientLabel('All', 'Zote', language)
-                            : clientLabel(catalog.items[i - 1].name, catalog.items[i - 1].nameSwahili, language);
-                        final active = _categoryId == id;
-                        return ChoiceChip(
-                          label: Text(label),
-                          selected: active,
-                          onSelected: (_) => setState(() => _categoryId = id),
-                          selectedColor: AppColors.teal,
-                          backgroundColor: AppColors.cream,
-                          labelStyle: AppText.sans(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: active ? Colors.white : AppColors.slate,
+                    child: catalog.isLoading && catalog.items.isEmpty
+                        ? Skeleton(
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: 4,
+                              separatorBuilder: (_, _) => const SizedBox(width: 8),
+                              itemBuilder: (_, i) =>
+                                  SkeletonBox(width: i == 0 ? 48 : 84, height: 36, borderRadius: 12),
+                            ),
+                          )
+                        : ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: catalog.items.length + 1,
+                            separatorBuilder: (_, _) => const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              final id = i == 0 ? 'all' : catalog.items[i - 1].id;
+                              final label = i == 0
+                                  ? clientLabel('All', 'Zote', language)
+                                  : clientLabel(catalog.items[i - 1].name, catalog.items[i - 1].nameSwahili, language);
+                              final active = _categoryId == id;
+                              return ChoiceChip(
+                                label: Text(label),
+                                selected: active,
+                                onSelected: (_) => setState(() => _categoryId = id),
+                                selectedColor: AppColors.teal,
+                                backgroundColor: AppColors.cream,
+                                labelStyle: AppText.sans(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: active ? Colors.white : AppColors.slate,
+                                ),
+                                side: BorderSide.none,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              );
+                            },
                           ),
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        );
-                      },
-                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: catalog.isLoading && allItems.isEmpty
-                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                  : visible.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Text(
-                              clientLabel(
-                                'No items match — try another word.',
-                                'Hakuna kipengee kinacholingana — jaribu neno jingine.',
-                                language,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: catalog.isLoading && allItems.isEmpty
+                    ? const _BasketBuilderSkeleton(key: ValueKey('skeleton'))
+                    : visible.isEmpty
+                        ? Center(
+                            key: const ValueKey('empty'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Text(
+                                clientLabel(
+                                  'No items match — try another word.',
+                                  'Hakuna kipengee kinacholingana — jaribu neno jingine.',
+                                  language,
+                                ),
+                                textAlign: TextAlign.center,
+                                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
                               ),
-                              textAlign: TextAlign.center,
-                              style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
                             ),
+                          )
+                        : ListView.separated(
+                            key: const ValueKey('list'),
+                            padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
+                            itemCount: visible.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (_, i) {
+                              final item = visible[i];
+                              final qty = draft.quantities[item.id] ?? 0;
+                              return _ItemRow(
+                                item: item,
+                                language: language,
+                                qty: qty,
+                                onRemove: () => builder.setQty(item.id, -1),
+                                onAdd: () => builder.setQty(item.id, 1),
+                              );
+                            },
                           ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
-                          itemCount: visible.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
-                          itemBuilder: (_, i) {
-                            final item = visible[i];
-                            final qty = draft.quantities[item.id] ?? 0;
-                            return _ItemRow(
-                              item: item,
-                              language: language,
-                              qty: qty,
-                              onRemove: () => builder.setQty(item.id, -1),
-                              onAdd: () => builder.setQty(item.id, 1),
-                            );
-                          },
-                        ),
+              ),
             ),
             // ── Footer: continue to vendor search ──
             Container(
@@ -345,4 +362,53 @@ class _ItemRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BasketBuilderSkeleton extends StatelessWidget {
+  const _BasketBuilderSkeleton({super.key});
+
+  static const _rowCount = 7;
+
+  @override
+  Widget build(BuildContext context) => Skeleton(
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _rowCount,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (_, _) => const _BasketItemRowSkeleton(),
+        ),
+      );
+}
+
+class _BasketItemRowSkeleton extends StatelessWidget {
+  const _BasketItemRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.clientSurfaceRaised(context),
+          border: Border.all(color: AppColors.clientBorder(context)),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            const SkeletonBox(width: 52, height: 52, borderRadius: 12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  SkeletonLine(width: 120),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 64, height: 11),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const SkeletonBox(width: 84, height: 30, borderRadius: 12),
+          ],
+        ),
+      );
 }

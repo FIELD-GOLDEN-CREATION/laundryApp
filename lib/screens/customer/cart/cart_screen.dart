@@ -16,14 +16,23 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
 import '../../../widgets/curved_clipper.dart';
 import '../../../widgets/round_back_button.dart';
+import 'widgets/vendor_items_section.dart';
 
-class CartScreen extends ConsumerWidget {
+class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key, required this.shopId});
 
   final String shopId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  bool _addingItems = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final shopId = widget.shopId;
     final basket = ref.watch(basketsProvider.select((m) => m[shopId])) ?? VendorBasket.empty(shopId);
     final qty = basket.qty;
     final basketsNotifier = ref.read(basketsProvider.notifier);
@@ -173,7 +182,7 @@ class CartScreen extends ConsumerWidget {
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(18),
-                            onTap: openBasketShop,
+                            onTap: () => setState(() => _addingItems = !_addingItems),
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(14),
@@ -181,15 +190,30 @@ class CartScreen extends ConsumerWidget {
                                 border: Border.all(color: AppColors.teal.withValues(alpha: 0.55), width: 1.5),
                                 borderRadius: BorderRadius.circular(18),
                               ),
-                              child: Center(
-                                child: Text(
-                                  clientLabel('+ Add more items', '+ Ongeza vitu', language),
-                                  style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _addingItems
+                                        ? clientLabel('Hide items', 'Ficha vitu', language)
+                                        : clientLabel('+ Add more items', '+ Ongeza vitu', language),
+                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    _addingItems ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                                    size: 18,
+                                    color: AppColors.teal,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
+                        if (_addingItems) ...[
+                          const SizedBox(height: 14),
+                          VendorItemsSection(shopId: shopId, shopSlug: basket.shopSlug, language: language),
+                        ],
                         const SizedBox(height: 22),
                         _AddOnsSection(
                           addons: vendorAddons,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -85,12 +86,13 @@ class BrowseLocationState {
     bool? isPrefetching,
     bool clearSavedAddressId = false,
     bool clearError = false,
+    bool clearLatLng = false,
   }) {
     return BrowseLocationState(
       source: source ?? this.source,
       savedAddressId: clearSavedAddressId ? null : (savedAddressId ?? this.savedAddressId),
-      lat: lat ?? this.lat,
-      lng: lng ?? this.lng,
+      lat: clearLatLng ? null : (lat ?? this.lat),
+      lng: clearLatLng ? null : (lng ?? this.lng),
       label: label ?? this.label,
       isLocating: isLocating ?? this.isLocating,
       hasPrompted: hasPrompted ?? this.hasPrompted,
@@ -173,12 +175,28 @@ class BrowseLocationNotifier extends Notifier<BrowseLocationState> {
     } else {
       await prefs.remove(_kAddressIdKey);
     }
-    if (state.lat != null) await prefs.setDouble(_kLatKey, state.lat!);
-    if (state.lng != null) await prefs.setDouble(_kLngKey, state.lng!);
+    if (state.lat != null) {
+      await prefs.setDouble(_kLatKey, state.lat!);
+    } else {
+      await prefs.remove(_kLatKey);
+    }
+    if (state.lng != null) {
+      await prefs.setDouble(_kLngKey, state.lng!);
+    } else {
+      await prefs.remove(_kLngKey);
+    }
     await prefs.setString(_kLabelKey, state.label);
   }
 
   void useSavedAddress(Address address) {
+    // An address without coordinates (typed by hand, never geocoded) must
+    // actively clear any previously-resolved lat/lng — `copyWith`'s `??`
+    // can't tell "explicitly none" from "unspecified", so passing null here
+    // without `clearLatLng` would silently keep whatever location (GPS or a
+    // prior address) was already active instead of reflecting this pick.
+    final hasCoords = address.latitude != null && address.longitude != null;
+    debugPrint('[BrowseLocation] useSavedAddress id=${address.id} label=${address.label} '
+        'lat=${address.latitude} lng=${address.longitude} hasCoords=$hasCoords');
     state = state.copyWith(
       source: BrowseLocationSource.savedAddress,
       savedAddressId: address.id,
@@ -187,7 +205,9 @@ class BrowseLocationNotifier extends Notifier<BrowseLocationState> {
       label: address.label.isNotEmpty ? address.label : address.line,
       hasPrompted: true,
       clearError: true,
+      clearLatLng: !hasCoords,
     );
+    debugPrint('[BrowseLocation] after useSavedAddress: hasLocation=${state.hasLocation} lat=${state.lat} lng=${state.lng}');
     _persist();
   }
 
