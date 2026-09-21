@@ -38,9 +38,9 @@ class _PackagesCarouselState extends ConsumerState<PackagesCarousel> {
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.78);
-    Future.microtask(
-      () => ref.read(popularPackagesProvider.notifier).load(),
-    );
+    // Fetch is triggered by home_screen.dart, not here — this widget is
+    // only mounted once popularPackagesProvider already has items (see
+    // HomeScreen), so there'd be nothing to trigger it on first build.
   }
 
   @override
@@ -54,11 +54,12 @@ class _PackagesCarouselState extends ConsumerState<PackagesCarousel> {
   Widget build(BuildContext context) {
     final displayPackages = ref.watch(popularPackagesProvider).items;
 
+    // Defensive: HomeScreen only mounts this widget once there are items,
+    // but a realtime 'hidden' event (see PopularPackagesNotifier) can empty
+    // the list out from under it while it's still on screen — collapse to
+    // nothing rather than a stray spinner in that case.
     if (displayPackages.isEmpty) {
-      return const SizedBox(
-        height: 260,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
+      return const SizedBox.shrink();
     }
 
     // Keep the auto-scroll timer in sync with the live item count.

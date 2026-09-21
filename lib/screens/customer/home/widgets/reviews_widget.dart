@@ -16,21 +16,17 @@ class ReviewsWidget extends ConsumerStatefulWidget {
 
 class _ReviewsWidgetState extends ConsumerState<ReviewsWidget> {
   @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.read(reviewsProvider.notifier).load());
-  }
-
-  @override
   Widget build(BuildContext context) {
     final language = ref.watch(clientPreferencesProvider).language;
     final reviews = ref.watch(reviewsProvider).items;
 
+    // Fetch is triggered by home_screen.dart, not here — this widget is
+    // only mounted once reviewsProvider already has items (see HomeScreen).
+    // Defensive: a realtime 'hidden' event can empty the list out from
+    // under it while still on screen — collapse to nothing rather than a
+    // stray spinner in that case.
     if (reviews.isEmpty) {
-      return const SizedBox(
-        height: 180,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
+      return const SizedBox.shrink();
     }
 
     return SizedBox(
