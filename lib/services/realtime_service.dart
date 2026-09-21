@@ -5,9 +5,12 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_service.dart';
 
-/// Hand-rolled Pusher-protocol client (private channels only) talking
-/// directly to the self-hosted Laravel Reverb server behind
-/// `wss://freshfold.qecure.online/app/{key}`.
+/// Hand-rolled Pusher-protocol client talking directly to the self-hosted
+/// Laravel Reverb server behind `wss://freshfold.qecure.online/app/{key}`.
+/// Mostly private channels (per-user/per-shop/per-thread, each requiring the
+/// `/broadcasting/auth` handshake below), plus one public channel (`reviews`,
+/// for the home screen's cross-vendor carousel) that every client — even a
+/// signed-out one, in principle — can join with no auth step at all.
 ///
 /// `pusher_channels_flutter` was tried first, but its native Android/iOS
 /// layer only forwards `apiKey`/`cluster` to the underlying Pusher SDKs —
@@ -53,9 +56,16 @@ class RealtimeService {
   /// state on a successful request the way create/toggle/delete already do.
   void Function(String action, Map<String, dynamic> promo)? onPromoEvent;
 
+  /// `action` is 'shown' | 'hidden' — fired when an admin toggles whether a
+  /// review is featured on the customer home screen's carousel. Delivered on
+  /// the public `reviews` channel (see [_wantedChannels] in [connect]), not
+  /// scoped to any one user.
+  void Function(String action, Map<String, dynamic> review)? onReviewVisibilityEvent;
+
   /// Ensures the socket is open and subscribed to exactly
   /// `private-user.{userId}` plus `private-vendor-shop.{shopId}` (when
-  /// [shopId] is known). Safe to call repeatedly — e.g. once at login with
+  /// [shopId] is known) plus the public `reviews` channel. Safe to call
+  /// repeatedly — e.g. once at login with
   /// `shopId: null`, then again once the dashboard load resolves it; only
   /// the newly-needed channel gets subscribed, the socket itself isn't
   /// reopened if already connected.
@@ -63,6 +73,8 @@ class RealtimeService {
     _wantedChannels = {
       'private-user.$userId',
       if (shopId != null) 'private-vendor-shop.$shopId',
+      // Public — no 'private-' prefix, no auth handshake (see _subscribe).
+      'reviews',
       ..._chatHandlers.keys,
     };
 
@@ -186,6 +198,12 @@ class RealtimeService {
           data['action'] as String? ?? '',
           promo is Map ? promo.cast<String, dynamic>() : const {},
         );
+      case 'review.updated':
+        final review = data['review'];
+        onReviewVisibilityEvent?.call(
+          data['action'] as String? ?? '',
+          review is Map ? review.cast<String, dynamic>() : const {},
+        );
       case 'message.created':
         // Routed by channel (not a single fixed callback like the events
         // above) since more than one chat-thread channel could in principle
@@ -202,6 +220,18 @@ class RealtimeService {
   Future<void> _subscribe(String channelName) async {
     final socketId = _socketId;
     if (socketId == null) return;
+
+    // Public channels (no 'private-' prefix) need no auth handshake at all —
+    // just subscribe directly.
+    if (!channelName.startsWith('private-')) {
+      _send({
+        'event': 'pusher:subscribe',
+        'data': {'channel': channelName},
+      });
+      _subscribedChannels.add(channelName);
+      return;
+    }
+
     try {
       final res = await api.post('/broadcasting/auth', body: {
         'socket_id': socketId,

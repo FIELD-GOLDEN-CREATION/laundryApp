@@ -173,6 +173,7 @@ ReviewItem reviewFromJson(Map<String, dynamic> j) {
   final rating = parseDouble(j['rating']) ?? 5;
   final customer = j['customer'] as Map<String, dynamic>?;
   return ReviewItem(
+    id: '${j['id'] ?? ''}',
     name: customer?['name'] as String? ?? 'Customer',
     stars: '★' * rating.round(),
     text: j['comment'] as String? ?? '',
@@ -319,10 +320,36 @@ class ReviewsNotifier extends Notifier<AsyncCatalogState<ReviewItem>> {
       state = state.copyWith(isLoading: false);
     }
   }
+
+  /// Called by [RealtimeService] for every `review.updated` socket event on
+  /// the public `reviews` channel — an admin just showed or hid a review on
+  /// the home screen, so patch the carousel directly instead of waiting for
+  /// the next [load].
+  void handleRealtimeVisibilityEvent(String action, Map<String, dynamic> json) {
+    if (action == 'hidden') {
+      final id = '${json['id'] ?? ''}';
+      state = state.copyWith(items: state.items.where((r) => r.id != id).toList());
+      return;
+    }
+    if (action == 'shown') {
+      final review = reviewFromJson(json);
+      if (state.items.any((r) => r.id == review.id)) return;
+      state = state.copyWith(items: [review, ...state.items].take(6).toList());
+    }
+  }
 }
 
 final reviewsProvider =
     NotifierProvider<ReviewsNotifier, AsyncCatalogState<ReviewItem>>(ReviewsNotifier.new);
+
+/// Every review left for one shop (by backend shop id), regardless of
+/// home-screen visibility — the backend already orders these
+/// highest-rated-then-latest and caps at 5, so this is a straight
+/// pass-through with no client-side re-sorting needed.
+final shopReviewsProvider = FutureProvider.family<List<ReviewItem>, String>((ref, shopId) async {
+  final data = await api.getReviews(shopId: shopId);
+  return data.map(reviewFromJson).toList();
+});
 
 /// Cheapest vendor offer for one item, from GET /items/{id}/offers.
 class ItemOffer {

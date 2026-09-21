@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../models/menu_item.dart';
+import '../../../models/review_item.dart';
 import '../../../models/service_package.dart';
 import '../../../models/shop.dart';
 import '../../../state/catalog_state.dart';
@@ -702,7 +703,121 @@ class _AboutSection extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 20),
+        _ShopReviewsSection(shopId: shop.slotId),
       ],
+    );
+  }
+}
+
+class _ShopReviewsSection extends ConsumerWidget {
+  const _ShopReviewsSection({required this.shopId});
+
+  final String shopId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(shopReviewsProvider(shopId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Reviews',
+          style: AppText.sans(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.clientText(context),
+          ),
+        ),
+        const SizedBox(height: 10),
+        reviewsAsync.when(
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return Text(
+                'No reviews yet.',
+                style: AppText.sans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.clientSecondaryText(context),
+                ),
+              );
+            }
+            return Column(
+              children: [
+                for (final review in reviews)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ReviewTile(review: review),
+                  ),
+              ],
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, _) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewTile extends StatelessWidget {
+  const _ReviewTile({required this.review});
+
+  final ReviewItem review;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.clientSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.clientBorder(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+                child: Center(
+                  child: Text(
+                    review.name[0],
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  review.name,
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
+                ),
+              ),
+              Text(review.stars, style: AppText.sans(fontSize: 12, color: AppColors.amber)),
+            ],
+          ),
+          if (review.text.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.text,
+              style: AppText.sans(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.clientSecondaryText(context),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
