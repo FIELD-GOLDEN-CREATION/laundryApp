@@ -585,7 +585,7 @@ class _Header extends StatelessWidget {
                           bars: [
                             for (var i = 0; i < dash.weekBars.length; i++)
                               BarDatum(
-                                heightFraction: dash.weekBars[i].fraction,
+                                heightFraction: dash.weekBars[i].revenueFraction,
                                 color: i == dash.weekBars.length - 1 ? AppColors.amber : Colors.white.withValues(alpha: 0.34),
                                 label: dash.weekBars[i].day,
                               ),
