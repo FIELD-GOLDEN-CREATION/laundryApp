@@ -363,42 +363,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
             ],
-             _SectionLabel(clientLabel('Preferences', 'Mapendeleo', language)),
-            Container(
-              decoration: BoxDecoration(
-                 color: AppColors.clientSurface(context),
-                 border: Border.all(color: AppColors.clientBorder(context)),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < _kPreferenceLabels.length; i++)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                             color: i == _kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.clientBorder(context),
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                               clientLabel(_kPreferenceLabels[i], ['Arifa za oda', 'Ofa na matangazo', 'Vidokezo vya utunzaji'][i], language),
-                               style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
+            if (false) ...[
+              _SectionLabel(clientLabel('Preferences', 'Mapendeleo', language)),
+              Container(
+                decoration: BoxDecoration(
+                   color: AppColors.clientSurface(context),
+                   border: Border.all(color: AppColors.clientBorder(context)),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _kPreferenceLabels.length; i++)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                               color: i == _kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.clientBorder(context),
                             ),
                           ),
-                          ToggleSwitch(on: clientPrefs.prefsOn[i], onTap: () => ref.read(clientPreferencesProvider.notifier).togglePref(i)),
-                        ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                 clientLabel(_kPreferenceLabels[i], ['Arifa za oda', 'Ofa na matangazo', 'Vidokezo vya utunzaji'][i], language),
+                                 style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
+                              ),
+                            ),
+                            ToggleSwitch(on: clientPrefs.prefsOn[i], onTap: () => ref.read(clientPreferencesProvider.notifier).togglePref(i)),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
+              const SizedBox(height: 18),
+            ],
             SizedBox(
               width: double.infinity,
               child: Material(

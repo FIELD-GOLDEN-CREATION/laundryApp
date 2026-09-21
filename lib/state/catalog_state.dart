@@ -324,6 +324,14 @@ class ReviewsNotifier extends Notifier<AsyncCatalogState<ReviewItem>> {
 final reviewsProvider =
     NotifierProvider<ReviewsNotifier, AsyncCatalogState<ReviewItem>>(ReviewsNotifier.new);
 
+/// Approved reviews for one shop (by backend shop id) — the backend already
+/// orders these highest-rated-then-latest and caps at 5, so this is a
+/// straight pass-through with no client-side re-sorting needed.
+final shopReviewsProvider = FutureProvider.family<List<ReviewItem>, String>((ref, shopId) async {
+  final data = await api.getReviews(shopId: shopId);
+  return data.map(reviewFromJson).toList();
+});
+
 /// Cheapest vendor offer for one item, from GET /items/{id}/offers.
 class ItemOffer {
   const ItemOffer({
