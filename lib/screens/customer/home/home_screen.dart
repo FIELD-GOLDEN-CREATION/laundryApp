@@ -39,6 +39,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ref.read(shopsProvider.notifier).load();
       ref.read(offersProvider.notifier).load();
       ref.read(notificationsProvider.notifier).refreshUnread();
+      // Owned here (not by PackagesCarousel/ReviewsWidget themselves) so
+      // the fetch always runs even though both sections below are only
+      // mounted once their provider actually has items to show.
+      ref.read(popularPackagesProvider.notifier).load();
+      ref.read(reviewsProvider.notifier).load();
     });
   }
 
@@ -48,6 +53,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final language = ref.watch(clientPreferencesProvider).language;
     final shops = ref.watch(shopsWithDistanceProvider);
     final offers = ref.watch(offersProvider).items;
+    // Both are admin-curated (an admin must explicitly feature a package or
+    // review on the home screen), so "no items" is an expected, normal
+    // state — not a stuck network load. Rendering nothing here beats a
+    // perpetual spinner that never resolves.
+    final packages = ref.watch(popularPackagesProvider).items;
+    final reviews = ref.watch(reviewsProvider).items;
 
     // Latest in-progress order for the tracking banner.
     final orders = ref.watch(ordersProvider);
@@ -105,8 +116,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         itemBuilder: (_, i) => OfferCard(offer: offers[i]),
                       ),
               ),
-              SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
-              const PackagesCarousel(),
+              if (packages.isNotEmpty) ...[
+                SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
+                const PackagesCarousel(),
+              ],
               const SizedBox(height: 12),
                SectionHeader(title: clientLabel('Categories', 'Kategoria', language)),
               CategoryCardsWidget(
@@ -126,8 +139,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 12),
               const DeliveryWidget(),
               const SizedBox(height: 12),
-              SectionHeader(title: clientLabel('What our customers say', 'Wateja wetu wanasema', language)),
-              const ReviewsWidget(),
+              if (reviews.isNotEmpty) ...[
+                SectionHeader(title: clientLabel('What our customers say', 'Wateja wetu wanasema', language)),
+                const ReviewsWidget(),
+              ],
               const SizedBox(height: 6),
               const VendorBannerWidget(),
               const SizedBox(height: 8),
