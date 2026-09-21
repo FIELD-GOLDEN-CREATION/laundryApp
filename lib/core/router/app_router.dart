@@ -230,6 +230,9 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
     realtime.onReviewVisibilityEvent = (action, review) {
       ref.read(reviewsProvider.notifier).handleRealtimeVisibilityEvent(action, review);
     };
+    realtime.onPackageVisibilityEvent = (action, package) {
+      ref.read(popularPackagesProvider.notifier).handleRealtimeVisibilityEvent(action, package);
+    };
     realtime.connect(userId: auth.userId);
   }
 

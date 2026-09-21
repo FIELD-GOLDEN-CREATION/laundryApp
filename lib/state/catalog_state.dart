@@ -302,6 +302,26 @@ class PopularPackagesNotifier extends Notifier<AsyncCatalogState<ServicePackage>
       state = state.copyWith(isLoading: false);
     }
   }
+
+  /// Called by [RealtimeService] for every `package.updated` socket event on
+  /// the public `packages` channel — an admin just showed or hid a package
+  /// on the home screen (or flipped its active state), so patch the
+  /// carousel directly instead of waiting for the next [load].
+  void handleRealtimeVisibilityEvent(String action, Map<String, dynamic> json) {
+    if (action == 'hidden') {
+      final id = '${json['id'] ?? ''}';
+      state = state.copyWith(items: state.items.where((p) => p.id != id).toList());
+      return;
+    }
+    if (action == 'shown') {
+      final package = packageFromJson(json);
+      // [load] keeps at most one package per shop for carousel variety —
+      // drop any existing card for this shop before featuring the new one,
+      // so a newly-shown package replaces rather than duplicates its slot.
+      final withoutSameShop = state.items.where((p) => p.shopId != package.shopId).toList();
+      state = state.copyWith(items: [package, ...withoutSameShop].take(6).toList());
+    }
+  }
 }
 
 final popularPackagesProvider =
