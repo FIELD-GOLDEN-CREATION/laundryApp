@@ -311,56 +311,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
             ),
-            _SectionLabel(clientLabel('Saved cards', 'Kadi zilizohifadhiwa', language)),
-            if (savedCards.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                   color: AppColors.clientSurface(context),
-                   border: Border.all(color: AppColors.clientBorder(context)),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                   clientLabel('No cards linked yet.', 'Hakuna kadi iliyounganishwa.', language),
-                   style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-                ),
-              )
-            else
-              Column(
-                children: [
-                  for (var i = 0; i < savedCards.length; i++) ...[
-                    _SavedCardRow(
-                      card: savedCards[i],
-                      onRemove: () => ref.read(savedCardsProvider.notifier).removeCard(savedCards[i].id),
-                    ),
-                    if (i != savedCards.length - 1) const SizedBox(height: 10),
+            if (false) ...[
+              _SectionLabel(clientLabel('Saved cards', 'Kadi zilizohifadhiwa', language)),
+              if (savedCards.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                     color: AppColors.clientSurface(context),
+                     border: Border.all(color: AppColors.clientBorder(context)),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                     clientLabel('No cards linked yet.', 'Hakuna kadi iliyounganishwa.', language),
+                     style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    for (var i = 0; i < savedCards.length; i++) ...[
+                      _SavedCardRow(
+                        card: savedCards[i],
+                        onRemove: () => ref.read(savedCardsProvider.notifier).removeCard(savedCards[i].id),
+                      ),
+                      if (i != savedCards.length - 1) const SizedBox(height: 10),
+                    ],
                   ],
-                ],
-              ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.teal, width: 1.5),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => showLinkCardSheet(context, ref),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '+ Link a card',
-                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Material(
+                  color: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.teal, width: 1.5),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => showLinkCardSheet(context, ref),
+                    child: Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '+ Link a card',
+                        style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
              _SectionLabel(clientLabel('Preferences', 'Mapendeleo', language)),
             Container(
               decoration: BoxDecoration(
