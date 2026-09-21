@@ -27,14 +27,27 @@ class DashboardAlert {
   Color get tagBg => isWarning ? AppColors.amberLight : AppColors.tealMuted;
 }
 
-/// One normalized bar of the trailing-7-days order chart.
+/// One normalized bar of the trailing-7-days order/revenue chart.
 class WeekBar {
-  const WeekBar({required this.day, required this.count, required this.fraction});
+  const WeekBar({
+    required this.day,
+    required this.count,
+    required this.fraction,
+    required this.revenueTzs,
+    required this.revenueFraction,
+  });
   final String day;
   final int count;
 
-  /// Height fraction relative to the busiest day (1.0 for the max).
+  /// Height fraction relative to the busiest day's order count (1.0 for the
+  /// max) — drives the "Order trend" donut.
   final double fraction;
+
+  final int revenueTzs;
+
+  /// Height fraction relative to the busiest day's revenue (1.0 for the
+  /// max) — drives the header's "REVENUE TODAY" bar chart.
+  final double revenueFraction;
 }
 
 /// One available subscription plan (for the change-plan sheet).
@@ -322,13 +335,19 @@ class VendorDashboardNotifier extends Notifier<VendorDashboardState> {
     final counts = [
       for (final r in rows) parseInt(r['count']) ?? 0,
     ];
+    final revenues = [
+      for (final r in rows) parseInt(r['revenue_tzs']) ?? 0,
+    ];
     final peak = counts.fold<int>(0, (m, c) => c > m ? c : m);
+    final revenuePeak = revenues.fold<int>(0, (m, c) => c > m ? c : m);
     return [
       for (var i = 0; i < rows.length; i++)
         WeekBar(
           day: rows[i]['day'] as String? ?? '',
           count: counts[i],
           fraction: peak == 0 ? 0.0 : (counts[i] / peak).clamp(0.04, 1.0),
+          revenueTzs: revenues[i],
+          revenueFraction: revenuePeak == 0 ? 0.0 : (revenues[i] / revenuePeak).clamp(0.04, 1.0),
         ),
     ];
   }
