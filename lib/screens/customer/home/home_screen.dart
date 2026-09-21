@@ -90,6 +90,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                    subtitle: clientLabel('Tap to track your laundry in real time', 'Bofya kufuatilia oda yako moja kwa moja', language),
                   onTap: () => context.push('/track', extra: activeOrder!.id),
                 ),
+              const CreateBasketWidget(),
+              const SizedBox(height: 12),
               SectionHeader(title: clientLabel('Just for you', 'Kwa ajili yako', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
               SizedBox(
                 height: 190,
@@ -105,8 +107,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
               const PackagesCarousel(),
-              const SizedBox(height: 12),
-              const CreateBasketWidget(),
               const SizedBox(height: 12),
                SectionHeader(title: clientLabel('Categories', 'Kategoria', language)),
               CategoryCardsWidget(
