@@ -62,4 +62,11 @@ abstract final class AppColors {
   /// Muted icon color that stays visible on dark surfaces.
   static Color clientMutedIcon(BuildContext context) =>
       isClientDark(context) ? const Color(0xFF8FA1AD) : muted;
+
+  // Sky blue-white theme tokens (customer only).
+  static const skyBg = Color(0xFF0E4E8A);
+  static const skyDeep = Color(0xFF0C3E6E);
+  static const skyBlue = Color(0xFF1B6FAE);
+  static const skyCloud = Color(0xFF2E7CC2);
+  static const skyNavy = Color(0xFF0F2B46);
 }

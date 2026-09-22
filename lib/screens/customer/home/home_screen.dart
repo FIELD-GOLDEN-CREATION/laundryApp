@@ -79,6 +79,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       notificationsProvider.select((s) => s.unreadCount),
     );
     final addressLine = addresses.isNotEmpty ? addresses.first.line : '';
+    // Dark + sky themes extend the body behind the floating nav bar.
+    final immersive =
+        AppColors.isClientDark(context) ||
+        ref.watch(clientPreferencesProvider.select((s) => s.sky));
 
     return Scaffold(
       body: ClientBackground(
@@ -93,6 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   language: language,
                   addressLine: addressLine,
                   unreadCount: unread,
+                  transparent: immersive,
                   onProfile: () {
                     if (gateGuest(
                       ref,
@@ -232,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                 ),
-                SizedBox(height: AppColors.isClientDark(context) ? 104 : 12),
+                SizedBox(height: immersive ? 104 : 12),
               ],
             ),
           ),
@@ -251,6 +256,7 @@ class _Header extends StatelessWidget {
     required this.onNotifs,
     required this.onSearch,
     this.unreadCount = 0,
+    this.transparent = false,
   });
 
   final bool isGuest;
@@ -261,15 +267,16 @@ class _Header extends StatelessWidget {
   final VoidCallback onSearch;
   final int unreadCount;
 
+  /// Transparent over the background video (dark/sky themes).
+  final bool transparent;
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: Container(
-        // Transparent in dark mode so the background video shows through.
-        color: AppColors.isClientDark(context)
-            ? Colors.transparent
-            : AppColors.teal,
+        // Transparent in dark/sky modes so the background video shows through.
+        color: transparent ? Colors.transparent : AppColors.teal,
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 26),
         child: Stack(
           children: [

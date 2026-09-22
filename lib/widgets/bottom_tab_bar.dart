@@ -47,14 +47,19 @@ class FloatingCustomerNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final language = ref.watch(clientPreferencesProvider).language;
-    final dark = ref.watch(clientPreferencesProvider).dark;
+    final prefs = ref.watch(clientPreferencesProvider);
+    final dark = prefs.dark;
+    final sky = prefs.sky;
     return Container(
       height: 92,
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 18),
-      // Transparent in dark mode so the page video shows around the capsule.
-      color: dark ? Colors.transparent : AppColors.cream,
+      // Transparent in dark/sky so the page video shows around the capsule.
+      color: dark || sky ? Colors.transparent : AppColors.cream,
       child: Material(
-        color: AppColors.slate,
+        // Opacified cloud blue in sky mode, like the reference design.
+        color: sky
+            ? AppColors.skyBlue.withValues(alpha: 0.82)
+            : AppColors.slate,
         borderRadius: BorderRadius.circular(28),
         elevation: 12,
         shadowColor: Colors.black.withValues(alpha: 0.22),
@@ -75,6 +80,7 @@ class FloatingCustomerNavBar extends ConsumerWidget {
                       gateReason: kCustomerTabs[i].gateReason,
                     ),
                     active: i == currentIndex,
+                    sky: sky,
                     onTap: () => onTap(i),
                   ),
                 ),
@@ -91,14 +97,19 @@ class _FloatingTabButton extends StatelessWidget {
     required this.item,
     required this.active,
     required this.onTap,
+    this.sky = false,
   });
 
   final TabBarItem item;
   final bool active;
+  final bool sky;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final inactiveColor = sky
+        ? Colors.white.withValues(alpha: 0.65)
+        : AppColors.tabInactive;
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
@@ -107,7 +118,7 @@ class _FloatingTabButton extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
           color: active
-              ? Colors.white.withValues(alpha: 0.16)
+              ? Colors.white.withValues(alpha: sky ? 0.24 : 0.16)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(22),
         ),
@@ -117,7 +128,7 @@ class _FloatingTabButton extends StatelessWidget {
             AppIcon(
               item.icon,
               size: 19,
-              color: active ? AppColors.cream : AppColors.tabInactive,
+              color: active ? AppColors.cream : inactiveColor,
             ),
             const SizedBox(height: 4),
             Text(
@@ -125,7 +136,7 @@ class _FloatingTabButton extends StatelessWidget {
               style: AppText.sans(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w800,
-                color: active ? AppColors.cream : AppColors.tabInactive,
+                color: active ? AppColors.cream : inactiveColor,
               ),
             ),
           ],

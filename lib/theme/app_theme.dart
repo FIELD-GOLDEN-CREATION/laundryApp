@@ -30,9 +30,45 @@ final ThemeData clientDarkTheme = ThemeData(
     surface: Color(0xFF111A22),
     onSurface: Color(0xFFF5F0E7),
   ),
-  appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF080D12), foregroundColor: Color(0xFFF5F0E7)),
-  bottomSheetTheme: const BottomSheetThemeData(backgroundColor: Color(0xFF111A22)),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xFF080D12),
+    foregroundColor: Color(0xFFF5F0E7),
+  ),
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: Color(0xFF111A22),
+  ),
   splashFactory: NoSplash.splashFactory,
   highlightColor: Colors.transparent,
-  textSelectionTheme: const TextSelectionThemeData(cursorColor: Color(0xFF6CC9BC)),
+  textSelectionTheme: const TextSelectionThemeData(
+    cursorColor: Color(0xFF6CC9BC),
+  ),
+);
+
+/// Sky blue-white theme (customer only): deep sky-blue scaffold with the
+/// cloud video behind it, white cards, navy text — brightness stays light
+/// so every adaptive `client*` helper resolves to the white-card look.
+final ThemeData clientSkyTheme = ThemeData(
+  useMaterial3: true,
+  brightness: Brightness.light,
+  scaffoldBackgroundColor: const Color(0xFF0E4E8A),
+  canvasColor: const Color(0xFF0E4E8A),
+  fontFamily: GoogleFonts.inter().fontFamily,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: const Color(0xFF1B6FAE),
+    primary: const Color(0xFF1B6FAE),
+    secondary: AppColors.amber,
+    surface: Colors.white,
+    onSurface: const Color(0xFF0F2B46),
+  ),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Colors.transparent,
+    foregroundColor: Colors.white,
+    elevation: 0,
+  ),
+  bottomSheetTheme: const BottomSheetThemeData(backgroundColor: Colors.white),
+  splashFactory: NoSplash.splashFactory,
+  highlightColor: Colors.transparent,
+  textSelectionTheme: const TextSelectionThemeData(
+    cursorColor: Color(0xFF1B6FAE),
+  ),
 );

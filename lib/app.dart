@@ -22,10 +22,15 @@ class LaundryApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(clientPreferencesProvider);
     final isClient = ref.watch(authProvider).role == UserRole.customer;
+    final theme = isClient && preferences.sky
+        ? clientSkyTheme
+        : isClient && preferences.dark
+        ? clientDarkTheme
+        : appTheme;
     return MaterialApp.router(
       title: 'Laundry',
       debugShowCheckedModeBanner: false,
-      theme: isClient && preferences.dark ? clientDarkTheme : appTheme,
+      theme: theme,
       themeAnimationDuration: const Duration(milliseconds: 450),
       themeAnimationCurve: Curves.easeInOutCubic,
       routerConfig: appRouter,
@@ -43,7 +48,13 @@ class LaundryApp extends ConsumerWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: AppColors.cream,
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 60, offset: const Offset(0, 24))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 60,
+                          offset: const Offset(0, 24),
+                        ),
+                      ],
                     ),
                     child: child,
                   ),

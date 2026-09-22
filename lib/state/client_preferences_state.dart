@@ -2,17 +2,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kDarkKey = 'prefs_dark';
+const _kSkyKey = 'prefs_sky';
 const _kLangKey = 'prefs_language';
 const _kPrefsOnKey = 'prefs_notifications';
 
 class ClientPreferencesState {
-  const ClientPreferencesState({this.dark = false, this.language = 'English', this.prefsOn = const [true, true, false]});
+  const ClientPreferencesState({
+    this.dark = false,
+    this.sky = false,
+    this.language = 'English',
+    this.prefsOn = const [true, true, false],
+  });
   final bool dark;
+
+  /// Sky blue-white theme (customer only). Mutually exclusive with dark.
+  final bool sky;
   final String language;
   final List<bool> prefsOn;
 
-  ClientPreferencesState copyWith({bool? dark, String? language, List<bool>? prefsOn}) => ClientPreferencesState(
+  ClientPreferencesState copyWith({
+    bool? dark,
+    bool? sky,
+    String? language,
+    List<bool>? prefsOn,
+  }) => ClientPreferencesState(
     dark: dark ?? this.dark,
+    sky: sky ?? this.sky,
     language: language ?? this.language,
     prefsOn: prefsOn ?? this.prefsOn,
   );
@@ -26,16 +41,25 @@ class ClientPreferencesNotifier extends Notifier<ClientPreferencesState> {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final dark = prefs.getBool(_kDarkKey) ?? false;
+    final sky = prefs.getBool(_kSkyKey) ?? false;
     final lang = prefs.getString(_kLangKey) ?? 'English';
     final prefsOnRaw = prefs.getStringList(_kPrefsOnKey);
-    final prefsOn = prefsOnRaw?.map((s) => s == 'true').toList() ?? const [true, true, false];
-    state = state.copyWith(dark: dark, language: lang, prefsOn: prefsOn);
+    final prefsOn =
+        prefsOnRaw?.map((s) => s == 'true').toList() ??
+        const [true, true, false];
+    state = state.copyWith(
+      dark: dark,
+      sky: sky && !dark,
+      language: lang,
+      prefsOn: prefsOn,
+    );
   }
 
   void setTheme(String value) async {
-    state = state.copyWith(dark: value == 'Dark');
+    state = state.copyWith(dark: value == 'Dark', sky: value == 'Sky');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kDarkKey, state.dark);
+    await prefs.setBool(_kSkyKey, state.sky);
   }
 
   void setLanguage(String value) async {
@@ -49,10 +73,17 @@ class ClientPreferencesNotifier extends Notifier<ClientPreferencesState> {
     next[i] = !next[i];
     state = state.copyWith(prefsOn: next);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_kPrefsOnKey, next.map((b) => b.toString()).toList());
+    await prefs.setStringList(
+      _kPrefsOnKey,
+      next.map((b) => b.toString()).toList(),
+    );
   }
 }
 
-final clientPreferencesProvider = NotifierProvider<ClientPreferencesNotifier, ClientPreferencesState>(ClientPreferencesNotifier.new);
+final clientPreferencesProvider =
+    NotifierProvider<ClientPreferencesNotifier, ClientPreferencesState>(
+      ClientPreferencesNotifier.new,
+    );
 
-String clientLabel(String english, String swahili, String language) => language == 'Swahili' ? swahili : english;
+String clientLabel(String english, String swahili, String language) =>
+    language == 'Swahili' ? swahili : english;

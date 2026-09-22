@@ -6,6 +6,7 @@ import '../../../core/icons/app_icons.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/browse_location_state.dart';
 import '../../../state/catalog_state.dart';
+import '../../../state/client_preferences_state.dart';
 import '../../../state/search_state.dart'
     show kFilterOptions, filteredShops, searchProvider;
 import '../../../theme/colors.dart';
@@ -45,6 +46,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final allShops = ref.watch(shopsWithDistanceProvider);
     final shops = filteredShops(allShops, search);
     final browseLocation = ref.watch(browseLocationProvider);
+    // Dark + sky themes extend the body behind the floating nav bar.
+    final immersive =
+        AppColors.isClientDark(context) ||
+        ref.watch(clientPreferencesProvider.select((s) => s.sky));
 
     return Scaffold(
       body: ClientBackground(
@@ -157,7 +162,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           22,
                           0,
                           22,
-                          AppColors.isClientDark(context) ? 112 : 20,
+                          immersive ? 112 : 20,
                         ),
                         itemCount: shops.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),

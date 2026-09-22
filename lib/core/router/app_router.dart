@@ -46,6 +46,7 @@ import '../../state/vendor_earnings_state.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../state/vendor_promos_state.dart';
+import '../../state/client_preferences_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/bottom_tab_bar.dart';
 
@@ -301,11 +302,13 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
     });
 
     return Scaffold(
-      // Transparent + extended in dark mode so the video background flows
-      // behind the floating nav capsule. Light mode is unaffected: screens
-      // paint their own backgrounds and the nav keeps its cream fill.
+      // Transparent + extended in dark/sky modes so the video background
+      // flows behind the floating nav capsule. Light mode is unaffected:
+      // screens paint their own backgrounds and the nav keeps its cream fill.
       backgroundColor: Colors.transparent,
-      extendBody: AppColors.isClientDark(context),
+      extendBody:
+          AppColors.isClientDark(context) ||
+          ref.watch(clientPreferencesProvider.select((s) => s.sky)),
       body: SafeArea(bottom: false, child: widget.shell),
       bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: widget.shell.currentIndex,
