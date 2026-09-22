@@ -66,10 +66,10 @@ class _BroadcastSheetState extends State<_BroadcastSheet> {
         _data = (res['data'] as Map<String, dynamic>?) ?? res;
         _loading = false;
       });
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = e is ApiException ? e.message : 'Network error — check connection and retry.';
         _loading = false;
       });
     }
@@ -95,11 +95,15 @@ class _BroadcastSheetState extends State<_BroadcastSheet> {
         // Surface how many were reached vs skipped for bad numbers.
         debugPrint('sms broadcast: sent=${d['sent']} skipped=${d['skipped_invalid']} via=${d['credit_source']}');
       }
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : 'Network error — SMS not sent. Check connection and retry.'),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -148,7 +152,12 @@ class _BroadcastSheetState extends State<_BroadcastSheet> {
               if (_loading)
                 const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 20), child: CircularProgressIndicator(strokeWidth: 2)))
               else if (_error != null)
-                Text(_error!, style: AppText.sans(fontSize: 13, color: AppColors.danger))
+                Row(
+                  children: [
+                    Expanded(child: Text(_error!, style: AppText.sans(fontSize: 13, color: AppColors.danger))),
+                    TextButton(onPressed: _fetch, child: const Text('Retry')),
+                  ],
+                )
               else ...[
                 Text(
                   '${_data?['valid'] ?? 0} reachable · ${quota['remaining_plan'] ?? 0} plan + ${quota['remaining_extra'] ?? 0} extra left',

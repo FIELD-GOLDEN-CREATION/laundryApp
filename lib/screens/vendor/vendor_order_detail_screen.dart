@@ -58,7 +58,7 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
     try {
       final res = await api.getOrderSmsPreview(orderId);
       preview = (res['data'] as Map<String, dynamic>?) ?? res;
-    } on ApiException {
+    } catch (_) {
       return;
     }
     if (!mounted) return;
@@ -102,10 +102,14 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : 'Network error — SMS not sent. Check connection and retry.'),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }

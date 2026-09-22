@@ -79,7 +79,7 @@ class VendorSmsNotifier extends Notifier<VendorSmsState> {
         isLoading: false,
         loaded: true,
       );
-    } on ApiException {
+    } catch (_) {
       state = state.copyWith(isLoading: false, loaded: true);
     }
   }
@@ -90,7 +90,7 @@ class VendorSmsNotifier extends Notifier<VendorSmsState> {
       await api.requestSms(count, note: note);
       await load();
       return true;
-    } on ApiException {
+    } catch (_) {
       return false;
     }
   }
