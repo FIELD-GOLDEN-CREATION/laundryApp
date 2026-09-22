@@ -194,7 +194,7 @@ class _CategoryCardState extends State<_CategoryCard> {
                   const SizedBox(height: 4),
                   Text(
                     language == 'Swahili' ? 'Tazama zaidi' : 'View items',
-                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.teal),
+                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientTealText(context)),
                   ),
                 ],
               ),

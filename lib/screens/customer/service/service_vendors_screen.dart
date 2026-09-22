@@ -13,6 +13,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
+import '../../../widgets/video_background.dart';
 
 class ServiceVendorsScreen extends ConsumerStatefulWidget {
   const ServiceVendorsScreen({super.key, required this.categoryId, required this.categoryName});
@@ -38,8 +39,9 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
     final offersAsync = ref.watch(categoryShopsProvider(widget.categoryId));
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
+      body: ClientBackground(
+        child: SafeArea(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
@@ -138,11 +140,11 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
                               ])),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(999)),
-                                child: Text('${formatMoney(offer.startingPriceTzs)} ${offer.itemUnit}', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                                decoration: BoxDecoration(color: AppColors.clientPillTeal(context), borderRadius: BorderRadius.circular(999)),
+                                child: Text('${formatMoney(offer.startingPriceTzs)} ${offer.itemUnit}', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
                               ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.muted),
+                              Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.clientMutedIcon(context)),
                             ]),
                           ),
                         ),
@@ -153,6 +155,7 @@ class _ServiceVendorsScreenState extends ConsumerState<ServiceVendorsScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

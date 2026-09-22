@@ -170,9 +170,9 @@ class _PackageCard extends ConsumerWidget {
       child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.clientSurface(context),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.creamDark),
+        border: Border.all(color: AppColors.clientBorder(context)),
         boxShadow: [
           BoxShadow(
             color: _accent.withValues(alpha: 0.08),
@@ -229,7 +229,7 @@ class _PackageCard extends ConsumerWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppColors.amberLight,
+                          color: AppColors.clientPillAmber(context),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -237,7 +237,7 @@ class _PackageCard extends ConsumerWidget {
                           style: AppText.sans(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.amber,
+                            color: AppColors.clientAmberText(context),
                           ),
                         ),
                       ),
@@ -277,14 +277,14 @@ class _PackageCard extends ConsumerWidget {
                 children: [
                   Text(
                     pkg.name,
-                    style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.slate),
+                    style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     pkg.tagline,
-                    style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -299,12 +299,12 @@ class _PackageCard extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.tealMuted,
+                                color: AppColors.clientPillTeal(context),
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
                                 'Save $savings%',
-                                style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                               ),
                             ),
                           if (savings != null) const SizedBox(height: 3),
@@ -314,12 +314,12 @@ class _PackageCard extends ConsumerWidget {
                             children: [
                               Text(
                                 'TZS ${pkg.priceTzs.round().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
-                                style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 pkg.priceUnit,
-                                style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                               ),
                             ],
                           ),

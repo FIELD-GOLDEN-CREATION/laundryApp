@@ -16,6 +16,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
 import '../../../widgets/curved_clipper.dart';
 import '../../../widgets/round_back_button.dart';
+import '../../../widgets/video_background.dart';
 import 'widgets/vendor_items_section.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -96,8 +97,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.isClientDark(context) ? const Color(0xFF0A1117) : AppColors.cream,
-      body: SafeArea(
-        child: Column(
+      body: ClientBackground(
+        child: SafeArea(
+          child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
@@ -112,11 +114,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                  decoration: BoxDecoration(color: AppColors.amberLight, borderRadius: BorderRadius.circular(99)),
+                  decoration: BoxDecoration(color: AppColors.clientPillAmber(context), borderRadius: BorderRadius.circular(99)),
                   child: Row(children: [
-                    const Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.amber),
+                    Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.clientAmberText(context)),
                     const SizedBox(width: 5),
-                    Text('${cartItemCount(qty, [], priced)}', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.amber)),
+                    Text('${cartItemCount(qty, [], priced)}', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context))),
                   ]),
                 ),
               ]),
@@ -165,7 +167,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         Row(children: [
                           Text(activePackages.isNotEmpty ? clientLabel('Additional items', 'Vitu nyongeza', language) : clientLabel('Your items', 'Vitu vyako', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                           const Spacer(),
-                          Text('${cartItemCount(qty, [], lines)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                          Text('${cartItemCount(qty, [], lines)} ${clientLabel('items', 'vitu', language)}', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
                         ]),
                         const SizedBox(height: 10),
                         for (final item in lines) ...[
@@ -197,13 +199,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                     _addingItems
                                         ? clientLabel('Hide items', 'Ficha vitu', language)
                                         : clientLabel('+ Add more items', '+ Ongeza vitu', language),
-                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                    style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                                   ),
                                   const SizedBox(width: 6),
                                   Icon(
                                     _addingItems ? Icons.expand_less_rounded : Icons.expand_more_rounded,
                                     size: 18,
-                                    color: AppColors.teal,
+                                    color: AppColors.clientTealText(context),
                                   ),
                                 ],
                               ),
@@ -255,6 +257,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
             ),
           ],
+        ),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -311,7 +314,7 @@ class _PackageBundleCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.tealMuted, AppColors.tealMuted.withValues(alpha: 0.3)]),
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.clientPillTeal(context), AppColors.clientPillTeal(context)]),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.teal.withValues(alpha: 0.25)),
       ),
@@ -327,7 +330,7 @@ class _PackageBundleCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(pkg.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                child: Text(pkg.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
               ),
               GestureDetector(
                 onTap: onRemove,
@@ -336,20 +339,20 @@ class _PackageBundleCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(pkg.tagline, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted)),
+          Text(pkg.tagline, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: AppColors.clientSurfaceRaised(context).withValues(alpha: 0.7), borderRadius: BorderRadius.circular(14)),
             child: Column(
               children: [
                 for (final pi in pkg.packageItems) ...[
                   Row(
                     children: [
-                      Text('${pi.qty * rate}×', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                      Text('${pi.qty * rate}×', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(pi.itemName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate))),
-                      Text(formatMoney(pi.lineTotal * rate), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.slate)),
+                      Expanded(child: Text(pi.itemName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientText(context)))),
+                      Text(formatMoney(pi.lineTotal * rate), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                     ],
                   ),
                   if (pi != pkg.packageItems.last) const SizedBox(height: 8),
@@ -361,13 +364,13 @@ class _PackageBundleCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(clientLabel('Quantity', 'Idadi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.teal)),
+              Text(clientLabel('Quantity', 'Idadi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context))),
               Row(
                 children: [
-                  _StepButton(symbol: '−', bg: Colors.white.withValues(alpha: 0.7), fg: AppColors.teal, onTap: onDecrement),
+                  _StepButton(symbol: '−', bg: AppColors.clientSurfaceRaised(context).withValues(alpha: 0.7), fg: AppColors.clientTealText(context), onTap: onDecrement),
                   SizedBox(
                     width: 30,
-                    child: Text('$rate', textAlign: TextAlign.center, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                    child: Text('$rate', textAlign: TextAlign.center, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
                   ),
                   _StepButton(symbol: '+', bg: AppColors.teal, fg: Colors.white, onTap: onIncrement),
                 ],
@@ -378,8 +381,8 @@ class _PackageBundleCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(clientLabel('Package total', 'Jumla ya kifurushi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.teal)),
-              Text(formatMoney(pkg.priceTzs * rate), style: AppText.serif(fontSize: 17, color: AppColors.teal)),
+              Text(clientLabel('Package total', 'Jumla ya kifurushi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context))),
+              Text(formatMoney(pkg.priceTzs * rate), style: AppText.serif(fontSize: 17, color: AppColors.clientTealText(context))),
             ],
           ),
         ],
@@ -456,7 +459,7 @@ class _FulfillmentTile extends StatelessWidget {
           decoration: BoxDecoration(border: Border.all(color: selected ? AppColors.teal : AppColors.clientBorder(context), width: 1.6), borderRadius: BorderRadius.circular(18)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Icon(icon, color: selected ? AppColors.teal : AppColors.clientSecondaryText(context), size: 21),
+              Icon(icon, color: selected ? AppColors.clientTealText(context) : AppColors.clientSecondaryText(context), size: 21),
               const Spacer(),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
@@ -480,9 +483,9 @@ class _FulfillmentTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(color: selected ? AppColors.teal.withValues(alpha: dark ? 0.3 : 0.14) : AppColors.clientBorder(context).withValues(alpha: 0.4), borderRadius: BorderRadius.circular(8)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.schedule_rounded, size: 11, color: selected ? AppColors.teal : AppColors.clientSecondaryText(context)),
+                Icon(Icons.schedule_rounded, size: 11, color: selected ? AppColors.clientTealText(context) : AppColors.clientSecondaryText(context)),
                 const SizedBox(width: 4),
-                Text(time, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w700, color: selected ? AppColors.teal : AppColors.clientSecondaryText(context))),
+                Text(time, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w700, color: selected ? AppColors.clientTealText(context) : AppColors.clientSecondaryText(context))),
               ]),
             ),
           ]),
@@ -536,11 +539,11 @@ class _CartRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(formatMoney(item.price * qty), style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal)),
+              Text(formatMoney(item.price * qty), style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  _StepButton(symbol: '−', bg: AppColors.clientSurfaceRaised(context), fg: AppColors.teal, onTap: () => onSetQty(item.key, -1)),
+                  _StepButton(symbol: '−', bg: AppColors.clientSurfaceRaised(context), fg: AppColors.clientTealText(context), onTap: () => onSetQty(item.key, -1)),
                   SizedBox(
                     width: 26,
                     child: Text('$qty', textAlign: TextAlign.center, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
@@ -667,7 +670,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
               Icon(
                 Icons.local_offer_outlined,
                 size: 18,
-                color: hasPromo ? AppColors.teal : AppColors.clientSecondaryText(context),
+                color: hasPromo ? AppColors.clientTealText(context) : AppColors.clientSecondaryText(context),
               ),
               const SizedBox(width: 8),
               Text(
@@ -703,7 +706,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.tealMuted,
+                color: AppColors.clientPillTeal(context),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppColors.teal.withValues(alpha: 0.2)),
               ),
@@ -735,7 +738,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                           style: AppText.sans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.teal,
+                            color: AppColors.clientTealText(context),
                           ),
                         ),
                         Text(
@@ -743,13 +746,13 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                           style: AppText.sans(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.muted,
+                            color: AppColors.clientSecondaryText(context),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.check_circle_rounded, size: 20, color: AppColors.teal),
+                  Icon(Icons.check_circle_rounded, size: 20, color: AppColors.clientTealText(context)),
                 ],
               ),
             ),
@@ -781,7 +784,7 @@ class _PromoCodeSectionState extends ConsumerState<_PromoCodeSection> {
                         hintStyle: AppText.sans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.muted.withValues(alpha: 0.5),
+                          color: AppColors.clientSecondaryText(context).withValues(alpha: 0.5),
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -897,21 +900,21 @@ class _SummaryPanel extends StatelessWidget {
           _SummaryLine(
             label: clientLabel('Discount', 'Punguzo', language),
             value: '-${formatMoney(discount)}',
-            valueColor: AppColors.teal,
+            valueColor: AppColors.clientTealText(context),
             context: context,
           ),
         ],
         const SizedBox(height: 9),
         if (isDelivery)
-          _SummaryLine(label: clientLabel('Delivery', 'Usafirishaji', language), value: delivery > 0 ? formatMoney(delivery.toDouble()) : clientLabel('Quoted at schedule', 'Itakadiriwa kwenye ratiba', language), valueColor: AppColors.teal, context: context)
+          _SummaryLine(label: clientLabel('Delivery', 'Usafirishaji', language), value: delivery > 0 ? formatMoney(delivery.toDouble()) : clientLabel('Quoted at schedule', 'Itakadiriwa kwenye ratiba', language), valueColor: AppColors.clientTealText(context), context: context)
         else
-          _SummaryLine(label: clientLabel('Self drop-off', 'Unapeleka mwenyewe', language), value: clientLabel('Free', 'Bure', language), valueColor: AppColors.teal, context: context),
+          _SummaryLine(label: clientLabel('Self drop-off', 'Unapeleka mwenyewe', language), value: clientLabel('Free', 'Bure', language), valueColor: AppColors.clientTealText(context), context: context),
         if (isDeliveryDiscount && promoState.pending) ...[
           const SizedBox(height: 9),
           _SummaryLine(
             label: clientLabel('Delivery discount', 'Punguzo la usafirishaji', language),
             value: clientLabel('Applied at checkout', 'Itatumika wakati wa malipo', language),
-            valueColor: AppColors.teal,
+            valueColor: AppColors.clientTealText(context),
             context: context,
           ),
         ] else if (isDeliveryDiscount && discount > 0) ...[
@@ -919,7 +922,7 @@ class _SummaryPanel extends StatelessWidget {
           _SummaryLine(
             label: clientLabel('Delivery discount', 'Punguzo la usafirishaji', language),
             value: '-${formatMoney(discount)}',
-            valueColor: AppColors.teal,
+            valueColor: AppColors.clientTealText(context),
             context: context,
           ),
         ],
@@ -928,7 +931,7 @@ class _SummaryPanel extends StatelessWidget {
           _SummaryLine(
             label: clientLabel('Add-on services', 'Huduma za nyongeza', language),
             value: formatMoney(addonTotal),
-            valueColor: AppColors.teal,
+            valueColor: AppColors.clientTealText(context),
             context: context,
           ),
         ],
@@ -945,9 +948,9 @@ class _SummaryPanel extends StatelessWidget {
                 if (discount > 0)
                   Text(
                     formatMoney(subtotal + delivery),
-                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted).copyWith(decoration: TextDecoration.lineThrough),
+                    style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)).copyWith(decoration: TextDecoration.lineThrough),
                   ),
-                Text(formatMoney(total), style: AppText.serif(fontSize: 18, color: AppColors.teal)),
+                Text(formatMoney(total), style: AppText.serif(fontSize: 18, color: AppColors.clientTealText(context))),
               ],
             ),
           ],
@@ -958,20 +961,21 @@ class _SummaryPanel extends StatelessWidget {
 }
 
 class _SummaryLine extends StatelessWidget {
-  const _SummaryLine({required this.label, required this.value, this.valueColor = AppColors.slate, required this.context});
+  const _SummaryLine({required this.label, required this.value, this.valueColor, required this.context});
 
   final String label;
   final String value;
-  final Color valueColor;
+  final Color? valueColor;
   final BuildContext context;
 
   @override
   Widget build(BuildContext context) {
+    final resolved = valueColor ?? AppColors.clientText(this.context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(this.context))),
-        Text(value, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: valueColor)),
+        Text(value, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: resolved)),
       ],
     );
   }
@@ -1010,7 +1014,7 @@ class _AddOnsSection extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             clientLabel('Extra services for your order', 'Huduma za ziada kwa oda yako', language),
-            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
           ),
           const SizedBox(height: 12),
           for (var i = 0; i < addons.length; i++) ...[
@@ -1076,7 +1080,7 @@ class _AddonToggleRow extends StatelessWidget {
               ),
               Text(
                 formatMoney(price),
-                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: selected ? AppColors.teal : AppColors.clientSecondaryText(context)),
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: selected ? AppColors.clientTealText(context) : AppColors.clientSecondaryText(context)),
               ),
             ],
           ),
@@ -1101,9 +1105,9 @@ class _EmptyBasket extends StatelessWidget {
           Container(
             width: 92,
             height: 92,
-            decoration: BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.clientPillTeal(context), shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: const Icon(Icons.local_laundry_service_outlined, size: 40, color: AppColors.teal),
+            child: Icon(Icons.local_laundry_service_outlined, size: 40, color: AppColors.clientTealText(context)),
           ),
           const SizedBox(height: 20),
           Text(clientLabel('Your basket is empty', 'Kikapu chako hakina kitu', language), style: AppText.serif(fontSize: 21, color: AppColors.clientText(context)), textAlign: TextAlign.center),

@@ -5,6 +5,7 @@ import '../../../state/profile_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/placeholder_image.dart';
+import '../../../widgets/video_background.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -20,15 +21,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() { name.dispose(); phone.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Edit profile', style: AppText.serif(fontSize: 24)), backgroundColor: AppColors.cream, foregroundColor: AppColors.slate),
-    body: ListView(padding: const EdgeInsets.all(20), children: [
+    appBar: AppBar(title: Text('Edit profile', style: AppText.serif(fontSize: 24, color: AppColors.clientText(context))), backgroundColor: AppColors.isClientDark(context) ? Colors.transparent : AppColors.cream, foregroundColor: AppColors.clientText(context)),
+    body: ClientBackground(
+      child: ListView(padding: const EdgeInsets.all(20), children: [
       Center(child: Stack(alignment: Alignment.bottomRight, children: [SizedBox(width: 96, height: 96, child: PlaceholderImage(label: photoLabel, circle: true)), FloatingActionButton.small(backgroundColor: AppColors.teal, onPressed: () => setState(() => photoLabel = photoLabel == 'You' ? 'New photo' : 'You'), child: const Icon(Icons.camera_alt_outlined, color: AppColors.cream))])),
       const SizedBox(height: 25),
       _Field(label: 'Full name', controller: name),
       _Field(label: 'Phone number', controller: phone, keyboardType: TextInputType.phone),
       const SizedBox(height: 14),
       FilledButton(onPressed: () async { if (name.text.trim().isEmpty || phone.text.trim().isEmpty) return; final ok = await ref.read(profileProvider.notifier).updateDetails(name: name.text.trim(), phone: phone.text.trim(), photoLabel: photoLabel); if (!context.mounted) return; if (!ok) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not save changes. Please try again.'))); return; } Navigator.pop(context); }, style: FilledButton.styleFrom(backgroundColor: AppColors.teal, padding: const EdgeInsets.symmetric(vertical: 16)), child: Text('Save changes', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream))),
-    ]),
+      ]),
+    ),
   );
 }
 
@@ -41,12 +44,14 @@ class _Field extends StatelessWidget {
     child: TextField(
       controller: controller,
       keyboardType: keyboardType,
+      style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
         filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.creamDark)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.creamDark)),
+        fillColor: AppColors.clientInputFill(context),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.clientBorder(context))),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.clientBorder(context))),
       ),
     ),
   );

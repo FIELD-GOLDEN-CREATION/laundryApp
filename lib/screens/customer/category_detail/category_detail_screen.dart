@@ -11,6 +11,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/currency.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
+import '../../../widgets/video_background.dart';
 
 class CategoryDetailScreen extends ConsumerStatefulWidget {
   const CategoryDetailScreen({super.key, required this.category});
@@ -44,8 +45,9 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
     final shops = ref.watch(shopsWithDistanceProvider);
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
+      body: ClientBackground(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _HeroSection(category: category, language: language, dark: dark),
@@ -56,7 +58,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                 children: [
                   Text(
                     language == 'Swahili' ? category.nameSwahili : category.name,
-                    style: AppText.serif(fontSize: 27),
+                    style: AppText.serif(fontSize: 27, color: AppColors.clientText(context)),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -87,7 +89,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   const SizedBox(height: 24),
                   Text(
                     language == 'Swahili' ? 'ORODHA YA BEI' : 'PRICE LIST',
-                    style: AppText.eyebrow(),
+                    style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)),
                   ),
                   const SizedBox(height: 12),
                   ...category.items.map((item) {
@@ -124,6 +126,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -353,12 +356,12 @@ class _CategoryItemCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.tealMuted,
+                              color: AppColors.clientPillTeal(context),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               item.unit,
-                              style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.teal),
+                              style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context)),
                             ),
                           ),
                           if (shopName != null) ...[
@@ -366,12 +369,12 @@ class _CategoryItemCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppColors.amberLight,
+                                color: AppColors.clientPillAmber(context),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 'from $shopName',
-                                style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.amber),
+                                style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.clientAmberText(context)),
                               ),
                             ),
                           ],
@@ -388,7 +391,7 @@ class _CategoryItemCard extends StatelessWidget {
                       style: AppText.sans(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.teal,
+                        color: AppColors.clientTealText(context),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -419,7 +422,7 @@ class _DeliveryInfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.tealMuted,
+        color: AppColors.clientPillTeal(context),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -431,7 +434,7 @@ class _DeliveryInfoBanner extends StatelessWidget {
               color: AppColors.teal.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.delivery_dining, color: AppColors.teal, size: 22),
+            child: Icon(Icons.delivery_dining, color: AppColors.clientTealText(context), size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -440,14 +443,14 @@ class _DeliveryInfoBanner extends StatelessWidget {
               children: [
                 Text(
                   language == 'Swahili' ? 'Utoaji na Uchukuaji' : 'Pickup & Delivery',
-                  style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   language == 'Swahili'
                       ? 'Dereva wetu atachukua na kuleta nguo zako'
                       : 'Our driver picks up and delivers your items',
-                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 ),
               ],
             ),

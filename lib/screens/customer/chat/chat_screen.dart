@@ -98,23 +98,23 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
     return FractionallySizedBox(
       heightFactor: 0.84,
       child: Container(
-        decoration: const BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        decoration: BoxDecoration(color: AppColors.clientSurface(context), borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
               child: Column(children: [
-                Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.creamDark, borderRadius: BorderRadius.circular(99))),
+                Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.clientBorder(context), borderRadius: BorderRadius.circular(99))),
                 const SizedBox(height: 12),
                 Row(children: [
                   SizedBox(width: 42, height: 42, child: RemoteImage(url: image, fallback: 'Shop', circle: true)),
                   const SizedBox(width: 11),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.shopName, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800)), const SizedBox(height: 2), Text('Vendor conversation', style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.teal))])),
-                  IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded, color: AppColors.slate)),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.shopName, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))), const SizedBox(height: 2), Text('Vendor conversation', style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context)))])),
+                  IconButton(onPressed: () => Navigator.of(context).pop(), icon: Icon(Icons.close_rounded, color: AppColors.clientSecondaryText(context))),
                 ]),
               ]),
             ),
-            const Divider(height: 1, color: AppColors.creamDark),
+            Divider(height: 1, color: AppColors.clientBorder(context)),
             Expanded(
               child: _resolving
                   ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
@@ -122,7 +122,7 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
                       ? Center(
                           child: Text(
                             "Couldn't open this conversation.",
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                           ),
                         )
                       : ListView.separated(padding: const EdgeInsets.all(18), itemCount: messages.length, separatorBuilder: (_, _) => const SizedBox(height: 12), itemBuilder: (_, i) => _Bubble(message: messages[i])),
@@ -130,7 +130,7 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
             Padding(
               padding: EdgeInsets.fromLTRB(16, 10, 16, 12 + MediaQuery.viewInsetsOf(context).bottom),
               child: Row(children: [
-                Expanded(child: Container(height: 46, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.creamDark), borderRadius: BorderRadius.circular(999)), child: TextField(controller: _controller, onChanged: notifier.setDraft, onSubmitted: (_) => _send(), style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600), decoration: InputDecoration.collapsed(hintText: 'Message the vendor', hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.muted))))),
+                Expanded(child: Container(height: 46, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: AppColors.clientInputFill(context), border: Border.all(color: AppColors.clientBorder(context)), borderRadius: BorderRadius.circular(999)), child: TextField(controller: _controller, onChanged: notifier.setDraft, onSubmitted: (_) => _send(), style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.clientText(context)), decoration: InputDecoration.collapsed(hintText: 'Message the vendor', hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)))))),
                 const SizedBox(width: 9),
                 Material(color: AppColors.teal, shape: const CircleBorder(), clipBehavior: Clip.antiAlias, child: InkWell(onTap: threadId == null ? null : _send, child: const SizedBox(width: 46, height: 46, child: Center(child: AppIcon(AppIcons.send, size: 19))))),
               ]),
@@ -148,8 +148,8 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = message.isMe ? AppColors.teal : Colors.white;
-    final fg = message.isMe ? AppColors.cream : AppColors.slate;
+    final bg = message.isMe ? AppColors.teal : AppColors.clientSurfaceRaised(context);
+    final fg = message.isMe ? AppColors.cream : AppColors.clientText(context);
     final radius = message.isMe ? const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomLeft: Radius.circular(18), bottomRight: Radius.circular(4)) : const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomLeft: Radius.circular(4), bottomRight: Radius.circular(18));
     return Align(alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft, child: ConstrainedBox(constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78), child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11), decoration: BoxDecoration(color: bg, borderRadius: radius), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(message.text, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: fg)), const SizedBox(height: 5), Text(message.time, style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w700, color: fg.withValues(alpha: 0.55)))]))));
   }

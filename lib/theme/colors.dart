@@ -24,10 +24,42 @@ abstract final class AppColors {
   static const successLight = Color(0xFFE6F4EC);
   static const rust = Color(0xFFB64A35);
 
-  static bool isClientDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
-  static Color clientSurface(BuildContext context) => isClientDark(context) ? const Color(0xFF111A22) : Colors.white;
-  static Color clientSurfaceRaised(BuildContext context) => isClientDark(context) ? const Color(0xFF182631) : Colors.white;
-  static Color clientText(BuildContext context) => isClientDark(context) ? const Color(0xFFF5F0E8) : slate;
-  static Color clientSecondaryText(BuildContext context) => isClientDark(context) ? const Color(0xFFAAB8C2) : muted;
-  static Color clientBorder(BuildContext context) => isClientDark(context) ? const Color(0xFF2A3B47) : creamDark;
+  static bool isClientDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+  static Color clientSurface(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFF111A22) : Colors.white;
+  static Color clientSurfaceRaised(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFF182631) : Colors.white;
+  static Color clientText(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFFF5F0E7) : slate;
+  static Color clientSecondaryText(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFFAAB8C2) : muted;
+  static Color clientBorder(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFF2A3B47) : creamDark;
+
+  /// Bright teal/amber text that stays readable on dark surfaces.
+  static Color clientTealText(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFF6CC9BC) : teal;
+  static Color clientAmberText(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFFE79A42) : amber;
+
+  /// Soft pill backgrounds: light tints in light mode, translucent whites in dark mode.
+  static Color clientPillTeal(BuildContext context) =>
+      isClientDark(context) ? Colors.white.withValues(alpha: 0.09) : tealMuted;
+  static Color clientPillAmber(BuildContext context) =>
+      isClientDark(context) ? Colors.white.withValues(alpha: 0.09) : amberLight;
+  static Color clientPillDanger(BuildContext context) => isClientDark(context)
+      ? Colors.white.withValues(alpha: 0.09)
+      : dangerLight;
+  static Color clientPillSuccess(BuildContext context) => isClientDark(context)
+      ? Colors.white.withValues(alpha: 0.09)
+      : successLight;
+
+  /// Text-field fill color.
+  static Color clientInputFill(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFF182631) : Colors.white;
+
+  /// Muted icon color that stays visible on dark surfaces.
+  static Color clientMutedIcon(BuildContext context) =>
+      isClientDark(context) ? const Color(0xFF8FA1AD) : muted;
 }

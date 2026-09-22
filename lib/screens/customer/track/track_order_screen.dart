@@ -16,6 +16,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/time_format.dart';
 import '../../../widgets/placeholder_image.dart';
 import '../../../widgets/round_back_button.dart';
+import '../../../widgets/video_background.dart';
 
 /// Timeline step titles, index-aligned with `kOrderStatusSteps` — the actual
 /// timestamp for each step comes from the order's `tracking` rows (see
@@ -122,8 +123,9 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     final driverName = order.driver.isNotEmpty ? order.driver : '';
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
+      body: ClientBackground(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
@@ -170,7 +172,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                           decoration: BoxDecoration(
-                            color: awaitingPickup ? AppColors.amberLight : AppColors.tealMuted,
+                            color: awaitingPickup ? AppColors.clientPillAmber(context) : AppColors.clientPillTeal(context),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -178,7 +180,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                             style: AppText.sans(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
-                              color: awaitingPickup ? AppColors.amber : AppColors.teal,
+                              color: awaitingPickup ? AppColors.clientAmberText(context) : AppColors.clientTealText(context),
                             ),
                           ),
                         ),
@@ -231,8 +233,8 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                             ),
                             _RoundIconButton(
                               icon: AppIcons.chatBubble,
-                              bg: AppColors.tealMuted,
-                              iconColor: AppColors.teal,
+                              bg: AppColors.clientPillTeal(context),
+                              iconColor: AppColors.clientTealText(context),
                               // The source wires this to goChat, which is
                               // also a tab-switch (this.tab('chat')), not a
                               // push.
@@ -271,6 +273,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -294,14 +297,14 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
               Container(
                 width: 56,
                 height: 56,
-                decoration: const BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: AppColors.clientPillTeal(ctx), shape: BoxShape.circle),
                 alignment: Alignment.center,
-                child: const Icon(Icons.check_circle_rounded, size: 30, color: AppColors.teal),
+                child: Icon(Icons.check_circle_rounded, size: 30, color: AppColors.clientTealText(ctx)),
               ),
               const SizedBox(height: 16),
               Text(
                 clientLabel('Order Delivered!', 'Oda Imefikishwa!', language),
-                style: AppText.serif(fontSize: 22),
+                style: AppText.serif(fontSize: 22, color: AppColors.clientText(ctx)),
               ),
               const SizedBox(height: 6),
               Text(
@@ -311,7 +314,7 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                   language,
                 ),
                 textAlign: TextAlign.center,
-                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(ctx)),
               ),
               const SizedBox(height: 20),
               Row(
@@ -323,7 +326,7 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                     child: Icon(
                       i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
                       size: 36,
-                      color: i < rating ? AppColors.amber : AppColors.creamDark,
+                      color: i < rating ? AppColors.amber : AppColors.clientBorder(ctx),
                     ),
                   ),
                 )),
@@ -331,17 +334,17 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
               const SizedBox(height: 18),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.cream,
-                  border: Border.all(color: AppColors.creamDark),
+                  color: AppColors.clientInputFill(ctx),
+                  border: Border.all(color: AppColors.clientBorder(ctx)),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: TextField(
                   controller: commentController,
                   maxLines: 3,
-                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientText(ctx)),
                   decoration: InputDecoration(
                     hintText: clientLabel('Leave a comment (optional)', 'Wacha maoni (si lazima)', language),
-                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(ctx)),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.all(14),
                   ),
@@ -355,7 +358,7 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                       color: Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                        side: BorderSide(color: AppColors.clientBorder(ctx), width: 1.5),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
@@ -365,7 +368,7 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                           alignment: Alignment.center,
                           child: Text(
                             clientLabel('Skip', 'Ruka', language),
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(ctx)),
                           ),
                         ),
                       ),
@@ -375,7 +378,7 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                   Expanded(
                     flex: 2,
                     child: Material(
-                      color: rating > 0 ? AppColors.teal : AppColors.creamDark,
+                      color: rating > 0 ? AppColors.teal : AppColors.clientBorder(ctx),
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
@@ -421,7 +424,7 @@ void _showDeliveredDialog(BuildContext context, WidgetRef ref, Order order, Stri
                             style: AppText.sans(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
-                              color: rating > 0 ? AppColors.cream : AppColors.muted,
+                              color: rating > 0 ? AppColors.cream : AppColors.clientSecondaryText(ctx),
                             ),
                           ),
                         ),
@@ -457,9 +460,9 @@ class _AwaitingPickupCard extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(color: AppColors.amberLight, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.clientPillAmber(context), shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: const AppIcon(AppIcons.clock, size: 20, color: AppColors.amber),
+            child: AppIcon(AppIcons.clock, size: 20, color: AppColors.clientAmberText(context)),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -501,9 +504,9 @@ class _SelfDropOffCard extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.clientPillTeal(context), shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: const Icon(Icons.storefront_outlined, size: 20, color: AppColors.teal),
+            child: Icon(Icons.storefront_outlined, size: 20, color: AppColors.clientTealText(context)),
           ),
           const SizedBox(width: 13),
           Expanded(

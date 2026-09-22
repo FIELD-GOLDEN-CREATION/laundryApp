@@ -75,7 +75,7 @@ class _ActiveOrderBannerState extends State<ActiveOrderBanner> with SingleTicker
                       Container(
                         width: 44,
                         height: 44,
-                        decoration: const BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: AppColors.clientPillTeal(context), shape: BoxShape.circle),
                         alignment: Alignment.center,
                         child: const AppIcon(AppIcons.clock, size: 21),
                       ),

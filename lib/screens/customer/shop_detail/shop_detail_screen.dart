@@ -16,6 +16,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/cart_math.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/shop_location_label.dart';
+import '../../../widgets/video_background.dart';
 import 'widgets/package_card.dart';
 
 const _kTabLabels = ['About', 'Packages', 'Price list'];
@@ -65,7 +66,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
         ? (shop.hours.isNotEmpty ? shop.hours : 'Open')
         : 'Closed now';
     final displayHoursColor = shop.isOpenNow
-        ? AppColors.teal
+        ? AppColors.clientTealText(context)
         : AppColors.danger;
 
     final detailAsync = ref.watch(shopDetailProvider(shop.listSlotId));
@@ -95,8 +96,9 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.clientSurface(context),
-      body: SingleChildScrollView(
-        child: Column(
+      body: ClientBackground(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _EdgedHeroImage(
@@ -136,7 +138,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.tealMuted,
+                                color: AppColors.clientPillTeal(context),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -144,7 +146,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                                 style: AppText.sans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.teal,
+                                  color: AppColors.clientTealText(context),
                                 ),
                               ),
                             ),
@@ -241,6 +243,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
       bottomNavigationBar: _BottomBar(
@@ -493,7 +496,7 @@ class _InfoChips extends StatelessWidget {
           _InfoChip(
             icon: Icons.star,
             text: shop.rating,
-            color: AppColors.amber,
+            color: AppColors.clientAmberText(context),
           ),
           const SizedBox(width: 8),
           _InfoChip(
@@ -580,14 +583,14 @@ class _DirectionButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.directions_outlined, size: 18, color: AppColors.teal),
+              Icon(Icons.directions_outlined, size: 18, color: AppColors.clientTealText(context)),
               const SizedBox(width: 8),
               Text(
                 'Get Directions',
                 style: AppText.sans(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.teal,
+                  color: AppColors.clientTealText(context),
                 ),
               ),
             ],
@@ -637,7 +640,7 @@ class _AboutSection extends StatelessWidget {
                   Icon(
                     Icons.check_circle_outline,
                     size: 18,
-                    color: AppColors.teal,
+                    color: AppColors.clientTealText(context),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -786,11 +789,11 @@ class _ReviewTile extends StatelessWidget {
               Container(
                 width: 32,
                 height: 32,
-                decoration: BoxDecoration(color: AppColors.tealMuted, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: AppColors.clientPillTeal(context), shape: BoxShape.circle),
                 child: Center(
                   child: Text(
                     review.name[0],
-                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal),
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                   ),
                 ),
               ),
@@ -801,7 +804,7 @@ class _ReviewTile extends StatelessWidget {
                   style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                 ),
               ),
-              Text(review.stars, style: AppText.sans(fontSize: 12, color: AppColors.amber)),
+              Text(review.stars, style: AppText.sans(fontSize: 12, color: AppColors.clientAmberText(context))),
             ],
           ),
           if (review.text.isNotEmpty) ...[
@@ -885,7 +888,7 @@ class _ShopTabButton extends StatelessWidget {
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
                 color: active
-                    ? AppColors.teal
+                    ? AppColors.clientTealText(context)
                     : AppColors.clientSecondaryText(context),
               ),
             ),
@@ -960,7 +963,7 @@ class _MenuRow extends StatelessWidget {
             style: AppText.sans(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: AppColors.teal,
+              color: AppColors.clientTealText(context),
             ),
           ),
           const SizedBox(width: 4),
@@ -1043,7 +1046,7 @@ class _BottomBar extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.tealMuted,
+                color: AppColors.clientPillTeal(context),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -1052,7 +1055,7 @@ class _BottomBar extends StatelessWidget {
                   style: AppText.sans(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.teal,
+                    color: AppColors.clientTealText(context),
                   ),
                 ),
               ),

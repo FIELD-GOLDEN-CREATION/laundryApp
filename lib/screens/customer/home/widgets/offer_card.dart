@@ -113,10 +113,10 @@ class _OfferCardState extends ConsumerState<OfferCard> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(color: AppColors.amberLight, borderRadius: BorderRadius.circular(999)),
+                        decoration: BoxDecoration(color: AppColors.clientPillAmber(context), borderRadius: BorderRadius.circular(999)),
                         child: Text(
                           widget.offer.discountLabel.toUpperCase(),
-                          style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.amber, letterSpacing: 0.5),
+                          style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context), letterSpacing: 0.5),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -233,7 +233,7 @@ class _PromoPopupSheet extends ConsumerWidget {
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         decoration: BoxDecoration(
-          color: AppColors.cream,
+          color: AppColors.clientSurface(context),
           borderRadius: BorderRadius.circular(24),
         ),
         child: SingleChildScrollView(
@@ -243,30 +243,30 @@ class _PromoPopupSheet extends ConsumerWidget {
               Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: AppColors.creamDark, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: AppColors.clientBorder(context), borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 14),
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: AppColors.clientPillTeal(context), borderRadius: BorderRadius.circular(14)),
                 alignment: Alignment.center,
-                child: const Icon(Icons.local_offer_rounded, color: AppColors.teal, size: 24),
+                child: Icon(Icons.local_offer_rounded, color: AppColors.clientTealText(context), size: 24),
               ),
               const SizedBox(height: 12),
               if (offer.vendorName.isNotEmpty) ...[
                 Text(
                   'Valid at ${offer.vendorName}',
-                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.teal, letterSpacing: 0.3),
+                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context), letterSpacing: 0.3),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
               ],
-              Text(offer.title, style: AppText.serif(fontSize: 18), textAlign: TextAlign.center),
+              Text(offer.title, style: AppText.serif(fontSize: 18, color: AppColors.clientText(context)), textAlign: TextAlign.center),
               const SizedBox(height: 4),
               Text(
                 offer.description,
-                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
@@ -274,13 +274,13 @@ class _PromoPopupSheet extends ConsumerWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.clientSurfaceRaised(context),
                   border: Border.all(color: AppColors.teal, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   offer.code,
-                  style: AppText.sans(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.teal, letterSpacing: 1.5),
+                  style: AppText.sans(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context), letterSpacing: 1.5),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -288,7 +288,7 @@ class _PromoPopupSheet extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Min spend: TZS ${offer.minSpend.round()}',
-                  style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 ),
               ],
               const SizedBox(height: 14),
@@ -327,7 +327,7 @@ class _PromoPopupSheet extends ConsumerWidget {
                   ),
                   const SizedBox(width: 10),
                   Material(
-                    color: AppColors.creamDark,
+                    color: AppColors.clientBorder(context),
                     borderRadius: BorderRadius.circular(14),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
@@ -336,7 +336,7 @@ class _PromoPopupSheet extends ConsumerWidget {
                         height: 46,
                         width: 46,
                         alignment: Alignment.center,
-                        child: Icon(Icons.close, color: AppColors.muted, size: 20),
+                        child: Icon(Icons.close, color: AppColors.clientMutedIcon(context), size: 20),
                       ),
                     ),
                   ),
@@ -363,7 +363,7 @@ class _PromoPopupSheet extends ConsumerWidget {
                         ),
                         child: Text(
                           'Shop now',
-                          style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                          style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                         ),
                       ),
                     ),

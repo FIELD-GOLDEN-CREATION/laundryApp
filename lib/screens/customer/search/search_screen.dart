@@ -6,10 +6,12 @@ import '../../../core/icons/app_icons.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/browse_location_state.dart';
 import '../../../state/catalog_state.dart';
-import '../../../state/search_state.dart' show kFilterOptions, filteredShops, searchProvider;
+import '../../../state/search_state.dart'
+    show kFilterOptions, filteredShops, searchProvider;
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/browse_location_sheet.dart';
+import '../../../widgets/video_background.dart';
 import '../home/widgets/shop_card.dart';
 import '../../../widgets/round_back_button.dart';
 
@@ -45,107 +47,134 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final browseLocation = ref.watch(browseLocationProvider);
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-              child: Row(
-                children: [
-                  const RoundBackButton(),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      height: 46,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppColors.creamDark),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          const AppIcon(AppIcons.search, size: 16),
-                          const SizedBox(width: 9),
-                          Expanded(
-                            child: TextField(
-                              onChanged: notifier.setQuery,
-                              decoration: InputDecoration.collapsed(
-                                hintText: "Try 'dry clean suit'",
-                                hintStyle: AppText.sans(fontWeight: FontWeight.w600, color: AppColors.muted),
-                              ),
-                              style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w600),
-                            ),
+      body: ClientBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
+                child: Row(
+                  children: [
+                    const RoundBackButton(),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        height: 46,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.clientSurface(context),
+                          border: Border.all(
+                            color: AppColors.clientBorder(context),
                           ),
-                        ],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const AppIcon(AppIcons.search, size: 16),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: TextField(
+                                onChanged: notifier.setQuery,
+                                decoration: InputDecoration.collapsed(
+                                  hintText: "Try 'dry clean suit'",
+                                  hintStyle: AppText.sans(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.clientSecondaryText(
+                                      context,
+                                    ),
+                                  ),
+                                ),
+                                style: AppText.sans(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.clientText(context),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+                child: LocationPill(
+                  label: browseLocation.hasLocation
+                      ? browseLocation.label
+                      : 'Set your location',
+                  onTap: () => showBrowseLocationSheet(context, ref),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  itemCount: kFilterOptions.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final label = kFilterOptions[i];
+                    final active = search.filter == label;
+                    return _FilterChip(
+                      label: label,
+                      active: active,
+                      onTap: () => notifier.setFilter(label),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 20, 22, 12),
+                child: Text(
+                  '${shops.length} shops near you',
+                  style: AppText.sans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.clientSecondaryText(context),
                   ),
-                ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-              child: LocationPill(
-                label: browseLocation.hasLocation ? browseLocation.label : 'Set your location',
-                onTap: () => showBrowseLocationSheet(context, ref),
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                itemCount: kFilterOptions.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final label = kFilterOptions[i];
-                  final active = search.filter == label;
-                  return _FilterChip(label: label, active: active, onTap: () => notifier.setFilter(label));
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 22, 12),
-              child: Text(
-                '${shops.length} shops near you',
-                style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
-              ),
-            ),
-            Expanded(
-              child: _loading
-                  ? const _ExploreLoading()
-                  : shops.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No shops match these filters',
-                        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+              Expanded(
+                child: _loading
+                    ? const _ExploreLoading()
+                    : shops.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No shops match these filters',
+                          style: AppText.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.clientSecondaryText(context),
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+                        itemCount: shops.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (_, i) => ShopListTile(
+                          shop: shops[i],
+                          onTap: () {
+                            if (gateGuest(
+                              ref,
+                              context,
+                              'Log in as a customer to view ${shops[i].name}.',
+                              redirectPath: '/detail',
+                              redirectExtra: shops[i],
+                            )) {
+                              return;
+                            }
+                            context.push('/detail', extra: shops[i]);
+                          },
+                        ),
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
-                      itemCount: shops.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (_, i) => ShopListTile(
-                        shop: shops[i],
-                        onTap: () {
-                          if (gateGuest(
-                            ref,
-                            context,
-                            'Log in as a customer to view ${shops[i].name}.',
-                            redirectPath: '/detail',
-                            redirectExtra: shops[i],
-                          )) {
-                            return;
-                          }
-                          context.push('/detail', extra: shops[i]);
-                        },
-                      ),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -167,13 +196,28 @@ class _ExploreLoading extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const CircularProgressIndicator(strokeWidth: 3, color: AppColors.teal, backgroundColor: AppColors.tealMuted),
-                const Icon(Icons.location_searching_rounded, size: 22, color: AppColors.amber),
+                const CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.teal,
+                  backgroundColor: AppColors.tealMuted,
+                ),
+                const Icon(
+                  Icons.location_searching_rounded,
+                  size: 22,
+                  color: AppColors.amber,
+                ),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          Text('Finding nearby vendors…', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted)),
+          Text(
+            'Finding nearby vendors…',
+            style: AppText.sans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.clientSecondaryText(context),
+            ),
+          ),
         ],
       ),
     );
@@ -181,7 +225,11 @@ class _ExploreLoading extends StatelessWidget {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.active, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -190,10 +238,12 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? AppColors.teal : Colors.white,
+      color: active ? AppColors.teal : AppColors.clientSurface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(999),
-        side: BorderSide(color: active ? AppColors.teal : AppColors.creamDark),
+        side: BorderSide(
+          color: active ? AppColors.teal : AppColors.clientBorder(context),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -205,7 +255,9 @@ class _FilterChip extends StatelessWidget {
             style: AppText.sans(
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
-              color: active ? AppColors.cream : AppColors.muted,
+              color: active
+                  ? AppColors.cream
+                  : AppColors.clientSecondaryText(context),
             ),
           ),
         ),
@@ -213,4 +265,3 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
-

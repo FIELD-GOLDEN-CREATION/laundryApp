@@ -107,7 +107,7 @@ class _DirectionScreenState extends ConsumerState<DirectionScreen> {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppColors.clientBorder(context)),
                           ),
-                          child: Text(shop.name, style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800)),
+                          child: Text(shop.name, style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                         ),
                       ],
                     ),

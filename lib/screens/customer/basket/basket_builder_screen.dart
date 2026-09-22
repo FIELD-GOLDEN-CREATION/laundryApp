@@ -11,6 +11,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/currency.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/skeleton_loader.dart';
+import '../../../widgets/video_background.dart';
 
 /// Step 1 of the basket flow: type to find laundry items (with live
 /// suggestions as you type), pick each item and set how many of each, then
@@ -77,8 +78,9 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
+      body: ClientBackground(
+        child: SafeArea(
+          child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
@@ -91,16 +93,18 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
                       'Andika kipengee, weka idadi, kisha tafuta muuzaji bora.',
                       language,
                     ),
-                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                   ),
                   const SizedBox(height: 12),
                   // ── Search: typing filters the catalogue live ──
                   TextField(
                     controller: _searchCtrl,
                     textInputAction: TextInputAction.search,
+                    style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.clientText(context)),
                     decoration: InputDecoration(
                       hintText: clientLabel('Search shirts, suits, duvets…', 'Tafuta shati, suti, mashuka…', language),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                      prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.clientMutedIcon(context)),
                       suffixIcon: _query.isEmpty
                           ? null
                           : IconButton(
@@ -108,7 +112,7 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
                               onPressed: () => _searchCtrl.clear(),
                             ),
                       filled: true,
-                      fillColor: AppColors.cream,
+                      fillColor: AppColors.clientInputFill(context),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -146,11 +150,11 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
                                 selected: active,
                                 onSelected: (_) => setState(() => _categoryId = id),
                                 selectedColor: AppColors.teal,
-                                backgroundColor: AppColors.cream,
+                                backgroundColor: AppColors.clientSurfaceRaised(context),
                                 labelStyle: AppText.sans(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: active ? Colors.white : AppColors.slate,
+                                  color: active ? Colors.white : AppColors.clientText(context),
                                 ),
                                 side: BorderSide.none,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -179,7 +183,7 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
                                   language,
                                 ),
                                 textAlign: TextAlign.center,
-                                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                               ),
                             ),
                           )
@@ -205,9 +209,9 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
             // ── Footer: continue to vendor search ──
             Container(
               padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.creamDark)),
+              decoration: BoxDecoration(
+                color: AppColors.clientSurface(context),
+                border: Border(top: BorderSide(color: AppColors.clientBorder(context))),
               ),
               child: SafeArea(
                 top: false,
@@ -222,12 +226,12 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
                             draft.isEmpty
                                 ? clientLabel('Basket is empty', 'Kikapu kiko wazi', language)
                                 : '${draft.totalQty} ${clientLabel('items', 'vitu', language)} · ${draft.distinctCount} ${clientLabel('kinds', 'aina', language)}',
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             clientLabel('Totals are priced per vendor next', 'Jumla itahesabiwa kwa kila muuzaji', language),
-                            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                           ),
                         ],
                       ),
@@ -255,6 +259,7 @@ class _BasketBuilderScreenState extends ConsumerState<BasketBuilderScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -281,8 +286,8 @@ class _ItemRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: selected ? AppColors.teal : AppColors.creamDark, width: selected ? 1.6 : 1),
+        color: AppColors.clientSurface(context),
+        border: Border.all(color: selected ? AppColors.teal : AppColors.clientBorder(context), width: selected ? 1.6 : 1),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -302,18 +307,18 @@ class _ItemRow extends StatelessWidget {
               children: [
                 Text(
                   language == 'Swahili' && item.nameSwahili.isNotEmpty ? item.nameSwahili : item.name,
-                  style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800),
+                  style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   item.unit.isNotEmpty ? item.unit : clientLabel('per piece', 'kwa kipande', language),
-                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 ),
                 if (item.priceTzs > 0) ...[
                   const SizedBox(height: 2),
                   Text(
                     '${clientLabel('from', 'kuanzia', language)} ${formatTzs(item.priceTzs)}',
-                    style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.teal),
+                    style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context)),
                   ),
                 ],
               ],
@@ -323,7 +328,7 @@ class _ItemRow extends StatelessWidget {
           // ── Qty stepper ──
           Container(
             decoration: BoxDecoration(
-              color: selected ? AppColors.teal : AppColors.cream,
+              color: selected ? AppColors.teal : AppColors.clientSurfaceRaised(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -332,7 +337,7 @@ class _ItemRow extends StatelessWidget {
                 IconButton(
                   onPressed: qty == 0 ? null : onRemove,
                   icon: const Icon(Icons.remove_rounded, size: 17),
-                  color: selected ? Colors.white : AppColors.slate,
+                  color: selected ? Colors.white : AppColors.clientSecondaryText(context),
                   padding: const EdgeInsets.all(6),
                   constraints: const BoxConstraints(),
                 ),
@@ -344,14 +349,14 @@ class _ItemRow extends StatelessWidget {
                     style: AppText.sans(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: selected ? Colors.white : AppColors.slate,
+                      color: selected ? Colors.white : AppColors.clientText(context),
                     ),
                   ),
                 ),
                 IconButton(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_rounded, size: 17),
-                  color: selected ? Colors.white : AppColors.slate,
+                  color: selected ? Colors.white : AppColors.clientSecondaryText(context),
                   padding: const EdgeInsets.all(6),
                   constraints: const BoxConstraints(),
                 ),

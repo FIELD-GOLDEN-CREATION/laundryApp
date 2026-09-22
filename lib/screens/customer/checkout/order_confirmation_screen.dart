@@ -8,6 +8,7 @@ import '../../../state/orders_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/primary_cta_bar.dart';
+import '../../../widgets/video_background.dart';
 
 /// Shown right after the client finishes scheduling — the client pays later
 /// (at pickup/drop-off), so this just confirms the order was placed with a
@@ -34,8 +35,9 @@ class OrderConfirmationScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.isClientDark(context) ? const Color(0xFF0A1117) : AppColors.cream,
-      body: SafeArea(
-        child: SingleChildScrollView(
+      body: ClientBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(28, 20, 28, 20),
           child: Column(
             children: [
@@ -73,6 +75,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
       bottomNavigationBar: PrimaryCtaBar(

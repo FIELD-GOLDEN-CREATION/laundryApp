@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +13,7 @@ import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../widgets/remote_image.dart';
+import '../../../widgets/video_background.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -51,43 +52,80 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final tab = ref.watch(ordersTabProvider);
     // Delivered/collected orders belong on the Completed tab, not Active —
     // even though ordersProvider's unfiltered API fetch can still include them.
-    final activeOrders = ref.watch(ordersProvider).where((o) => o.trackStep != 4).toList();
+    final activeOrders = ref
+        .watch(ordersProvider)
+        .where((o) => o.trackStep != 4)
+        .toList();
     final completed = ref.watch(completedOrdersProvider);
     final orders = tab == 0 ? activeOrders : completed;
     final shops = ref.watch(shopsProvider).items;
     final language = ref.watch(clientPreferencesProvider).language;
 
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
-            children: [
-              Text(clientLabel('Your orders', 'Oda zako', language), style: AppText.serif(fontSize: 28, color: AppColors.clientText(context))),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: AppColors.isClientDark(context) ? const Color(0xFF182631) : AppColors.creamDark, borderRadius: BorderRadius.circular(999)),
-                child: Row(
-                  children: [
-                    Expanded(child: _TabButton(label: clientLabel('Active', 'Inayoendelea', language), active: tab == 0, onTap: () => _pickTab(0))),
-                    Expanded(child: _TabButton(label: clientLabel('Completed', 'Imekamilika', language), active: tab == 1, onTap: () => _pickTab(1))),
-                  ],
+      body: ClientBackground(
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
+              children: [
+                Text(
+                  clientLabel('Your orders', 'Oda zako', language),
+                  style: AppText.serif(
+                    fontSize: 28,
+                    color: AppColors.clientText(context),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              for (var i = 0; i < orders.length; i++) ...[
-                _OrderCard(
-                  order: orders[i],
-                  shop: _shopFor(shops, orders[i].shop),
-                  showContact: tab == 0,
-                  language: language,
-                  onTap: () => context.push('/order-detail', extra: orders[i].id),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.isClientDark(context)
+                        ? const Color(0xFF182631)
+                        : AppColors.creamDark,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _TabButton(
+                          label: clientLabel(
+                            'Active',
+                            'Inayoendelea',
+                            language,
+                          ),
+                          active: tab == 0,
+                          onTap: () => _pickTab(0),
+                        ),
+                      ),
+                      Expanded(
+                        child: _TabButton(
+                          label: clientLabel(
+                            'Completed',
+                            'Imekamilika',
+                            language,
+                          ),
+                          active: tab == 1,
+                          onTap: () => _pickTab(1),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                if (i != orders.length - 1) const SizedBox(height: 12),
+                const SizedBox(height: 18),
+                for (var i = 0; i < orders.length; i++) ...[
+                  _OrderCard(
+                    order: orders[i],
+                    shop: _shopFor(shops, orders[i].shop),
+                    showContact: tab == 0,
+                    language: language,
+                    onTap: () =>
+                        context.push('/order-detail', extra: orders[i].id),
+                  ),
+                  if (i != orders.length - 1) const SizedBox(height: 12),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -97,7 +135,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
 Shop? _shopFor(List<Shop> shops, String nameOrId) {
   for (final s in shops) {
-    if (s.name == nameOrId || s.slotId == nameOrId || '#${s.slotId}' == nameOrId || s.listSlotId == nameOrId) {
+    if (s.name == nameOrId ||
+        s.slotId == nameOrId ||
+        '#${s.slotId}' == nameOrId ||
+        s.listSlotId == nameOrId) {
       return s;
     }
   }
@@ -105,7 +146,11 @@ Shop? _shopFor(List<Shop> shops, String nameOrId) {
 }
 
 class _TabButton extends StatelessWidget {
-  const _TabButton({required this.label, required this.active, required this.onTap});
+  const _TabButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -114,7 +159,9 @@ class _TabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? AppColors.clientSurfaceRaised(context) : Colors.transparent,
+      color: active
+          ? AppColors.clientSurfaceRaised(context)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
@@ -127,7 +174,9 @@ class _TabButton extends StatelessWidget {
               style: AppText.sans(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: active ? AppColors.teal : AppColors.muted,
+                color: active
+                    ? AppColors.clientTealText(context)
+                    : AppColors.clientSecondaryText(context),
               ),
             ),
           ),
@@ -138,7 +187,13 @@ class _TabButton extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.shop, required this.onTap, required this.language, this.showContact = false});
+  const _OrderCard({
+    required this.order,
+    required this.shop,
+    required this.onTap,
+    required this.language,
+    this.showContact = false,
+  });
 
   final Order order;
   final Shop? shop;
@@ -152,7 +207,7 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-       color: AppColors.clientSurface(context),
+      color: AppColors.clientSurface(context),
       borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -160,7 +215,7 @@ class _OrderCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-             border: Border.all(color: AppColors.clientBorder(context)),
+            border: Border.all(color: AppColors.clientBorder(context)),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Column(
@@ -169,39 +224,78 @@ class _OrderCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 44, height: 44, child: RemoteImage(url: shop?.imageUrl ?? '', fallback: 'Shop', circle: true)),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: RemoteImage(
+                      url: shop?.imageUrl ?? '',
+                      fallback: 'Shop',
+                      circle: true,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(order.shop, style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+                        Text(
+                          order.shop,
+                          style: AppText.sans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.clientText(context),
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           '${order.id} Â· ${order.items}',
-                           style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                          style: AppText.sans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.clientSecondaryText(context),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(color: order.statusBg, borderRadius: BorderRadius.circular(999)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: order.statusBg,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                     child: Text(
                       order.status,
-                      style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: order.statusFg),
+                      style: AppText.sans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: order.statusFg,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const Padding(padding: EdgeInsets.symmetric(vertical: 13), child: Divider(height: 1, color: AppColors.cream)),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                child: Divider(
+                  height: 1,
+                  color: AppColors.clientBorder(context),
+                ),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
                     child: Text(
                       order.date,
-                      style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
+                      style: AppText.sans(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.clientSecondaryText(context),
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -212,7 +306,11 @@ class _OrderCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           order.total,
-                          style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.teal),
+                          style: AppText.sans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.clientTealText(context),
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -220,13 +318,23 @@ class _OrderCard extends StatelessWidget {
                         const SizedBox(width: 10),
                         _ContactIconButton(
                           icon: AppIcons.whatsapp,
-                          bg: AppColors.tealMuted,
-                          iconColor: AppColors.teal,
+                          bg: AppColors.clientPillTeal(context),
+                          iconColor: AppColors.clientTealText(context),
                           onTap: () async {
-                            final ok = await launchWhatsAppChat(shop?.phone ?? "");
+                            final ok = await launchWhatsAppChat(
+                              shop?.phone ?? "",
+                            );
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(clientLabel("Couldn't open WhatsApp.", 'Imeshindwa kufungua WhatsApp.', language))),
+                                SnackBar(
+                                  content: Text(
+                                    clientLabel(
+                                      "Couldn't open WhatsApp.",
+                                      'Imeshindwa kufungua WhatsApp.',
+                                      language,
+                                    ),
+                                  ),
+                                ),
                               );
                             }
                           },
@@ -240,7 +348,15 @@ class _OrderCard extends StatelessWidget {
                             final ok = await launchPhoneCall(shop?.phone ?? "");
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(clientLabel("Couldn't start the call.", 'Imeshindwa kupiga simu.', language))),
+                                SnackBar(
+                                  content: Text(
+                                    clientLabel(
+                                      "Couldn't start the call.",
+                                      'Imeshindwa kupiga simu.',
+                                      language,
+                                    ),
+                                  ),
+                                ),
                               );
                             }
                           },
@@ -259,7 +375,12 @@ class _OrderCard extends StatelessWidget {
 }
 
 class _ContactIconButton extends StatelessWidget {
-  const _ContactIconButton({required this.icon, required this.bg, required this.iconColor, required this.onTap});
+  const _ContactIconButton({
+    required this.icon,
+    required this.bg,
+    required this.iconColor,
+    required this.onTap,
+  });
 
   final String icon;
   final Color bg;
@@ -274,7 +395,11 @@ class _ContactIconButton extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(width: 36, height: 36, child: Center(child: AppIcon(icon, size: 17, color: iconColor))),
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(child: AppIcon(icon, size: 17, color: iconColor)),
+        ),
       ),
     );
   }

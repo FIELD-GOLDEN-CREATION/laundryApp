@@ -25,6 +25,7 @@ import '../../../utils/location.dart';
 import '../../../widgets/primary_cta_bar.dart';
 import '../../../widgets/radio_option_card.dart';
 import '../../../widgets/round_back_button.dart';
+import '../../../widgets/video_background.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key, required this.shopId});
@@ -256,8 +257,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     }();
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
+      body: ClientBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,6 +378,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             ],
           ),
         ),
+        ),
       ),
       bottomNavigationBar: PrimaryCtaBar(
         label: ctaLabel,
@@ -407,9 +410,9 @@ class _ShopDropOffCard extends StatelessWidget {
           Container(
             width: 46,
             height: 46,
-            decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(15)),
+            decoration: BoxDecoration(color: AppColors.clientPillTeal(context), borderRadius: BorderRadius.circular(15)),
             alignment: Alignment.center,
-            child: const Icon(Icons.storefront_outlined, size: 22, color: AppColors.teal),
+            child: Icon(Icons.storefront_outlined, size: 22, color: AppColors.clientTealText(context)),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -420,7 +423,7 @@ class _ShopDropOffCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(shop, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                 const SizedBox(height: 2),
-                Text(clientLabel('Pay at the shop — no delivery fee', 'Ulipa dukani — hakuna nauli', language), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.teal)),
+                Text(clientLabel('Pay at the shop — no delivery fee', 'Ulipa dukani — hakuna nauli', language), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientTealText(context))),
               ],
             ),
           ),
@@ -566,6 +569,8 @@ class _AddressIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bg = this.bg == AppColors.tealMuted ? AppColors.clientPillTeal(context) : this.bg;
+    final fg = this.fg == AppColors.teal ? AppColors.clientTealText(context) : (this.fg == AppColors.amber ? AppColors.clientAmberText(context) : this.fg);
     return Container(
       width: 40,
       height: 40,
@@ -637,7 +642,7 @@ class _TimeSlotChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? AppColors.tealMuted : AppColors.clientSurface(context),
+      color: active ? AppColors.clientPillTeal(context) : AppColors.clientSurface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: active ? AppColors.teal : AppColors.clientBorder(context), width: 1.5),
@@ -651,7 +656,7 @@ class _TimeSlotChip extends StatelessWidget {
             style: AppText.sans(
               fontSize: 13.5,
               fontWeight: FontWeight.w800,
-              color: active ? AppColors.teal : AppColors.clientText(context),
+              color: active ? AppColors.clientTealText(context) : AppColors.clientText(context),
             ),
           ),
         ),

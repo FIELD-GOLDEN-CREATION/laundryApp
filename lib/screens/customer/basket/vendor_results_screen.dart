@@ -14,6 +14,7 @@ import '../../../theme/text_styles.dart';
 import '../../../utils/currency.dart';
 import '../../../widgets/browse_location_sheet.dart';
 import '../../../widgets/skeleton_loader.dart';
+import '../../../widgets/video_background.dart';
 
 /// Step 2 of the basket flow: every nearby vendor priced for the exact
 /// basket — total, distance in km, coverage — ranked by Best match (blended
@@ -92,8 +93,9 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
       appBar: AppBar(
         title: Text(clientLabel('Choose vendor', 'Chagua muuzaji', language)),
       ),
-      body: SafeArea(
-        child: Column(
+      body: ClientBackground(
+        child: SafeArea(
+          child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
@@ -108,7 +110,7 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
                             'Vitu ${draft.totalQty} vimehesabiwa kwa kila muuzaji karibu nawe.',
                             language,
                           ),
-                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                   ),
                   const SizedBox(height: 8),
                   Align(
@@ -122,7 +124,7 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
                   // ── Sort: best match blends rating+price+distance (rating weighted heaviest); cheapest/nearest are price-only/distance-only ──
                   Container(
                     decoration: BoxDecoration(
-                      color: AppColors.cream,
+                      color: AppColors.clientSurfaceRaised(context),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.all(3),
@@ -148,7 +150,7 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
                                   style: AppText.sans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,
-                                    color: s == _sort ? Colors.white : AppColors.muted,
+                                    color: s == _sort ? Colors.white : AppColors.clientSecondaryText(context),
                                   ),
                                 ),
                               ),
@@ -180,7 +182,7 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
                               language,
                             ),
                             textAlign: TextAlign.center,
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                           ),
                           const SizedBox(height: 12),
                           FilledButton(
@@ -206,7 +208,7 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
                               language,
                             ),
                             textAlign: TextAlign.center,
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                           ),
                         ),
                       );
@@ -230,6 +232,7 @@ class _VendorResultsScreenState extends ConsumerState<VendorResultsScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -264,9 +267,9 @@ class _QuoteCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.clientSurface(context),
         border: Border.all(
-          color: highlight ? AppColors.teal : AppColors.creamDark,
+          color: highlight ? AppColors.teal : AppColors.clientBorder(context),
           width: highlight ? 1.6 : 1,
         ),
         borderRadius: BorderRadius.circular(20),
@@ -280,13 +283,13 @@ class _QuoteCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.tealMuted,
+                  color: AppColors.clientPillTeal(context),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   shop.name.isNotEmpty ? shop.name[0].toUpperCase() : '?',
-                  style: AppText.sans(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  style: AppText.sans(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                 ),
               ),
               const SizedBox(width: 11),
@@ -294,7 +297,7 @@ class _QuoteCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(shop.name, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800)),
+                    Text(shop.name, style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                     const SizedBox(height: 2),
                     Row(
                       children: [
@@ -302,15 +305,15 @@ class _QuoteCard extends StatelessWidget {
                         const SizedBox(width: 2),
                         Text(
                           shop.rating.isNotEmpty ? shop.rating : '—',
-                          style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                          style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(Icons.location_on_outlined, size: 14, color: AppColors.teal),
+                        Icon(Icons.location_on_outlined, size: 14, color: AppColors.clientTealText(context)),
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
                             distance,
-                            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
                           ),
                         ),
                       ],
@@ -326,16 +329,16 @@ class _QuoteCard extends StatelessWidget {
             runSpacing: 6,
             children: [
               if (quote.isRecommended)
-                _Badge(label: clientLabel('#1 Best match', '#1 Bora', language), color: AppColors.teal, bg: AppColors.tealMuted),
+                _Badge(label: clientLabel('#1 Best match', '#1 Bora', language), color: AppColors.clientTealText(context), bg: AppColors.clientPillTeal(context)),
               if (quote.isCheapest)
-                _Badge(label: clientLabel('Cheapest', 'Rahisi zaidi', language), color: AppColors.amber, bg: AppColors.amberLight),
+                _Badge(label: clientLabel('Cheapest', 'Rahisi zaidi', language), color: AppColors.clientAmberText(context), bg: AppColors.clientPillAmber(context)),
               if (quote.isNearest)
-                _Badge(label: clientLabel('Nearest', 'Karibu zaidi', language), color: AppColors.teal, bg: AppColors.tealMuted),
+                _Badge(label: clientLabel('Nearest', 'Karibu zaidi', language), color: AppColors.clientTealText(context), bg: AppColors.clientPillTeal(context)),
               if (!quote.fullCoverage)
                 _Badge(
                   label: '${quote.matched}/${quote.total} ${clientLabel('items', 'vitu', language)}',
-                  color: AppColors.amber,
-                  bg: AppColors.amberLight,
+                  color: AppColors.clientAmberText(context),
+                  bg: AppColors.clientPillAmber(context),
                 ),
             ],
           ),
@@ -343,7 +346,7 @@ class _QuoteCard extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               '${clientLabel('Missing', 'Hakuna', language)}: ${quote.missingNames.take(3).join(', ')}${quote.missingNames.length > 3 ? '…' : ''}',
-              style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.amber),
+              style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientAmberText(context)),
             ),
           ],
           const SizedBox(height: 8),
@@ -355,7 +358,7 @@ class _QuoteCard extends StatelessWidget {
               dense: true,
               title: Text(
                 clientLabel('Price breakdown', 'Muhtasari wa bei', language),
-                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.teal),
+                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context)),
               ),
               children: [
                 for (final entry in quantities.entries)
@@ -367,12 +370,12 @@ class _QuoteCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               '${_itemName(entry.key)} × ${entry.value}',
-                              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                              style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                             ),
                           ),
                           Text(
                             formatTzs(quote.prices[entry.key]! * entry.value),
-                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800),
+                            style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                           ),
                         ],
                       ),
@@ -387,9 +390,9 @@ class _QuoteCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(clientLabel('TOTAL', 'JUMLA', language), style: AppText.eyebrow()),
+                    Text(clientLabel('TOTAL', 'JUMLA', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                     const SizedBox(height: 2),
-                    Text(formatTzs(quote.totalTzs), style: AppText.serif(fontSize: 21)),
+                    Text(formatTzs(quote.totalTzs), style: AppText.serif(fontSize: 21, color: AppColors.clientText(context))),
                   ],
                 ),
               ),

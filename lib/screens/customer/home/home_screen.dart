@@ -14,6 +14,7 @@ import '../../../state/profile_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/section_header.dart';
+import '../../../widgets/video_background.dart';
 import 'widgets/active_order_banner.dart';
 import 'widgets/create_basket_widget.dart';
 import 'widgets/offer_card.dart';
@@ -49,7 +50,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isGuest = ref.watch(authProvider.select((s) => s.role == UserRole.guest));
+    final isGuest = ref.watch(
+      authProvider.select((s) => s.role == UserRole.guest),
+    );
     final language = ref.watch(clientPreferencesProvider).language;
     final shops = ref.watch(shopsWithDistanceProvider);
     final offers = ref.watch(offersProvider).items;
@@ -72,109 +75,166 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Default pickup address: first saved address for this customer.
     final addresses = ref.watch(profileProvider.select((s) => s.addresses));
-    final unread = ref.watch(notificationsProvider.select((s) => s.unreadCount));
+    final unread = ref.watch(
+      notificationsProvider.select((s) => s.unreadCount),
+    );
     final addressLine = addresses.isNotEmpty ? addresses.first.line : '';
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Header(
-                 isGuest: isGuest,
-                 language: language,
-                 addressLine: addressLine,
-                unreadCount: unread,
-                onProfile: () {
-                  if (gateGuest(ref, context, 'Log in to see your profile, addresses and saved shops.')) return;
-                  context.go('/profile');
-                },
-                onNotifs: () => context.push('/notifs'),
-                onSearch: () => context.push('/search'),
-              ),
-              const SizedBox(height: 14),
-              if (!isGuest && activeOrder != null)
-                ActiveOrderBanner(
-                   title: clientLabel('Order ${activeOrder.id} is being washed', 'Oda ${activeOrder.id} inafuliwa', language),
-                   subtitle: clientLabel('Tap to track your laundry in real time', 'Bofya kufuatilia oda yako moja kwa moja', language),
-                  onTap: () => context.push('/track', extra: activeOrder!.id),
+      body: ClientBackground(
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Header(
+                  isGuest: isGuest,
+                  language: language,
+                  addressLine: addressLine,
+                  unreadCount: unread,
+                  onProfile: () {
+                    if (gateGuest(
+                      ref,
+                      context,
+                      'Log in to see your profile, addresses and saved shops.',
+                    ))
+                      return;
+                    context.go('/profile');
+                  },
+                  onNotifs: () => context.push('/notifs'),
+                  onSearch: () => context.push('/search'),
                 ),
-              const CreateBasketWidget(),
-              const SizedBox(height: 12),
-              SectionHeader(title: clientLabel('Just for you', 'Kwa ajili yako', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
-              SizedBox(
-                height: 190,
-                child: offers.isEmpty
-                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
-                        itemCount: offers.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (_, i) => OfferCard(offer: offers[i]),
-                      ),
-              ),
-              if (packages.isNotEmpty) ...[
-                SectionHeader(title: clientLabel('Popular packages', 'Vifurushi maarufu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () {}),
-                const PackagesCarousel(),
-              ],
-              const SizedBox(height: 12),
-               SectionHeader(title: clientLabel('Categories', 'Kategoria', language)),
-              CategoryCardsWidget(
-                onCategoryTap: (category) {
-                  if (gateGuest(
-                    ref,
-                    context,
-                    'Log in as a customer to view ${category.name}.',
-                    redirectPath: '/category-detail',
-                    redirectExtra: category,
-                  )) {
-                    return;
-                  }
-                  context.push('/category-detail', extra: category);
-                },
-              ),
-              const SizedBox(height: 12),
-              const DeliveryWidget(),
-              const SizedBox(height: 12),
-              if (reviews.isNotEmpty) ...[
-                SectionHeader(title: clientLabel('What our customers say', 'Wateja wetu wanasema', language)),
-                const ReviewsWidget(),
-              ],
-              const SizedBox(height: 6),
-              const VendorBannerWidget(),
-              const SizedBox(height: 8),
-               SectionHeader(title: clientLabel('Nearby shops', 'Maduka yaliyo karibu', language), seeAllLabel: clientLabel('See all', 'Tazama yote', language), onSeeAll: () => context.push('/search')),
-              SizedBox(
-                height: 250,
-                child: shops.isEmpty
-                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-                        itemCount: shops.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (_, i) => ShopCard(
-                          shop: shops[i],
-                          onTap: () {
-                            if (gateGuest(
-                              ref,
-                              context,
-                              'Log in as a customer to view ${shops[i].name}.',
-                              redirectPath: '/detail',
-                              redirectExtra: shops[i],
-                            )) {
-                              return;
-                            }
-                            context.push('/detail', extra: shops[i]);
-                          },
+                const SizedBox(height: 14),
+                if (!isGuest && activeOrder != null)
+                  ActiveOrderBanner(
+                    title: clientLabel(
+                      'Order ${activeOrder.id} is being washed',
+                      'Oda ${activeOrder.id} inafuliwa',
+                      language,
+                    ),
+                    subtitle: clientLabel(
+                      'Tap to track your laundry in real time',
+                      'Bofya kufuatilia oda yako moja kwa moja',
+                      language,
+                    ),
+                    onTap: () => context.push('/track', extra: activeOrder!.id),
+                  ),
+                const CreateBasketWidget(),
+                const SizedBox(height: 12),
+                SectionHeader(
+                  title: clientLabel(
+                    'Just for you',
+                    'Kwa ajili yako',
+                    language,
+                  ),
+                  seeAllLabel: clientLabel('See all', 'Tazama yote', language),
+                  onSeeAll: () => context.push('/search'),
+                ),
+                SizedBox(
+                  height: 190,
+                  child: offers.isEmpty
+                      ? const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.fromLTRB(22, 0, 22, 4),
+                          itemCount: offers.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 14),
+                          itemBuilder: (_, i) => OfferCard(offer: offers[i]),
                         ),
-                      ),
-              ),
-              const SizedBox(height: 12),
-            ],
+                ),
+                if (packages.isNotEmpty) ...[
+                  SectionHeader(
+                    title: clientLabel(
+                      'Popular packages',
+                      'Vifurushi maarufu',
+                      language,
+                    ),
+                    seeAllLabel: clientLabel(
+                      'See all',
+                      'Tazama yote',
+                      language,
+                    ),
+                    onSeeAll: () {},
+                  ),
+                  const PackagesCarousel(),
+                ],
+                const SizedBox(height: 12),
+                SectionHeader(
+                  title: clientLabel('Categories', 'Kategoria', language),
+                ),
+                CategoryCardsWidget(
+                  onCategoryTap: (category) {
+                    if (gateGuest(
+                      ref,
+                      context,
+                      'Log in as a customer to view ${category.name}.',
+                      redirectPath: '/category-detail',
+                      redirectExtra: category,
+                    )) {
+                      return;
+                    }
+                    context.push('/category-detail', extra: category);
+                  },
+                ),
+                const SizedBox(height: 12),
+                const DeliveryWidget(),
+                const SizedBox(height: 12),
+                if (reviews.isNotEmpty) ...[
+                  SectionHeader(
+                    title: clientLabel(
+                      'What our customers say',
+                      'Wateja wetu wanasema',
+                      language,
+                    ),
+                  ),
+                  const ReviewsWidget(),
+                ],
+                const SizedBox(height: 6),
+                const VendorBannerWidget(),
+                const SizedBox(height: 8),
+                SectionHeader(
+                  title: clientLabel(
+                    'Nearby shops',
+                    'Maduka yaliyo karibu',
+                    language,
+                  ),
+                  seeAllLabel: clientLabel('See all', 'Tazama yote', language),
+                  onSeeAll: () => context.push('/search'),
+                ),
+                SizedBox(
+                  height: 250,
+                  child: shops.isEmpty
+                      ? const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                          itemCount: shops.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 14),
+                          itemBuilder: (_, i) => ShopCard(
+                            shop: shops[i],
+                            onTap: () {
+                              if (gateGuest(
+                                ref,
+                                context,
+                                'Log in as a customer to view ${shops[i].name}.',
+                                redirectPath: '/detail',
+                                redirectExtra: shops[i],
+                              )) {
+                                return;
+                              }
+                              context.push('/detail', extra: shops[i]);
+                            },
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -183,7 +243,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.isGuest, required this.language, required this.addressLine, required this.onProfile, required this.onNotifs, required this.onSearch, this.unreadCount = 0});
+  const _Header({
+    required this.isGuest,
+    required this.language,
+    required this.addressLine,
+    required this.onProfile,
+    required this.onNotifs,
+    required this.onSearch,
+    this.unreadCount = 0,
+  });
 
   final bool isGuest;
   final String language;
@@ -208,7 +276,10 @@ class _Header extends StatelessWidget {
               child: Container(
                 width: 210,
                 height: 210,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
             Positioned(
@@ -219,7 +290,9 @@ class _Header extends StatelessWidget {
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.09),
+                  ),
                 ),
               ),
             ),
@@ -240,33 +313,58 @@ class _Header extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                               clientLabel('PICKUP LOCATION', 'MAHALI PA KUCHUKUA', language),
-                              style: AppText.eyebrow(color: AppColors.cream.withValues(alpha: 0.6)),
+                              clientLabel(
+                                'PICKUP LOCATION',
+                                'MAHALI PA KUCHUKUA',
+                                language,
+                              ),
+                              style: AppText.eyebrow(
+                                color: AppColors.cream.withValues(alpha: 0.6),
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
                                 const AppIcon(AppIcons.locationPin, size: 15),
                                 const SizedBox(width: 7),
-                                 Text(
-                                   addressLine.isNotEmpty ? addressLine : clientLabel('Set pickup address', 'Weka mahali pa kuchukua', language),
-                                   style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cream),
-                                 ),
+                                Text(
+                                  addressLine.isNotEmpty
+                                      ? addressLine
+                                      : clientLabel(
+                                          'Set pickup address',
+                                          'Weka mahali pa kuchukua',
+                                          language,
+                                        ),
+                                  style: AppText.sans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.cream,
+                                  ),
+                                ),
                                 const SizedBox(width: 7),
-                                AppIcon(AppIcons.chevronDownSmall, size: 11, color: AppColors.cream.withValues(alpha: 0.7)),
+                                AppIcon(
+                                  AppIcons.chevronDownSmall,
+                                  size: 11,
+                                  color: AppColors.cream.withValues(alpha: 0.7),
+                                ),
                               ],
                             ),
                           ],
                         ),
                       ),
-                      _HeaderIconButton(icon: AppIcons.bell, badge: unreadCount > 0, count: unreadCount, onTap: onNotifs),
+                      _HeaderIconButton(
+                        icon: AppIcons.bell,
+                        badge: unreadCount > 0,
+                        count: unreadCount,
+                        onTap: onNotifs,
+                      ),
                     ],
                   ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: Material(
-                    color: AppColors.cream,
+                    color: AppColors.clientSurface(context),
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
@@ -279,8 +377,16 @@ class _Header extends StatelessWidget {
                             const AppIcon(AppIcons.search, size: 17),
                             const SizedBox(width: 10),
                             Text(
-                                   clientLabel('Search services or shops', 'Tafuta huduma au maduka', language),
-                              style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                              clientLabel(
+                                'Search services or shops',
+                                'Tafuta huduma au maduka',
+                                language,
+                              ),
+                              style: AppText.sans(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.clientSecondaryText(context),
+                              ),
                             ),
                           ],
                         ),
@@ -333,7 +439,10 @@ class _HeaderIconButton extends StatelessWidget {
                   top: 6,
                   right: 6,
                   child: Container(
-                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: const BoxDecoration(
                       color: AppColors.amber,
@@ -342,7 +451,11 @@ class _HeaderIconButton extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Text(
                       count > 99 ? '99+' : '$count',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.black),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),

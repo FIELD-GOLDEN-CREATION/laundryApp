@@ -7,6 +7,7 @@ import '../../../state/profile_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../widgets/video_background.dart';
 
 const _kPlans = [
   _Plan(
@@ -173,7 +174,6 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
     final titles = ['Select Plan', 'Chagua Mpango', 'Your Details', 'Taarifa Zako', 'Application Submitted', 'Oda Imewasilishwa'];
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
       appBar: AppBar(
         backgroundColor: AppColors.slate,
         foregroundColor: AppColors.cream,
@@ -192,7 +192,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
           },
         ),
       ),
-      body: _step == 2 ? _buildSuccess(lang, profile) : _step == 1 ? _buildForm(lang, profile) : _buildPlanSelection(lang),
+      body: ClientBackground(child: _step == 2 ? _buildSuccess(lang, profile) : _step == 1 ? _buildForm(lang, profile) : _buildPlanSelection(lang)),
     );
   }
 
@@ -204,7 +204,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
       children: [
         Text(
           clientLabel('Choose a plan that fits your business', 'Chagua mpango unaofaa biashara yako', lang),
-          style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.muted),
+          style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
         ),
         const SizedBox(height: 16),
         for (final plan in _kPlans) ...[
@@ -252,7 +252,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.tealMuted,
+            color: AppColors.clientPillTeal(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.teal.withValues(alpha: 0.2)),
           ),
@@ -278,11 +278,11 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
                   children: [
                     Text(
                       clientLabel(selectedPlan.name, selectedPlan.nameSw, lang),
-                      style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                     ),
                     Text(
                       '${selectedPlan.price}${clientLabel(selectedPlan.period, selectedPlan.periodSw, lang)}',
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                   ],
                 ),
@@ -291,7 +291,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
                 onTap: _backToPlans,
                 child: Text(
                   clientLabel('Change', 'Badilisha', lang),
-                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                 ),
               ),
             ],
@@ -302,7 +302,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
         // Section: Personal info
         Text(
           clientLabel('PERSONAL INFORMATION', 'TAARIFA BINAFSI', lang),
-          style: AppText.eyebrow(color: AppColors.muted),
+          style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)),
         ),
         const SizedBox(height: 10),
         _FormCard(
@@ -332,7 +332,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
         // Section: Business info
         Text(
           clientLabel('BUSINESS INFORMATION', 'TAARIFA ZA BIASHARA', lang),
-          style: AppText.eyebrow(color: AppColors.muted),
+          style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)),
         ),
         const SizedBox(height: 10),
         _FormCard(
@@ -414,16 +414,16 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.tealMuted,
+                color: AppColors.clientPillTeal(context),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.check_circle_rounded, size: 40, color: AppColors.teal),
+              child: Icon(Icons.check_circle_rounded, size: 40, color: AppColors.clientTealText(context)),
             ),
             const SizedBox(height: 24),
             Text(
               clientLabel('Application Submitted!', 'Oda Imewasilishwa!', lang),
-              style: AppText.serif(fontSize: 22, color: AppColors.slate),
+              style: AppText.serif(fontSize: 22, color: AppColors.clientText(context)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -433,7 +433,7 @@ class _VendorApplyScreenState extends ConsumerState<VendorApplyScreen> {
                 'Asante kwa nia yako ya kuwa muuzaji. Timu yetu itakagua oda yako na itakurudia ndani ya masaa 24-48.',
                 lang,
               ),
-              style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.muted),
+              style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -481,11 +481,11 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.tealMuted : AppColors.white,
+      color: selected ? AppColors.clientPillTeal(context) : AppColors.clientSurface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-          color: selected ? AppColors.teal : AppColors.creamDark,
+          color: selected ? AppColors.teal : AppColors.clientBorder(context),
           width: selected ? 2 : 1,
         ),
       ),
@@ -505,7 +505,7 @@ class _PlanCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: selected ? AppColors.teal : AppColors.creamDark,
+                        color: selected ? AppColors.teal : AppColors.clientBorder(context),
                         width: 2,
                       ),
                     ),
@@ -524,31 +524,31 @@ class _PlanCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Text(
                     clientLabel(plan.name, plan.nameSw, lang),
-                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate),
+                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
                   ),
                   if (plan.isPopular) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.amberLight,
+                        color: AppColors.clientPillAmber(context),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         clientLabel('Most Popular', 'Maarufu Zaidi', lang),
-                        style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.amber),
+                        style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context)),
                       ),
                     ),
                   ],
                   const Spacer(),
                   Text(
                     clientLabel(plan.price, plan.priceSw, lang),
-                    style: AppText.sans(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.teal),
+                    style: AppText.sans(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                   ),
                   if (plan.period.isNotEmpty)
                     Text(
                       clientLabel(plan.period, plan.periodSw, lang),
-                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                      style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                     ),
                 ],
               ),
@@ -556,7 +556,7 @@ class _PlanCard extends StatelessWidget {
               for (final feature in plan.features.asMap().entries) ...[
                 Row(
                   children: [
-                    const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.teal),
+                    Icon(Icons.check_circle_rounded, size: 16, color: AppColors.clientTealText(context)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -565,7 +565,7 @@ class _PlanCard extends StatelessWidget {
                           plan.featuresSw[feature.key],
                           lang,
                         ),
-                        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                       ),
                     ),
                   ],
@@ -631,7 +631,7 @@ class _FormField extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted),
+                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
               ),
               if (isRequired)
                 const Text(' *', style: TextStyle(color: AppColors.danger, fontSize: 12)),
@@ -646,14 +646,14 @@ class _FormField extends StatelessWidget {
             style: AppText.sans(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: readOnly ? AppColors.muted : AppColors.slate,
+              color: readOnly ? AppColors.clientSecondaryText(context) : AppColors.clientText(context),
             ),
             decoration: InputDecoration.collapsed(
               hintText: hint,
               hintStyle: AppText.sans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppColors.muted.withValues(alpha: 0.5),
+                color: AppColors.clientSecondaryText(context).withValues(alpha: 0.5),
               ),
             ),
           ),

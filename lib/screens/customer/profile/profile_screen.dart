@@ -18,6 +18,7 @@ import '../../../widgets/link_card_sheet.dart';
 import '../../../widgets/profile_action_tile.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/toggle_switch.dart';
+import '../../../widgets/video_background.dart';
 
 /// Notification preference rows — display configuration.
 const _kPreferenceLabels = ['Push notifications', 'Eco detergent by default', 'Contactless pickup'];
@@ -45,19 +46,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final language = ref.read(clientPreferencesProvider).language;
     return showModalBottomSheet<_ImagePickSource>(
       context: context,
-      backgroundColor: AppColors.cream,
+      backgroundColor: AppColors.clientSurface(context),
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.teal),
-              title: Text(clientLabel('Take photo', 'Piga picha', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+              leading: Icon(Icons.photo_camera_outlined, color: AppColors.clientTealText(sheetContext)),
+              title: Text(clientLabel('Take photo', 'Piga picha', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(sheetContext))),
               onTap: () => Navigator.pop(sheetContext, _ImagePickSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.teal),
-              title: Text(clientLabel('Choose from gallery', 'Chagua kwenye picha zako', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700)),
+              leading: Icon(Icons.photo_library_outlined, color: AppColors.clientTealText(sheetContext)),
+              title: Text(clientLabel('Choose from gallery', 'Chagua kwenye picha zako', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(sheetContext))),
               onTap: () => Navigator.pop(sheetContext, _ImagePickSource.gallery),
             ),
           ],
@@ -117,7 +118,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authEmail = ref.watch(authProvider.select((s) => s.authEmail));
 
     return Scaffold(
-      body: SafeArea(
+      body: ClientBackground(
+        child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [
@@ -209,7 +211,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Material(
-                color: AppColors.tealMuted,
+                color: AppColors.clientPillTeal(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                   side: BorderSide(color: AppColors.teal.withValues(alpha: 0.2), width: 1.5),
@@ -238,17 +240,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             children: [
                               Text(
                                 clientLabel('Become a Vendor', 'Kuwa Muuzaji', language),
-                                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.teal),
+                                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 clientLabel('Start your laundry business on FreshFold', 'Anza biashara yako ya ufagaji kwenye FreshFold', language),
-                                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right_rounded, size: 22, color: AppColors.teal),
+                        Icon(Icons.chevron_right_rounded, size: 22, color: AppColors.clientTealText(context)),
                       ],
                     ),
                   ),
@@ -305,7 +307,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       '+ ${clientLabel('Add address', 'Ongeza anwani', language)}',
-                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                     ),
                   ),
                 ),
@@ -407,7 +409,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 color: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                  side: BorderSide(color: AppColors.clientBorder(context), width: 1.5),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -420,13 +422,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     alignment: Alignment.center,
                     child: Text(
                        clientLabel('Log out', 'Toka', language),
-                      style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.amber),
+                      style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context)),
                     ),
                   ),
                 ),
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -465,7 +468,7 @@ class _ProfileMenuRow extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-           child: Row(children: [Icon(icon, size: 20, color: AppColors.teal), const SizedBox(width: 13), Expanded(child: Text(label, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientText(context)))), Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.clientSecondaryText(context))]),
+           child: Row(children: [Icon(icon, size: 20, color: AppColors.clientTealText(context)), const SizedBox(width: 13), Expanded(child: Text(label, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientText(context)))), Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.clientSecondaryText(context))]),
         ),
       ),
     ),
@@ -556,17 +559,17 @@ class _AddressRowState extends State<_AddressRow> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.clientSurface(dialogContext),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Delete address?', style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800)),
+        title: Text('Delete address?', style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientText(dialogContext))),
         content: Text(
           'This will remove "${widget.label}" from your saved addresses. This cannot be undone.',
-          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(dialogContext)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted)),
+            child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(dialogContext))),
           ),
           TextButton(
             onPressed: () async {
@@ -601,9 +604,9 @@ class _AddressRowState extends State<_AddressRow> {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(13)),
+                decoration: BoxDecoration(color: AppColors.clientPillTeal(context), borderRadius: BorderRadius.circular(13)),
                 alignment: Alignment.center,
-                child: const AppIcon(AppIcons.locationPin, size: 15, color: AppColors.teal),
+                child: AppIcon(AppIcons.locationPin, size: 15, color: AppColors.clientTealText(context)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -630,7 +633,7 @@ class _AddressRowState extends State<_AddressRow> {
                     const SizedBox(width: 14),
                     InkWell(
                       onTap: _startEditing,
-                      child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                      child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
                     ),
                   ],
                 ),
@@ -653,11 +656,11 @@ class _AddressRowState extends State<_AddressRow> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
+                  AppIcon(AppIcons.locationPin, size: 14, color: AppColors.clientTealText(context)),
                   const SizedBox(width: 6),
                   Text(
                     'Use current location',
-                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                   ),
                 ],
               ),
@@ -670,7 +673,7 @@ class _AddressRowState extends State<_AddressRow> {
                     color: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                      side: BorderSide(color: AppColors.clientBorder(context), width: 1.5),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -678,7 +681,7 @@ class _AddressRowState extends State<_AddressRow> {
                       child: Container(
                         height: 44,
                         alignment: Alignment.center,
-                        child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted)),
+                        child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context))),
                       ),
                     ),
                   ),
@@ -803,9 +806,9 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
         child: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
-            decoration: const BoxDecoration(
-              color: AppColors.cream,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            decoration: BoxDecoration(
+              color: AppColors.clientSurface(context),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -819,16 +822,16 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                     decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
                   ),
                 ),
-                Text('Add address', style: AppText.serif(fontSize: 22)),
+                Text('Add address', style: AppText.serif(fontSize: 22, color: AppColors.clientText(context))),
                 const SizedBox(height: 3),
                 Text(
                   'Saved to your account for pickup and delivery',
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
                 ),
                 const SizedBox(height: 16),
                 _AddAddressField(label: 'Label', hint: 'Home, Work, ...', controller: _labelCtrl),
                 const SizedBox(height: 12),
-                Text('Address', style: AppText.eyebrow()),
+                Text('Address', style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
                 const SizedBox(height: 7),
                 AddressSearchField(
                   controller: _lineCtrl,
@@ -845,13 +848,13 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_locating)
-                        const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal))
+                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.clientTealText(context)))
                       else
-                        const AppIcon(AppIcons.locationPin, size: 14, color: AppColors.teal),
+                        AppIcon(AppIcons.locationPin, size: 14, color: AppColors.clientTealText(context)),
                       const SizedBox(width: 6),
                       Text(
                         _locating ? 'Getting location...' : 'Use current location',
-                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                       ),
                     ],
                   ),
@@ -868,7 +871,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                         color: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
-                          side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                          side: BorderSide(color: AppColors.clientBorder(context), width: 1.5),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
@@ -876,7 +879,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                           child: Container(
                             height: 52,
                             alignment: Alignment.center,
-                            child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.muted)),
+                            child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context))),
                           ),
                         ),
                       ),
@@ -927,23 +930,23 @@ class _AddAddressField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppText.eyebrow()),
+        Text(label, style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
         const SizedBox(height: 7),
         Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.creamDark),
+            color: AppColors.clientInputFill(context),
+            border: Border.all(color: AppColors.clientBorder(context)),
             borderRadius: BorderRadius.circular(14),
           ),
           alignment: Alignment.centerLeft,
           child: TextField(
             controller: controller,
-            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
+            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
             decoration: InputDecoration.collapsed(
               hintText: hint,
-              hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+              hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
             ),
           ),
         ),
@@ -975,18 +978,18 @@ class _SavedCardRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('â€¢â€¢â€¢â€¢ ${card.last4}', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800)),
+                Text('â€¢â€¢â€¢â€¢ ${card.last4}', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                 const SizedBox(height: 2),
                 Text(
                   '${card.holderName} Â· Expires ${card.expiry}',
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                 ),
               ],
             ),
           ),
           InkWell(
             onTap: onRemove,
-            child: Text('Remove', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.amber)),
+            child: Text('Remove', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context))),
           ),
         ],
       ),

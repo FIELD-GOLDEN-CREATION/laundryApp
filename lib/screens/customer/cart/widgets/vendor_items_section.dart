@@ -125,9 +125,19 @@ class _VendorItemsSectionState extends ConsumerState<VendorItemsSection> {
               TextField(
                 controller: _searchCtrl,
                 textInputAction: TextInputAction.search,
+                style: AppText.sans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.clientText(context),
+                ),
                 decoration: InputDecoration(
                   hintText: clientLabel('Search this vendor\'s items…', 'Tafuta vitu vya muuzaji…', language),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  hintStyle: AppText.sans(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.clientSecondaryText(context),
+                  ),
+                  prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.clientMutedIcon(context)),
                   suffixIcon: _query.isEmpty
                       ? null
                       : IconButton(
@@ -135,7 +145,7 @@ class _VendorItemsSectionState extends ConsumerState<VendorItemsSection> {
                           onPressed: () => _searchCtrl.clear(),
                         ),
                   filled: true,
-                  fillColor: AppColors.clientSurfaceRaised(context),
+                  fillColor: AppColors.clientInputFill(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -233,7 +243,7 @@ class _CategoryHeader extends StatelessWidget {
                 ),
                 child: Text(
                   '$count',
-                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                  style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -292,7 +302,7 @@ class _VendorItemRow extends StatelessWidget {
               children: [
                 Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
                 const SizedBox(height: 2),
-                Text(formatMoney(item.price), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.teal)),
+                Text(formatMoney(item.price), style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context))),
               ],
             ),
           ),

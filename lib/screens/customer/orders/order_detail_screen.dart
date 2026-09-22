@@ -19,6 +19,7 @@ import '../../../utils/cart_math.dart';
 import '../../../widgets/curved_clipper.dart';
 import '../../../widgets/remote_image.dart';
 import '../../../widgets/round_back_button.dart';
+import '../../../widgets/video_background.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, this.orderId});
@@ -71,9 +72,10 @@ class OrderDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF080D12) : AppColors.cream,
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
+      body: ClientBackground(
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
           child: Column(children: [
             Container(
               color: AppColors.slate,
@@ -204,7 +206,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   const SizedBox(height: 2),
                                   Text(
                                     clientLabel('Saved to your profile', 'Imehifadhiwaswa kwenye wasifu wako', language),
-                                    style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted),
+                                    style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
                                   ),
                                 ],
                               ),
@@ -289,6 +291,7 @@ class OrderDetailScreen extends ConsumerWidget {
               ),
             ),
           ]),
+        ),
         ),
       ),
     );
@@ -593,7 +596,7 @@ class _ProfileInfoRow extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted)),
+            Text(label, style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context))),
             const SizedBox(height: 1),
             Text(value, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
           ],
@@ -644,7 +647,7 @@ class _ReviewCard extends StatelessWidget {
               child: Icon(
                 i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
                 size: 18,
-                color: i < review.rating ? AppColors.amber : AppColors.creamDark,
+                color: i < review.rating ? AppColors.amber : AppColors.clientBorder(context),
               ),
             )),
           ),
@@ -707,13 +710,13 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
             children: [
               Text(
                 isEdit ? clientLabel('Edit your review', 'Hariri maoni yako', language) : clientLabel('Rate your order', 'Kadiria oda yako', language),
-                style: AppText.serif(fontSize: 20),
+                style: AppText.serif(fontSize: 20, color: AppColors.clientText(ctx)),
               ),
               const SizedBox(height: 6),
               Text(
                 clientLabel('How was your experience with ${order.shop}?', 'Uzoefu wako na ${order.shop} ulikuwaje?', language),
                 textAlign: TextAlign.center,
-                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(ctx)),
               ),
               const SizedBox(height: 20),
               Row(
@@ -725,7 +728,7 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
                     child: Icon(
                       i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
                       size: 36,
-                      color: i < rating ? AppColors.amber : AppColors.creamDark,
+                      color: i < rating ? AppColors.amber : AppColors.clientBorder(ctx),
                     ),
                   ),
                 )),
@@ -733,17 +736,17 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
               const SizedBox(height: 18),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.cream,
-                  border: Border.all(color: AppColors.creamDark),
+                  color: AppColors.clientInputFill(ctx),
+                  border: Border.all(color: AppColors.clientBorder(ctx)),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: TextField(
                   controller: commentController,
                   maxLines: 3,
-                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientText(ctx)),
                   decoration: InputDecoration(
                     hintText: clientLabel('Leave a comment (optional)', 'Wacha maoni (si lazima)', language),
-                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                    hintStyle: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(ctx)),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.all(14),
                   ),
@@ -757,7 +760,7 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
                       color: Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: AppColors.creamDark, width: 1.5),
+                        side: BorderSide(color: AppColors.clientBorder(ctx), width: 1.5),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
@@ -767,7 +770,7 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
                           alignment: Alignment.center,
                           child: Text(
                             clientLabel('Cancel', 'Ghairi', language),
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted),
+                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(ctx)),
                           ),
                         ),
                       ),
@@ -777,7 +780,7 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
                   Expanded(
                     flex: 2,
                     child: Material(
-                      color: rating > 0 ? AppColors.teal : AppColors.creamDark,
+                      color: rating > 0 ? AppColors.teal : AppColors.clientBorder(ctx),
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
@@ -827,7 +830,7 @@ void _showReviewDialog(BuildContext context, WidgetRef ref, Order order, String 
                             style: AppText.sans(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
-                              color: rating > 0 ? AppColors.cream : AppColors.muted,
+                              color: rating > 0 ? AppColors.cream : AppColors.clientSecondaryText(ctx),
                             ),
                           ),
                         ),
@@ -849,15 +852,15 @@ void _confirmDeleteReview(BuildContext context, WidgetRef ref, Order order, Stri
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(clientLabel('Delete review?', 'Futa maoni?', language), style: AppText.serif(fontSize: 18)),
+      title: Text(clientLabel('Delete review?', 'Futa maoni?', language), style: AppText.serif(fontSize: 18, color: AppColors.clientText(ctx))),
       content: Text(
         clientLabel("This can't be undone.", 'Hili haliwezi kutenduliwa.', language),
-        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+        style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(ctx)),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: Text(clientLabel('Cancel', 'Ghairi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.muted)),
+          child: Text(clientLabel('Cancel', 'Ghairi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(ctx))),
         ),
         TextButton(
           onPressed: () async {

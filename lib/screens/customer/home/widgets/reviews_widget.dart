@@ -67,13 +67,13 @@ class _ReviewCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.tealMuted,
+                  color: AppColors.clientPillTeal(context),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Text(
                     review.name[0],
-                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.teal),
+                    style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                   ),
                 ),
               ),
@@ -89,7 +89,7 @@ class _ReviewCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       review.stars,
-                      style: AppText.sans(fontSize: 12, color: AppColors.amber),
+                      style: AppText.sans(fontSize: 12, color: AppColors.clientAmberText(context)),
                     ),
                   ],
                 ),
