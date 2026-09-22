@@ -11,6 +11,7 @@ import '../../utils/currency.dart';
 import '../../widgets/account_sheet.dart';
 import '../../widgets/alert_card.dart';
 import '../../widgets/bar_chart_row.dart';
+import '../../widgets/sms_balance_card.dart';
 import '../../widgets/stat_tile.dart';
 
 class VendorDashboardScreen extends ConsumerStatefulWidget {
@@ -76,6 +77,13 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                     Expanded(child: StatTile(value: '${dash.completedOrders}', label: 'Completed', bg: Colors.white, fg: AppColors.mint)),
                   ],
                 ),
+              ),
+
+              // ── SMS balance ─────────────────────────────────────────
+              const SizedBox(height: 14),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 22),
+                child: SmsBalanceCard(),
               ),
 
               // ── Needs attention ─────────────────────────────────────

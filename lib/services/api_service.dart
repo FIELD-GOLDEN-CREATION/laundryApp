@@ -447,6 +447,48 @@ class ApiService {
       delete('/vendor/promos/$id');
 
   // =========================================================================
+  // VENDOR SMS (Beem)
+  // =========================================================================
+
+  /// Plan/extra balance + kill-switch state for the SMS permission popup.
+  Future<Map<String, dynamic>> getSmsBalance() => get('/vendor/sms/balance');
+
+  Future<Map<String, dynamic>> getOrderSmsPreview(String orderId) =>
+      get('/vendor/orders/$orderId/sms-preview');
+
+  Future<Map<String, dynamic>> sendOrderCompleteSms(String orderId, {String? phone, bool force = false}) =>
+      post('/vendor/orders/$orderId/send-complete-sms', body: {
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (force) 'force': true,
+      });
+
+  Future<Map<String, dynamic>> getSmsHistory({String? type, String? source}) =>
+      get('/vendor/sms/history', query: {
+        if (type != null) 'type': type,
+        if (source != null) 'credit_source': source,
+      });
+
+  Future<Map<String, dynamic>> requestSms(int count, {String? note}) =>
+      post('/vendor/sms/request', body: {
+        'count': count,
+        if (note != null && note.isNotEmpty) 'note': note,
+      });
+
+  Future<Map<String, dynamic>> getSmsRequests() => get('/vendor/sms/requests');
+
+  Future<Map<String, dynamic>> getPackageSmsAudience(String id, {String audience = 'all', int minOrders = 5}) =>
+      get('/vendor/packages/$id/sms-audience', query: {'audience': audience, 'min_orders': minOrders.toString()});
+
+  Future<Map<String, dynamic>> sendPackageBroadcast(String id, {String audience = 'all', int minOrders = 5}) =>
+      post('/vendor/packages/$id/sms-broadcast', body: {'audience': audience, 'min_orders': minOrders});
+
+  Future<Map<String, dynamic>> getPromoSmsAudience(String id, {String audience = 'all', int minOrders = 5}) =>
+      get('/vendor/promos/$id/sms-audience', query: {'audience': audience, 'min_orders': minOrders.toString()});
+
+  Future<Map<String, dynamic>> sendPromoBroadcast(String id, {String audience = 'all', int minOrders = 5}) =>
+      post('/vendor/promos/$id/sms-broadcast', body: {'audience': audience, 'min_orders': minOrders});
+
+  // =========================================================================
   // REVIEWS
   // =========================================================================
 

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../state/vendor_profile_state.dart';
+import '../../services/api_service.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/currency.dart';
@@ -48,6 +49,65 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
+  }
+
+  /// After "Mark all complete": fetch the SMS preview and ask the vendor
+  /// for permission to message the customer (editable phone number).
+  Future<void> _maybeShowSmsDialog(String orderId) async {
+    Map<String, dynamic> preview;
+    try {
+      final res = await api.getOrderSmsPreview(orderId);
+      preview = (res['data'] as Map<String, dynamic>?) ?? res;
+    } on ApiException {
+      return;
+    }
+    if (!mounted) return;
+    if (preview['already_sent'] == true) return;
+
+    final quota = (preview['quota'] as Map?) ?? {};
+    if (quota['allowed'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${quota['reason'] ?? 'SMS not available.'}'),
+          backgroundColor: AppColors.amber,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final phoneCtrl = TextEditingController(text: '${preview['customer_phone'] ?? ''}');
+    final phone = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _SmsPermissionDialog(
+        customerName: '${preview['customer_name'] ?? ''}',
+        phoneCtrl: phoneCtrl,
+        message: '${preview['message'] ?? ''}',
+        remainingPlan: int.tryParse('${quota['remaining_plan'] ?? 0}') ?? 0,
+        remainingExtra: int.tryParse('${quota['remaining_extra'] ?? 0}') ?? 0,
+      ),
+    );
+    phoneCtrl.dispose();
+    if (phone == null || phone.trim().isEmpty || !mounted) return;
+
+    try {
+      final res = await api.sendOrderCompleteSms(orderId, phone: phone.trim());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${res['message'] ?? 'SMS sent.'}'),
+          backgroundColor: (res['success'] == true) ? AppColors.teal : AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   @override
@@ -191,7 +251,12 @@ class _VendorOrderDetailScreenState extends ConsumerState<VendorOrderDetailScree
                       ? null
                       : () async {
                           final ok = bulkApplied ? await notifier.undoMarkAllComplete() : await notifier.markAllComplete();
-                          if (!ok) _showStatusError('Could not update processing status');
+                          if (!ok) {
+                            _showStatusError('Could not update processing status');
+                          } else if (!bulkApplied && context.mounted) {
+                            // Order just completed → ask permission to SMS the customer.
+                            _maybeShowSmsDialog(state.orderId);
+                          }
                         },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 15),
@@ -471,8 +536,84 @@ class _OpenInMapsButton extends StatelessWidget {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
+/// Permission popup after "Mark all complete": shows who the SMS goes to,
+/// lets the vendor correct the reachable number, previews the message.
+class _SmsPermissionDialog extends StatelessWidget {
+  const _SmsPermissionDialog({
+    required this.customerName,
+    required this.phoneCtrl,
+    required this.message,
+    required this.remainingPlan,
+    required this.remainingExtra,
+  });
+
+  final String customerName;
+  final TextEditingController phoneCtrl;
+  final String message;
+  final int remainingPlan;
+  final int remainingExtra;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.sms_outlined, color: AppColors.teal, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Send SMS to customer?', style: AppText.sans(fontSize: 15, fontWeight: FontWeight.w800))),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(customerName.isEmpty ? 'Customer' : customerName, style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text('Reachable number (edit if needed)', style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted)),
+            const SizedBox(height: 4),
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: '07XXXXXXXX',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(12)),
+              child: Text(message, style: AppText.sans(fontSize: 12, height: 1.5)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Balance: $remainingPlan plan · $remainingExtra extra',
+              style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Skip')),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.teal),
+          onPressed: () => Navigator.of(context).pop(phoneCtrl.text),
+          child: const Text('Send SMS'),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {  const _SectionLabel(this.text);
   final String text;
 
   @override

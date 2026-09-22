@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/laundry_category.dart';
 import '../../models/promo_offer.dart';
 import '../../models/service_package.dart';
+import '../../services/api_service.dart';
 import '../../state/catalog_state.dart';
 import '../../state/vendor_packages_state.dart';
 import '../../state/vendor_promos_state.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/cart_math.dart';
+import '../../widgets/sms_broadcast_sheet.dart';
 
 class VendorPromosScreen extends ConsumerStatefulWidget {
   const VendorPromosScreen({super.key});
@@ -58,6 +60,14 @@ class _VendorPromosScreenState extends ConsumerState<VendorPromosScreen> {
                   promo: promo,
                   onToggle: () => notifier.togglePromoActive(promo.id),
                   onDelete: () => notifier.deletePromo(promo.id),
+                  onSendSms: () => showSmsBroadcastSheet(
+                    context: context,
+                    title: 'Send ${promo.code} to customers',
+                    loadAudience: ({required String audience, required int minOrders}) =>
+                        api.getPromoSmsAudience(promo.id, audience: audience, minOrders: minOrders),
+                    send: ({required String audience, required int minOrders}) =>
+                        api.sendPromoBroadcast(promo.id, audience: audience, minOrders: minOrders),
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -151,12 +161,14 @@ class _PromoCard extends StatelessWidget {
     required this.promo,
     required this.onToggle,
     required this.onDelete,
+    this.onSendSms,
     this.expired = false,
   });
 
   final PromoOffer promo;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback? onSendSms;
   final bool expired;
 
   @override
@@ -242,6 +254,23 @@ class _PromoCard extends StatelessWidget {
               ),
             ],
           ),
+          if (onSendSms != null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onSendSms,
+                icon: const Icon(Icons.sms_outlined, size: 15),
+                label: Text('Send SMS to customers', style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.teal,
+                  side: const BorderSide(color: AppColors.teal),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+          ],
           if (expired) ...[
             const SizedBox(height: 8),
             Row(

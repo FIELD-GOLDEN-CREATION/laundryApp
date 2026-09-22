@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/laundry_category.dart';
 import '../../models/service_package.dart';
+import '../../services/api_service.dart';
 import '../../state/catalog_state.dart';
 import '../../state/vendor_catalog_state.dart';
 import '../../state/vendor_packages_state.dart';
@@ -13,6 +14,7 @@ import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/currency.dart';
 import '../../widgets/package_form_sheet.dart';
+import '../../widgets/sms_broadcast_sheet.dart';
 import '../../widgets/toggle_switch.dart';
 import '../../widgets/remote_image.dart';
 
@@ -682,6 +684,24 @@ class _PackageRowState extends State<_PackageRow> {
                 ),
               ],
               const SizedBox(width: 10),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => showSmsBroadcastSheet(
+                    context: context,
+                    title: 'Send ${package.name} to customers',
+                    loadAudience: ({required String audience, required int minOrders}) =>
+                        api.getPackageSmsAudience(package.id, audience: audience, minOrders: minOrders),
+                    send: ({required String audience, required int minOrders}) =>
+                        api.sendPackageBroadcast(package.id, audience: audience, minOrders: minOrders),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Icon(Icons.sms_outlined, size: 19, color: AppColors.teal),
+                  ),
+                ),
+              ),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
