@@ -266,7 +266,8 @@ class _Header extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: Container(
-        color: AppColors.teal,
+        // Transparent in dark mode so the background video shows through.
+        color: AppColors.isClientDark(context) ? Colors.transparent : AppColors.teal,
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 26),
         child: Stack(
           children: [
