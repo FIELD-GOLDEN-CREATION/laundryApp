@@ -153,7 +153,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+                        padding: EdgeInsets.fromLTRB(
+                          22,
+                          0,
+                          22,
+                          AppColors.isClientDark(context) ? 112 : 20,
+                        ),
                         itemCount: shops.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (_, i) => ShopListTile(

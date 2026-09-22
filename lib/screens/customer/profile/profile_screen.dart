@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,7 +21,11 @@ import '../../../widgets/toggle_switch.dart';
 import '../../../widgets/video_background.dart';
 
 /// Notification preference rows — display configuration.
-const _kPreferenceLabels = ['Push notifications', 'Eco detergent by default', 'Contactless pickup'];
+const _kPreferenceLabels = [
+  'Push notifications',
+  'Eco detergent by default',
+  'Contactless pickup',
+];
 
 enum _ImagePickSource { camera, gallery }
 
@@ -52,14 +56,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.photo_camera_outlined, color: AppColors.clientTealText(sheetContext)),
-              title: Text(clientLabel('Take photo', 'Piga picha', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(sheetContext))),
+              leading: Icon(
+                Icons.photo_camera_outlined,
+                color: AppColors.clientTealText(sheetContext),
+              ),
+              title: Text(
+                clientLabel('Take photo', 'Piga picha', language),
+                style: AppText.sans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.clientText(sheetContext),
+                ),
+              ),
               onTap: () => Navigator.pop(sheetContext, _ImagePickSource.camera),
             ),
             ListTile(
-              leading: Icon(Icons.photo_library_outlined, color: AppColors.clientTealText(sheetContext)),
-              title: Text(clientLabel('Choose from gallery', 'Chagua kwenye picha zako', language), style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(sheetContext))),
-              onTap: () => Navigator.pop(sheetContext, _ImagePickSource.gallery),
+              leading: Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.clientTealText(sheetContext),
+              ),
+              title: Text(
+                clientLabel(
+                  'Choose from gallery',
+                  'Chagua kwenye picha zako',
+                  language,
+                ),
+                style: AppText.sans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.clientText(sheetContext),
+                ),
+              ),
+              onTap: () =>
+                  Navigator.pop(sheetContext, _ImagePickSource.gallery),
             ),
           ],
         ),
@@ -74,7 +103,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final language = ref.read(clientPreferencesProvider).language;
     try {
       final xfile = await _imagePicker.pickImage(
-        source: source == _ImagePickSource.camera ? ImageSource.camera : ImageSource.gallery,
+        source: source == _ImagePickSource.camera
+            ? ImageSource.camera
+            : ImageSource.gallery,
         maxWidth: 1600,
         imageQuality: 85,
       );
@@ -84,11 +115,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final isCamera = source == _ImagePickSource.camera;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(clientLabel(
-            'Could not access the ${isCamera ? 'camera' : 'gallery'}. Check app permissions in your phone settings.',
-            'Imeshindwa kufikia ${isCamera ? 'kamera' : 'picha zako'}. Angalia ruhusa za programu kwenye mipangilio ya simu.',
-            language,
-          )),
+          content: Text(
+            clientLabel(
+              'Could not access the ${isCamera ? 'camera' : 'gallery'}. Check app permissions in your phone settings.',
+              'Imeshindwa kufikia ${isCamera ? 'kamera' : 'picha zako'}. Angalia ruhusa za programu kwenye mipangilio ya simu.',
+              language,
+            ),
+          ),
         ),
       );
       return null;
@@ -101,10 +134,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final file = await _pickFile(source);
     if (file == null || !mounted) return;
     final language = ref.read(clientPreferencesProvider).language;
-    final ok = await ref.read(profileProvider.notifier).uploadProfilePhoto(file);
+    final ok = await ref
+        .read(profileProvider.notifier)
+        .uploadProfilePhoto(file);
     if (!mounted || ok) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(clientLabel('Could not upload photo. Please try again.', 'Imeshindwa kupakia picha. Jaribu tena.', language))),
+      SnackBar(
+        content: Text(
+          clientLabel(
+            'Could not upload photo. Please try again.',
+            'Imeshindwa kupakia picha. Jaribu tena.',
+            language,
+          ),
+        ),
+      ),
     );
   }
 
@@ -120,223 +163,330 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       body: ClientBackground(
         child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
-              decoration: const BoxDecoration(
-                color: AppColors.slate,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
-              ),
-               child: Stack(
-                 children: [
-                   Positioned.fill(
-                     child: Opacity(
-                       opacity: 0.13,
-                       child: RemoteImage(url: profile.photoUrl ?? '', fallback: profile.photoLabel, fit: BoxFit.cover),
-                     ),
-                   ),
-                   Positioned.fill(child: Container(color: AppColors.slate.withValues(alpha: 0.84))),
-                   Column(
-                     children: [
-                   Row(children: [Expanded(child: Text(clientLabel('Profile', 'Wasifu', language), style: AppText.serif(fontSize: 24, color: AppColors.cream))), _HeroIcon(icon: AppIcons.bell, onTap: () => context.push('/notifs'))]),
-                  const SizedBox(height: 18),
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      SizedBox(
-                        width: 82,
-                        height: 82,
-                        child: Stack(
-                          fit: StackFit.expand,
+          child: ListView(
+            padding: EdgeInsets.only(
+              bottom: AppColors.isClientDark(context) ? 116 : 24,
+            ),
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+                decoration: const BoxDecoration(
+                  color: AppColors.slate,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(32),
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.13,
+                        child: RemoteImage(
+                          url: profile.photoUrl ?? '',
+                          fallback: profile.photoLabel,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Container(
+                        color: AppColors.slate.withValues(alpha: 0.84),
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        Row(
                           children: [
-                            RemoteImage(url: profile.photoUrl ?? '', fallback: profile.photoLabel, circle: true, borderRadius: 41),
-                            if (profile.uploadingProfilePhoto)
-                              const DecoratedBox(
-                                decoration: BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
-                                child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cream)),
+                            Expanded(
+                              child: Text(
+                                clientLabel('Profile', 'Wasifu', language),
+                                style: AppText.serif(
+                                  fontSize: 24,
+                                  color: AppColors.cream,
+                                ),
                               ),
+                            ),
+                            _HeroIcon(
+                              icon: AppIcons.bell,
+                              onTap: () => context.push('/notifs'),
+                            ),
                           ],
                         ),
-                      ),
-                      FloatingActionButton.small(
-                        backgroundColor: AppColors.teal,
-                        onPressed: profile.uploadingProfilePhoto ? null : _editProfilePhoto,
-                        child: const Icon(Icons.camera_alt_outlined, color: AppColors.cream),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 11),
-                   Text(profile.name, style: AppText.serif(fontSize: 23, color: AppColors.cream)),
-                  const SizedBox(height: 3),
-                   Text(authEmail.isNotEmpty ? authEmail : profile.phone, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.cream.withValues(alpha: 0.66))),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ProfileActionTile(
-                          icon: Icons.notifications_none_rounded,
-                           label: clientLabel('Notification', 'Arifa', language),
-                          onTap: () => context.push('/notifs'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                       Expanded(
-                        child: ProfileActionTile(
-                          icon: Icons.history_rounded,
-                           label: clientLabel('History', 'Historia', language),
-                          onTap: () => context.go('/orders'),
-                        ),
-                      ),
-                     ],
-                   ),
-                 ],
-               ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                   _ProfileMenuRow(icon: Icons.person_outline_rounded, label: clientLabel('Edit Profile', 'Hariri wasifu', language), onTap: () => context.push('/profile/edit')),
-                  _ProfileMenuRow(icon: Icons.headset_mic_outlined, label: clientLabel('Help & Support', 'Msaada', language), onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(clientLabel('Support chat is available from an active order.', 'Mazungumzo ya msaada yanapatikana kwenye oda inayoendelea.', language))))),
-                   _ProfileMenuRow(icon: Icons.settings_outlined, label: clientLabel('Settings', 'Mipangilio', language), onTap: () => context.push('/profile/settings')),
-                ],
-              ),
-            ),
-            // Become a Vendor CTA
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Material(
-                color: AppColors.clientPillTeal(context),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: BorderSide(color: AppColors.teal.withValues(alpha: 0.2), width: 1.5),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => context.push('/profile/apply-vendor'),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.teal,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.store_rounded, size: 20, color: AppColors.cream),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                clientLabel('Become a Vendor', 'Kuwa Muuzaji', language),
-                                style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
+                        const SizedBox(height: 18),
+                        Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            SizedBox(
+                              width: 82,
+                              height: 82,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  RemoteImage(
+                                    url: profile.photoUrl ?? '',
+                                    fallback: profile.photoLabel,
+                                    circle: true,
+                                    borderRadius: 41,
+                                  ),
+                                  if (profile.uploadingProfilePhoto)
+                                    const DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black38,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.cream,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                clientLabel('Start your laundry business on FreshFold', 'Anza biashara yako ya ufagaji kwenye FreshFold', language),
-                                style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                            ),
+                            FloatingActionButton.small(
+                              backgroundColor: AppColors.teal,
+                              onPressed: profile.uploadingProfilePhoto
+                                  ? null
+                                  : _editProfilePhoto,
+                              child: const Icon(
+                                Icons.camera_alt_outlined,
+                                color: AppColors.cream,
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 11),
+                        Text(
+                          profile.name,
+                          style: AppText.serif(
+                            fontSize: 23,
+                            color: AppColors.cream,
                           ),
                         ),
-                        Icon(Icons.chevron_right_rounded, size: 22, color: AppColors.clientTealText(context)),
+                        const SizedBox(height: 3),
+                        Text(
+                          authEmail.isNotEmpty ? authEmail : profile.phone,
+                          style: AppText.sans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.cream.withValues(alpha: 0.66),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ProfileActionTile(
+                                icon: Icons.notifications_none_rounded,
+                                label: clientLabel(
+                                  'Notification',
+                                  'Arifa',
+                                  language,
+                                ),
+                                onTap: () => context.push('/notifs'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ProfileActionTile(
+                                icon: Icons.history_rounded,
+                                label: clientLabel(
+                                  'History',
+                                  'Historia',
+                                  language,
+                                ),
+                                onTap: () => context.go('/orders'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 22), child: Text(clientLabel('ACCOUNT DETAILS', 'TAARIFA ZA AKAUNTI', language), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)))),
-            _SectionLabel(clientLabel('Saved addresses', 'Anwani zilizohifadhiwa', language)),
-            if (profile.addresses.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                   color: AppColors.clientSurface(context),
-                   border: Border.all(color: AppColors.clientBorder(context)),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                   clientLabel('No addresses saved yet.', 'Hakuna anwani iliyohifadhiwa.', language),
-                   style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-                ),
-              )
-            else
-              Column(
-                children: [
-                  for (var i = 0; i < profile.addresses.length; i++) ...[
-                    _AddressRow(
-                      key: ValueKey(profile.addresses[i].id ?? 'addr-$i'),
-                      label: profile.addresses[i].label,
-                      line: profile.addresses[i].line,
-                      latitude: profile.addresses[i].latitude,
-                      longitude: profile.addresses[i].longitude,
-                      onSave: (line, latitude, longitude) => notifier.updateAddressLine(i, line, latitude: latitude, longitude: longitude),
-                      onDelete: () => notifier.removeAddressAt(i),
-                    ),
-                    if (i != profile.addresses.length - 1) const SizedBox(height: 10),
                   ],
-                ],
-              ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.teal, width: 1.5),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => _showAddAddressSheet(context, ref),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '+ ${clientLabel('Add address', 'Ongeza anwani', language)}',
-                      style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
+              ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    _ProfileMenuRow(
+                      icon: Icons.person_outline_rounded,
+                      label: clientLabel(
+                        'Edit Profile',
+                        'Hariri wasifu',
+                        language,
+                      ),
+                      onTap: () => context.push('/profile/edit'),
+                    ),
+                    _ProfileMenuRow(
+                      icon: Icons.headset_mic_outlined,
+                      label: clientLabel('Help & Support', 'Msaada', language),
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            clientLabel(
+                              'Support chat is available from an active order.',
+                              'Mazungumzo ya msaada yanapatikana kwenye oda inayoendelea.',
+                              language,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    _ProfileMenuRow(
+                      icon: Icons.settings_outlined,
+                      label: clientLabel('Settings', 'Mipangilio', language),
+                      onTap: () => context.push('/profile/settings'),
+                    ),
+                  ],
+                ),
+              ),
+              // Become a Vendor CTA
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Material(
+                  color: AppColors.clientPillTeal(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(
+                      color: AppColors.teal.withValues(alpha: 0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => context.push('/profile/apply-vendor'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.teal,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.store_rounded,
+                              size: 20,
+                              color: AppColors.cream,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  clientLabel(
+                                    'Become a Vendor',
+                                    'Kuwa Muuzaji',
+                                    language,
+                                  ),
+                                  style: AppText.sans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.clientTealText(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  clientLabel(
+                                    'Start your laundry business on FreshFold',
+                                    'Anza biashara yako ya ufagaji kwenye FreshFold',
+                                    language,
+                                  ),
+                                  style: AppText.sans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.clientSecondaryText(
+                                      context,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 22,
+                            color: AppColors.clientTealText(context),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            if (false) ...[
-              _SectionLabel(clientLabel('Saved cards', 'Kadi zilizohifadhiwa', language)),
-              if (savedCards.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: Text(
+                  clientLabel(
+                    'ACCOUNT DETAILS',
+                    'TAARIFA ZA AKAUNTI',
+                    language,
+                  ),
+                  style: AppText.eyebrow(
+                    color: AppColors.clientSecondaryText(context),
+                  ),
+                ),
+              ),
+              _SectionLabel(
+                clientLabel(
+                  'Saved addresses',
+                  'Anwani zilizohifadhiwa',
+                  language,
+                ),
+              ),
+              if (profile.addresses.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                     color: AppColors.clientSurface(context),
-                     border: Border.all(color: AppColors.clientBorder(context)),
+                    color: AppColors.clientSurface(context),
+                    border: Border.all(color: AppColors.clientBorder(context)),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Text(
-                     clientLabel('No cards linked yet.', 'Hakuna kadi iliyounganishwa.', language),
-                     style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                    clientLabel(
+                      'No addresses saved yet.',
+                      'Hakuna anwani iliyohifadhiwa.',
+                      language,
+                    ),
+                    style: AppText.sans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.clientSecondaryText(context),
+                    ),
                   ),
                 )
               else
                 Column(
                   children: [
-                    for (var i = 0; i < savedCards.length; i++) ...[
-                      _SavedCardRow(
-                        card: savedCards[i],
-                        onRemove: () => ref.read(savedCardsProvider.notifier).removeCard(savedCards[i].id),
+                    for (var i = 0; i < profile.addresses.length; i++) ...[
+                      _AddressRow(
+                        key: ValueKey(profile.addresses[i].id ?? 'addr-$i'),
+                        label: profile.addresses[i].label,
+                        line: profile.addresses[i].line,
+                        latitude: profile.addresses[i].latitude,
+                        longitude: profile.addresses[i].longitude,
+                        onSave: (line, latitude, longitude) =>
+                            notifier.updateAddressLine(
+                              i,
+                              line,
+                              latitude: latitude,
+                              longitude: longitude,
+                            ),
+                        onDelete: () => notifier.removeAddressAt(i),
                       ),
-                      if (i != savedCards.length - 1) const SizedBox(height: 10),
+                      if (i != profile.addresses.length - 1)
+                        const SizedBox(height: 10),
                     ],
                   ],
                 ),
@@ -351,85 +501,190 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                    onTap: () => showLinkCardSheet(context, ref),
+                    onTap: () => _showAddAddressSheet(context, ref),
                     child: Container(
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       alignment: Alignment.center,
                       child: Text(
-                        '+ Link a card',
-                        style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                        '+ ${clientLabel('Add address', 'Ongeza anwani', language)}',
+                        style: AppText.sans(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.clientTealText(context),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ],
-            if (false) ...[
-              _SectionLabel(clientLabel('Preferences', 'Mapendeleo', language)),
-              Container(
-                decoration: BoxDecoration(
-                   color: AppColors.clientSurface(context),
-                   border: Border.all(color: AppColors.clientBorder(context)),
-                  borderRadius: BorderRadius.circular(20),
+              if (false) ...[
+                _SectionLabel(
+                  clientLabel('Saved cards', 'Kadi zilizohifadhiwa', language),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    for (var i = 0; i < _kPreferenceLabels.length; i++)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                               color: i == _kPreferenceLabels.length - 1 ? Colors.transparent : AppColors.clientBorder(context),
-                            ),
+                if (savedCards.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.clientSurface(context),
+                      border: Border.all(
+                        color: AppColors.clientBorder(context),
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      clientLabel(
+                        'No cards linked yet.',
+                        'Hakuna kadi iliyounganishwa.',
+                        language,
+                      ),
+                      style: AppText.sans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.clientSecondaryText(context),
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    children: [
+                      for (var i = 0; i < savedCards.length; i++) ...[
+                        _SavedCardRow(
+                          card: savedCards[i],
+                          onRemove: () => ref
+                              .read(savedCardsProvider.notifier)
+                              .removeCard(savedCards[i].id),
+                        ),
+                        if (i != savedCards.length - 1)
+                          const SizedBox(height: 10),
+                      ],
+                    ],
+                  ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Material(
+                    color: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppColors.teal, width: 1.5),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => showLinkCardSheet(context, ref),
+                      child: Container(
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '+ Link a card',
+                          style: AppText.sans(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.teal,
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                 clientLabel(_kPreferenceLabels[i], ['Arifa za oda', 'Ofa na matangazo', 'Vidokezo vya utunzaji'][i], language),
-                                 style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              if (false) ...[
+                _SectionLabel(
+                  clientLabel('Preferences', 'Mapendeleo', language),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.clientSurface(context),
+                    border: Border.all(color: AppColors.clientBorder(context)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < _kPreferenceLabels.length; i++)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 15,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: i == _kPreferenceLabels.length - 1
+                                    ? Colors.transparent
+                                    : AppColors.clientBorder(context),
                               ),
                             ),
-                            ToggleSwitch(on: clientPrefs.prefsOn[i], onTap: () => ref.read(clientPreferencesProvider.notifier).togglePref(i)),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  clientLabel(
+                                    _kPreferenceLabels[i],
+                                    [
+                                      'Arifa za oda',
+                                      'Ofa na matangazo',
+                                      'Vidokezo vya utunzaji',
+                                    ][i],
+                                    language,
+                                  ),
+                                  style: AppText.sans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.clientText(context),
+                                  ),
+                                ),
+                              ),
+                              ToggleSwitch(
+                                on: clientPrefs.prefsOn[i],
+                                onTap: () => ref
+                                    .read(clientPreferencesProvider.notifier)
+                                    .togglePref(i),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
+              SizedBox(
+                width: double.infinity,
+                child: Material(
+                  color: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(
+                      color: AppColors.clientBorder(context),
+                      width: 1.5,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(authProvider.notifier).logout();
+                      context.go('/home');
+                    },
+                    child: Container(
+                      height: 52,
+                      alignment: Alignment.center,
+                      child: Text(
+                        clientLabel('Log out', 'Toka', language),
+                        style: AppText.sans(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.clientAmberText(context),
                         ),
                       ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: BorderSide(color: AppColors.clientBorder(context), width: 1.5),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () {
-                    ref.read(authProvider.notifier).logout();
-                    context.go('/home');
-                  },
-                  child: Container(
-                    height: 52,
-                    alignment: Alignment.center,
-                    child: Text(
-                       clientLabel('Log out', 'Toka', language),
-                      style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context)),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -445,14 +700,28 @@ class _HeroIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.white.withValues(alpha: 0.1),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.white.withValues(alpha: 0.18))),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+    ),
     clipBehavior: Clip.antiAlias,
-    child: InkWell(onTap: onTap, child: SizedBox(width: 42, height: 42, child: Center(child: AppIcon(icon, size: 18, color: AppColors.cream)))),
+    child: InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        width: 42,
+        height: 42,
+        child: Center(child: AppIcon(icon, size: 18, color: AppColors.cream)),
+      ),
+    ),
   );
 }
 
 class _ProfileMenuRow extends StatelessWidget {
-  const _ProfileMenuRow({required this.icon, required this.label, required this.onTap});
+  const _ProfileMenuRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -461,14 +730,39 @@ class _ProfileMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 1),
-     decoration: BoxDecoration(color: AppColors.clientSurface(context), border: Border(bottom: BorderSide(color: AppColors.clientBorder(context)))),
+    decoration: BoxDecoration(
+      color: AppColors.clientSurface(context),
+      border: Border(
+        bottom: BorderSide(color: AppColors.clientBorder(context)),
+      ),
+    ),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-           child: Row(children: [Icon(icon, size: 20, color: AppColors.clientTealText(context)), const SizedBox(width: 13), Expanded(child: Text(label, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientText(context)))), Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.clientSecondaryText(context))]),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.clientTealText(context)),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppText.sans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.clientText(context),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.clientSecondaryText(context),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -483,7 +777,10 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 26, bottom: 11),
-       child: Text(text.toUpperCase(), style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+      child: Text(
+        text.toUpperCase(),
+        style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)),
+      ),
     );
   }
 }
@@ -546,7 +843,9 @@ class _AddressRowState extends State<_AddressRow> {
       setState(() {});
     } on LocationException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -561,15 +860,33 @@ class _AddressRowState extends State<_AddressRow> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.clientSurface(dialogContext),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Delete address?', style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientText(dialogContext))),
+        title: Text(
+          'Delete address?',
+          style: AppText.sans(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.clientText(dialogContext),
+          ),
+        ),
         content: Text(
           'This will remove "${widget.label}" from your saved addresses. This cannot be undone.',
-          style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(dialogContext)),
+          style: AppText.sans(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.clientSecondaryText(dialogContext),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(dialogContext))),
+            child: Text(
+              'Cancel',
+              style: AppText.sans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.clientSecondaryText(dialogContext),
+              ),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -577,10 +894,19 @@ class _AddressRowState extends State<_AddressRow> {
               final ok = await widget.onDelete();
               if (!mounted || ok) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Could not delete address. Please try again.')),
+                const SnackBar(
+                  content: Text('Could not delete address. Please try again.'),
+                ),
               );
             },
-            child: Text('Delete', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.danger)),
+            child: Text(
+              'Delete',
+              style: AppText.sans(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.danger,
+              ),
+            ),
           ),
         ],
       ),
@@ -592,8 +918,8 @@ class _AddressRowState extends State<_AddressRow> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-         color: AppColors.clientSurface(context),
-         border: Border.all(color: AppColors.clientBorder(context)),
+        color: AppColors.clientSurface(context),
+        border: Border.all(color: AppColors.clientBorder(context)),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -604,20 +930,38 @@ class _AddressRowState extends State<_AddressRow> {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: AppColors.clientPillTeal(context), borderRadius: BorderRadius.circular(13)),
+                decoration: BoxDecoration(
+                  color: AppColors.clientPillTeal(context),
+                  borderRadius: BorderRadius.circular(13),
+                ),
                 alignment: Alignment.center,
-                child: AppIcon(AppIcons.locationPin, size: 15, color: AppColors.clientTealText(context)),
+                child: AppIcon(
+                  AppIcons.locationPin,
+                  size: 15,
+                  color: AppColors.clientTealText(context),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                     Text(widget.label, style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+                    Text(
+                      widget.label,
+                      style: AppText.sans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.clientText(context),
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       widget.line,
-                       style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                      style: AppText.sans(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.clientSecondaryText(context),
+                      ),
                     ),
                   ],
                 ),
@@ -628,12 +972,26 @@ class _AddressRowState extends State<_AddressRow> {
                   children: [
                     InkWell(
                       onTap: _confirmDelete,
-                      child: Text('Delete', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.danger)),
+                      child: Text(
+                        'Delete',
+                        style: AppText.sans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.danger,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 14),
                     InkWell(
                       onTap: _startEditing,
-                      child: Text('Edit', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context))),
+                      child: Text(
+                        'Edit',
+                        style: AppText.sans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.clientTealText(context),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -656,11 +1014,19 @@ class _AddressRowState extends State<_AddressRow> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppIcon(AppIcons.locationPin, size: 14, color: AppColors.clientTealText(context)),
+                  AppIcon(
+                    AppIcons.locationPin,
+                    size: 14,
+                    color: AppColors.clientTealText(context),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Use current location',
-                    style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
+                    style: AppText.sans(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.clientTealText(context),
+                    ),
                   ),
                 ],
               ),
@@ -673,7 +1039,10 @@ class _AddressRowState extends State<_AddressRow> {
                     color: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(color: AppColors.clientBorder(context), width: 1.5),
+                      side: BorderSide(
+                        color: AppColors.clientBorder(context),
+                        width: 1.5,
+                      ),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -681,7 +1050,14 @@ class _AddressRowState extends State<_AddressRow> {
                       child: Container(
                         height: 44,
                         alignment: Alignment.center,
-                        child: Text('Cancel', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context))),
+                        child: Text(
+                          'Cancel',
+                          style: AppText.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.clientSecondaryText(context),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -697,7 +1073,14 @@ class _AddressRowState extends State<_AddressRow> {
                       child: Container(
                         height: 44,
                         alignment: Alignment.center,
-                        child: Text('Save', style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.cream)),
+                        child: Text(
+                          'Save',
+                          style: AppText.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.cream,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -758,7 +1141,9 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
       setState(() {});
     } on LocationException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -785,7 +1170,9 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
       _saving = true;
       _error = null;
     });
-    final ok = await widget.ref.read(profileProvider.notifier).addAddress(label, line, latitude: _latitude, longitude: _longitude);
+    final ok = await widget.ref
+        .read(profileProvider.notifier)
+        .addAddress(label, line, latitude: _latitude, longitude: _longitude);
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop();
@@ -808,7 +1195,9 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
             padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
             decoration: BoxDecoration(
               color: AppColors.clientSurface(context),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -819,19 +1208,41 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                     width: 44,
                     height: 5,
                     margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(color: const Color(0xFFDED8CA), borderRadius: BorderRadius.circular(99)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDED8CA),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
                 ),
-                Text('Add address', style: AppText.serif(fontSize: 22, color: AppColors.clientText(context))),
+                Text(
+                  'Add address',
+                  style: AppText.serif(
+                    fontSize: 22,
+                    color: AppColors.clientText(context),
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   'Saved to your account for pickup and delivery',
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
+                  style: AppText.sans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.clientSecondaryText(context),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _AddAddressField(label: 'Label', hint: 'Home, Work, ...', controller: _labelCtrl),
+                _AddAddressField(
+                  label: 'Label',
+                  hint: 'Home, Work, ...',
+                  controller: _labelCtrl,
+                ),
                 const SizedBox(height: 12),
-                Text('Address', style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+                Text(
+                  'Address',
+                  style: AppText.eyebrow(
+                    color: AppColors.clientSecondaryText(context),
+                  ),
+                ),
                 const SizedBox(height: 7),
                 AddressSearchField(
                   controller: _lineCtrl,
@@ -848,20 +1259,44 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_locating)
-                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.clientTealText(context)))
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.clientTealText(context),
+                          ),
+                        )
                       else
-                        AppIcon(AppIcons.locationPin, size: 14, color: AppColors.clientTealText(context)),
+                        AppIcon(
+                          AppIcons.locationPin,
+                          size: 14,
+                          color: AppColors.clientTealText(context),
+                        ),
                       const SizedBox(width: 6),
                       Text(
-                        _locating ? 'Getting location...' : 'Use current location',
-                        style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
+                        _locating
+                            ? 'Getting location...'
+                            : 'Use current location',
+                        style: AppText.sans(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.clientTealText(context),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 10),
-                  Text(_error!, style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.danger)),
+                  Text(
+                    _error!,
+                    style: AppText.sans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.danger,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 20),
                 Row(
@@ -871,15 +1306,27 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                         color: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
-                          side: BorderSide(color: AppColors.clientBorder(context), width: 1.5),
+                          side: BorderSide(
+                            color: AppColors.clientBorder(context),
+                            width: 1.5,
+                          ),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
-                          onTap: _saving ? null : () => Navigator.of(context).pop(),
+                          onTap: _saving
+                              ? null
+                              : () => Navigator.of(context).pop(),
                           child: Container(
                             height: 52,
                             alignment: Alignment.center,
-                            child: Text('Cancel', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientSecondaryText(context))),
+                            child: Text(
+                              'Cancel',
+                              style: AppText.sans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.clientSecondaryText(context),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -900,9 +1347,19 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cream),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.cream,
+                                    ),
                                   )
-                                : Text('Save address', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.cream)),
+                                : Text(
+                                    'Save address',
+                                    style: AppText.sans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.cream,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -919,7 +1376,11 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
 }
 
 class _AddAddressField extends StatelessWidget {
-  const _AddAddressField({required this.label, required this.hint, required this.controller});
+  const _AddAddressField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+  });
 
   final String label;
   final String hint;
@@ -930,7 +1391,10 @@ class _AddAddressField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppText.eyebrow(color: AppColors.clientSecondaryText(context))),
+        Text(
+          label,
+          style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)),
+        ),
         const SizedBox(height: 7),
         Container(
           height: 48,
@@ -943,10 +1407,18 @@ class _AddAddressField extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: TextField(
             controller: controller,
-            style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.clientText(context)),
+            style: AppText.sans(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.clientText(context),
+            ),
             decoration: InputDecoration.collapsed(
               hintText: hint,
-              hintStyle: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.clientSecondaryText(context)),
+              hintStyle: AppText.sans(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.clientSecondaryText(context),
+              ),
             ),
           ),
         ),
@@ -966,8 +1438,8 @@ class _SavedCardRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-                 color: AppColors.clientSurface(context),
-                 border: Border.all(color: AppColors.clientBorder(context)),
+        color: AppColors.clientSurface(context),
+        border: Border.all(color: AppColors.clientBorder(context)),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -978,18 +1450,36 @@ class _SavedCardRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('â€¢â€¢â€¢â€¢ ${card.last4}', style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context))),
+                Text(
+                  'â€¢â€¢â€¢â€¢ ${card.last4}',
+                  style: AppText.sans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.clientText(context),
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '${card.holderName} Â· Expires ${card.expiry}',
-                  style: AppText.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                  style: AppText.sans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.clientSecondaryText(context),
+                  ),
                 ),
               ],
             ),
           ),
           InkWell(
             onTap: onRemove,
-            child: Text('Remove', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.clientAmberText(context))),
+            child: Text(
+              'Remove',
+              style: AppText.sans(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.clientAmberText(context),
+              ),
+            ),
           ),
         ],
       ),

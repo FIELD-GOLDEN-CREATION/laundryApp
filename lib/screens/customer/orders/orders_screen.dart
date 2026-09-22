@@ -67,7 +67,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           child: RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
+              padding: EdgeInsets.fromLTRB(
+                22,
+                12,
+                22,
+                AppColors.isClientDark(context) ? 112 : 20,
+              ),
               children: [
                 Text(
                   clientLabel('Your orders', 'Oda zako', language),

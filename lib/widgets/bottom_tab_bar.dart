@@ -20,7 +20,11 @@ class TabBarItem {
 const kCustomerTabs = [
   TabBarItem(icon: AppIcons.tabHome, label: 'Home'),
   TabBarItem(icon: AppIcons.tabSearch, label: 'Explore'),
-  TabBarItem(icon: AppIcons.tabOrders, label: 'Orders', gateReason: 'Log in to see your orders.'),
+  TabBarItem(
+    icon: AppIcons.tabOrders,
+    label: 'Orders',
+    gateReason: 'Log in to see your orders.',
+  ),
   TabBarItem(
     icon: AppIcons.tabProfile,
     label: 'Profile',
@@ -31,7 +35,11 @@ const kCustomerTabs = [
 /// Customer navigation styled as a floating dark capsule with rounded ends.
 /// Chat intentionally is not a tab; customers enter it from an active order.
 class FloatingCustomerNavBar extends ConsumerWidget {
-  const FloatingCustomerNavBar({super.key, required this.currentIndex, required this.onTap});
+  const FloatingCustomerNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
 
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -43,7 +51,8 @@ class FloatingCustomerNavBar extends ConsumerWidget {
     return Container(
       height: 92,
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 18),
-      color: dark ? const Color(0xFF080D12) : AppColors.cream,
+      // Transparent in dark mode so the page video shows around the capsule.
+      color: dark ? Colors.transparent : AppColors.cream,
       child: Material(
         color: AppColors.slate,
         borderRadius: BorderRadius.circular(28),
@@ -56,7 +65,15 @@ class FloatingCustomerNavBar extends ConsumerWidget {
               for (var i = 0; i < kCustomerTabs.length; i++)
                 Expanded(
                   child: _FloatingTabButton(
-                     item: TabBarItem(icon: kCustomerTabs[i].icon, label: clientLabel(kCustomerTabs[i].label, ['Nyumbani', 'Tafuta', 'Oda', 'Wasifu'][i], language), gateReason: kCustomerTabs[i].gateReason),
+                    item: TabBarItem(
+                      icon: kCustomerTabs[i].icon,
+                      label: clientLabel(
+                        kCustomerTabs[i].label,
+                        ['Nyumbani', 'Tafuta', 'Oda', 'Wasifu'][i],
+                        language,
+                      ),
+                      gateReason: kCustomerTabs[i].gateReason,
+                    ),
                     active: i == currentIndex,
                     onTap: () => onTap(i),
                   ),
@@ -70,7 +87,11 @@ class FloatingCustomerNavBar extends ConsumerWidget {
 }
 
 class _FloatingTabButton extends StatelessWidget {
-  const _FloatingTabButton({required this.item, required this.active, required this.onTap});
+  const _FloatingTabButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
 
   final TabBarItem item;
   final bool active;
@@ -84,13 +105,29 @@ class _FloatingTabButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         margin: const EdgeInsets.symmetric(horizontal: 3),
-        decoration: BoxDecoration(color: active ? Colors.white.withValues(alpha: 0.16) : Colors.transparent, borderRadius: BorderRadius.circular(22)),
+        decoration: BoxDecoration(
+          color: active
+              ? Colors.white.withValues(alpha: 0.16)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AppIcon(item.icon, size: 19, color: active ? AppColors.cream : AppColors.tabInactive),
+            AppIcon(
+              item.icon,
+              size: 19,
+              color: active ? AppColors.cream : AppColors.tabInactive,
+            ),
             const SizedBox(height: 4),
-            Text(item.label, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w800, color: active ? AppColors.cream : AppColors.tabInactive)),
+            Text(
+              item.label,
+              style: AppText.sans(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                color: active ? AppColors.cream : AppColors.tabInactive,
+              ),
+            ),
           ],
         ),
       ),
@@ -111,7 +148,12 @@ const kVendorTabs = [
 /// are a flat neutral gray. Item set varies by role (see the 3 const lists
 /// above) — the shell around this widget owns which list is passed in.
 class AppBottomTabBar extends StatelessWidget {
-  const AppBottomTabBar({super.key, required this.items, required this.currentIndex, required this.onTap});
+  const AppBottomTabBar({
+    super.key,
+    required this.items,
+    required this.currentIndex,
+    required this.onTap,
+  });
 
   final List<TabBarItem> items;
   final int currentIndex;
@@ -128,14 +170,29 @@ class AppBottomTabBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         elevation: 10,
         shadowColor: Colors.black.withValues(alpha: 0.2),
-        child: Row(children: [for (var i = 0; i < items.length; i++) Expanded(child: _TabButton(item: items[i], active: i == currentIndex, onTap: () => onTap(i)))]),
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Expanded(
+                child: _TabButton(
+                  item: items[i],
+                  active: i == currentIndex,
+                  onTap: () => onTap(i),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _TabButton extends StatelessWidget {
-  const _TabButton({required this.item, required this.active, required this.onTap});
+  const _TabButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
 
   final TabBarItem item;
   final bool active;
@@ -145,11 +202,35 @@ class _TabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        AnimatedContainer(duration: const Duration(milliseconds: 220), width: active ? 48 : 34, height: active ? 48 : 34, decoration: BoxDecoration(color: active ? Colors.white : Colors.transparent, shape: BoxShape.circle), alignment: Alignment.center, child: AppIcon(item.icon, size: 19, color: active ? AppColors.teal : AppColors.tabInactive)),
-        const SizedBox(height: 3),
-        Text(item.label, style: AppText.sans(fontSize: 9.5, fontWeight: FontWeight.w800, color: active ? AppColors.cream : AppColors.tabInactive)),
-      ]),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            width: active ? 48 : 34,
+            height: active ? 48 : 34,
+            decoration: BoxDecoration(
+              color: active ? Colors.white : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: AppIcon(
+              item.icon,
+              size: 19,
+              color: active ? AppColors.teal : AppColors.tabInactive,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            item.label,
+            style: AppText.sans(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              color: active ? AppColors.cream : AppColors.tabInactive,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

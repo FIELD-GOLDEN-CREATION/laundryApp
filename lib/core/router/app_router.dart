@@ -46,6 +46,7 @@ import '../../state/vendor_earnings_state.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../state/vendor_promos_state.dart';
+import '../../theme/colors.dart';
 import '../../widgets/bottom_tab_bar.dart';
 
 /// Root navigation graph.
@@ -74,40 +75,102 @@ final appRouter = GoRouter(
   initialLocation: '/home',
   routes: [
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => _CustomerTabShell(shell: navigationShell),
+      builder: (context, state, navigationShell) =>
+          _CustomerTabShell(shell: navigationShell),
       branches: [
-        StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/search', builder: (_, _) => const SearchScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (_, _) => const OrdersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen())]),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/orders', builder: (_, _) => const OrdersScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+          ],
+        ),
       ],
     ),
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => _RoleTabShell(shell: navigationShell, items: kVendorTabs),
+      builder: (context, state, navigationShell) =>
+          _RoleTabShell(shell: navigationShell, items: kVendorTabs),
       branches: [
-        StatefulShellBranch(routes: [GoRoute(path: '/vendor/dashboard', builder: (_, _) => const VendorDashboardScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/vendor/orders', builder: (_, _) => const VendorOrdersScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/vendor/catalog', builder: (_, _) => const VendorCatalogScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/vendor/promos', builder: (_, _) => const VendorPromosScreen())]),
-        StatefulShellBranch(routes: [GoRoute(path: '/vendor/earnings', builder: (_, _) => const VendorEarningsScreen())]),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/vendor/dashboard',
+              builder: (_, _) => const VendorDashboardScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/vendor/orders',
+              builder: (_, _) => const VendorOrdersScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/vendor/catalog',
+              builder: (_, _) => const VendorCatalogScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/vendor/promos',
+              builder: (_, _) => const VendorPromosScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/vendor/earnings',
+              builder: (_, _) => const VendorEarningsScreen(),
+            ),
+          ],
+        ),
       ],
     ),
     GoRoute(
       path: '/detail',
-      builder: (_, state) => Consumer(builder: (_, ref, _) {
-        final initialTab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
-        final extra = state.extra as Shop?;
-        if (extra != null) return ShopDetailScreen(shop: extra, initialTab: initialTab);
-        // No explicit shop (e.g. an offer claim) — open the top-ranked one.
-        final shops = ref.watch(shopsWithDistanceProvider);
-        return shops.isNotEmpty
-            ? ShopDetailScreen(shop: shops.first, initialTab: initialTab)
-            : const Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2)));
-      }),
+      builder: (_, state) => Consumer(
+        builder: (_, ref, _) {
+          final initialTab =
+              int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+          final extra = state.extra as Shop?;
+          if (extra != null)
+            return ShopDetailScreen(shop: extra, initialTab: initialTab);
+          // No explicit shop (e.g. an offer claim) — open the top-ranked one.
+          final shops = ref.watch(shopsWithDistanceProvider);
+          return shops.isNotEmpty
+              ? ShopDetailScreen(shop: shops.first, initialTab: initialTab)
+              : const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+        },
+      ),
     ),
     GoRoute(
       path: '/category-detail',
-      builder: (_, state) => CategoryDetailScreen(category: state.extra as LaundryCategory),
+      builder: (_, state) =>
+          CategoryDetailScreen(category: state.extra as LaundryCategory),
     ),
     GoRoute(
       path: '/direction',
@@ -117,30 +180,74 @@ final appRouter = GoRouter(
       path: '/service-vendors',
       builder: (_, state) {
         final category = state.extra as LaundryCategory?;
-        return ServiceVendorsScreen(categoryId: category?.id ?? '', categoryName: category?.name ?? '');
+        return ServiceVendorsScreen(
+          categoryId: category?.id ?? '',
+          categoryName: category?.name ?? '',
+        );
       },
     ),
-    GoRoute(path: '/cart', builder: (_, state) => CartScreen(shopId: state.extra as String? ?? '')),
-    GoRoute(path: '/basket-builder', builder: (_, _) => const BasketBuilderScreen()),
-    GoRoute(path: '/vendor-results', builder: (_, _) => const VendorResultsScreen()),
-    GoRoute(path: '/schedule', builder: (_, state) => ScheduleScreen(shopId: state.extra as String? ?? '')),
+    GoRoute(
+      path: '/cart',
+      builder: (_, state) => CartScreen(shopId: state.extra as String? ?? ''),
+    ),
+    GoRoute(
+      path: '/basket-builder',
+      builder: (_, _) => const BasketBuilderScreen(),
+    ),
+    GoRoute(
+      path: '/vendor-results',
+      builder: (_, _) => const VendorResultsScreen(),
+    ),
+    GoRoute(
+      path: '/schedule',
+      builder: (_, state) =>
+          ScheduleScreen(shopId: state.extra as String? ?? ''),
+    ),
     GoRoute(
       path: '/order-confirmation',
-      builder: (_, state) => OrderConfirmationScreen(orderId: state.extra as String?),
+      builder: (_, state) =>
+          OrderConfirmationScreen(orderId: state.extra as String?),
     ),
-    GoRoute(path: '/track', builder: (_, state) => TrackOrderScreen(orderId: state.extra as String?)),
-    GoRoute(path: '/order-detail', builder: (_, state) => OrderDetailScreen(orderId: state.extra as String?)),
+    GoRoute(
+      path: '/track',
+      builder: (_, state) => TrackOrderScreen(orderId: state.extra as String?),
+    ),
+    GoRoute(
+      path: '/order-detail',
+      builder: (_, state) => OrderDetailScreen(orderId: state.extra as String?),
+    ),
     GoRoute(path: '/notifs', builder: (_, _) => const NotificationsScreen()),
     GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
     GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
-    GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
-    GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
-    GoRoute(path: '/profile/apply-vendor', builder: (_, _) => const VendorApplyScreen()),
-    GoRoute(path: '/profile/settings', builder: (_, _) => const ProfileSettingsScreen()),
-    GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
-    GoRoute(path: '/vendor/order-detail', builder: (_, _) => const VendorOrderDetailScreen()),
-    GoRoute(path: '/vendor/settings', builder: (_, _) => const VendorSettingsScreen()),
+    GoRoute(
+      path: '/profile/settings',
+      builder: (_, _) => const ProfileSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/profile/edit',
+      builder: (_, _) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/profile/apply-vendor',
+      builder: (_, _) => const VendorApplyScreen(),
+    ),
+    GoRoute(
+      path: '/profile/settings',
+      builder: (_, _) => const ProfileSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/profile/edit',
+      builder: (_, _) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/vendor/order-detail',
+      builder: (_, _) => const VendorOrderDetailScreen(),
+    ),
+    GoRoute(
+      path: '/vendor/settings',
+      builder: (_, _) => const VendorSettingsScreen(),
+    ),
   ],
 );
 
@@ -194,16 +301,21 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
     });
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: widget.shell,
-      ),
+      // Transparent + extended in dark mode so the video background flows
+      // behind the floating nav capsule. Light mode is unaffected: screens
+      // paint their own backgrounds and the nav keeps its cream fill.
+      backgroundColor: Colors.transparent,
+      extendBody: AppColors.isClientDark(context),
+      body: SafeArea(bottom: false, child: widget.shell),
       bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: widget.shell.currentIndex,
         onTap: (i) {
           final reason = kCustomerTabs[i].gateReason;
           if (reason != null && gateGuest(ref, context, reason)) return;
-          widget.shell.goBranch(i, initialLocation: i == widget.shell.currentIndex);
+          widget.shell.goBranch(
+            i,
+            initialLocation: i == widget.shell.currentIndex,
+          );
         },
       ),
     );
@@ -224,14 +336,20 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
       final data = n['data'];
       if (data is Map && data['order_id'] != null) {
         ref.read(ordersProvider.notifier).handleRealtimeOrderNotification(n);
-        ref.read(completedOrdersProvider.notifier).handleRealtimeOrderNotification(n);
+        ref
+            .read(completedOrdersProvider.notifier)
+            .handleRealtimeOrderNotification(n);
       }
     };
     realtime.onReviewVisibilityEvent = (action, review) {
-      ref.read(reviewsProvider.notifier).handleRealtimeVisibilityEvent(action, review);
+      ref
+          .read(reviewsProvider.notifier)
+          .handleRealtimeVisibilityEvent(action, review);
     };
     realtime.onPackageVisibilityEvent = (action, package) {
-      ref.read(popularPackagesProvider.notifier).handleRealtimeVisibilityEvent(action, package);
+      ref
+          .read(popularPackagesProvider.notifier)
+          .handleRealtimeVisibilityEvent(action, package);
     };
     realtime.connect(userId: auth.userId);
   }
@@ -302,17 +420,20 @@ class _RoleTabShellState extends ConsumerState<_RoleTabShell> {
   @override
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authProvider, (_, _) => _syncRealtime());
-    ref.listen<int>(vendorDashboardProvider.select((s) => s.shopId), (_, _) => _syncRealtime());
+    ref.listen<int>(
+      vendorDashboardProvider.select((s) => s.shopId),
+      (_, _) => _syncRealtime(),
+    );
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: widget.shell,
-      ),
+      body: SafeArea(bottom: false, child: widget.shell),
       bottomNavigationBar: AppBottomTabBar(
         items: widget.items,
         currentIndex: widget.shell.currentIndex,
-        onTap: (i) => widget.shell.goBranch(i, initialLocation: i == widget.shell.currentIndex),
+        onTap: (i) => widget.shell.goBranch(
+          i,
+          initialLocation: i == widget.shell.currentIndex,
+        ),
       ),
     );
   }
@@ -332,15 +453,25 @@ class _RoleTabShellState extends ConsumerState<_RoleTabShell> {
 
     final realtime = RealtimeService.instance;
     realtime.onOrderEvent = (action, order) {
-      ref.read(vendorDashboardProvider.notifier).handleRealtimeOrderEvent(action, order);
-      ref.read(vendorOrdersProvider.notifier).handleRealtimeOrderEvent(action, order);
-      ref.read(vendorOrderDetailProvider.notifier).handleRealtimeOrderEvent(action, order);
-      ref.read(vendorEarningsProvider.notifier).handleRealtimeOrderEvent(action, order);
+      ref
+          .read(vendorDashboardProvider.notifier)
+          .handleRealtimeOrderEvent(action, order);
+      ref
+          .read(vendorOrdersProvider.notifier)
+          .handleRealtimeOrderEvent(action, order);
+      ref
+          .read(vendorOrderDetailProvider.notifier)
+          .handleRealtimeOrderEvent(action, order);
+      ref
+          .read(vendorEarningsProvider.notifier)
+          .handleRealtimeOrderEvent(action, order);
     };
-    realtime.onNotificationEvent = (n) =>
-        ref.read(vendorDashboardProvider.notifier).handleRealtimeNotification(n);
-    realtime.onPromoEvent = (action, promo) =>
-        ref.read(vendorPromosProvider.notifier).handleRealtimePromoEvent(action, promo);
+    realtime.onNotificationEvent = (n) => ref
+        .read(vendorDashboardProvider.notifier)
+        .handleRealtimeNotification(n);
+    realtime.onPromoEvent = (action, promo) => ref
+        .read(vendorPromosProvider.notifier)
+        .handleRealtimePromoEvent(action, promo);
     realtime.connect(userId: auth.userId, shopId: shopId);
   }
 

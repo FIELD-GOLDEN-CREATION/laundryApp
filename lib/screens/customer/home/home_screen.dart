@@ -232,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: AppColors.isClientDark(context) ? 104 : 12),
               ],
             ),
           ),
@@ -267,7 +267,9 @@ class _Header extends StatelessWidget {
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: Container(
         // Transparent in dark mode so the background video shows through.
-        color: AppColors.isClientDark(context) ? Colors.transparent : AppColors.teal,
+        color: AppColors.isClientDark(context)
+            ? Colors.transparent
+            : AppColors.teal,
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 26),
         child: Stack(
           children: [
