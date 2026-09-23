@@ -95,12 +95,6 @@ class _PackageCard extends ConsumerWidget {
   const _PackageCard({required this.pkg});
   final ServicePackage pkg;
 
-  Color get _accent => switch (pkg.kind) {
-    PackageKind.weight => AppColors.teal,
-    PackageKind.itemCount => AppColors.amber,
-    PackageKind.household => const Color(0xFF1F5ECC),
-  };
-
   String get _kindLabel => switch (pkg.kind) {
     PackageKind.weight => 'Weight',
     PackageKind.itemCount => 'Item',
@@ -153,14 +147,16 @@ class _PackageCard extends ConsumerWidget {
       message: packageWhatsAppMessage(
         shopName: pkg.shopName.isEmpty ? 'there' : pkg.shopName,
         packageName: pkg.name,
-        priceLabel: '${_priceLabel()} ${pkg.priceNegotiable ? '' : pkg.priceUnit}'.trim(),
+        priceLabel:
+            '${_priceLabel()} ${pkg.priceNegotiable ? '' : pkg.priceUnit}'
+                .trim(),
         detail: _scopeLabel,
       ),
     );
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open WhatsApp.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
     }
   }
 
@@ -168,13 +164,17 @@ class _PackageCard extends ConsumerWidget {
     final auth = ref.read(authProvider);
     if (auth.role == UserRole.guest) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Log in as a customer to add packages to your basket.')),
+        const SnackBar(
+          content: Text('Log in as a customer to add packages to your basket.'),
+        ),
       );
       return;
     }
     if (pkg.packageItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This package has no items configured yet.')),
+        const SnackBar(
+          content: Text('This package has no items configured yet.'),
+        ),
       );
       return;
     }
@@ -182,7 +182,12 @@ class _PackageCard extends ConsumerWidget {
     // re-adding, which would otherwise double up the same package items in
     // the cart. Other packages already active for this shop are left alone,
     // since a customer can stack more than one.
-    final alreadyActive = ref.read(basketsProvider)[pkg.shopId]?.activePackages.containsKey(pkg.id) ?? false;
+    final alreadyActive =
+        ref
+            .read(basketsProvider)[pkg.shopId]
+            ?.activePackages
+            .containsKey(pkg.id) ??
+        false;
     if (!alreadyActive) {
       ref.read(basketsProvider.notifier).addPackage(pkg.shopId, pkg);
     }
@@ -197,193 +202,204 @@ class _PackageCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => _onTap(context, ref),
       child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.clientSurface(context),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.clientBorder(context)),
-        boxShadow: [
-          BoxShadow(
-            color: _accent.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Photo area (image behind, like the basket card) ─────────
-          Expanded(
-            flex: 5,
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  RemoteImage(url: pkg.displayImage, fallback: pkg.name),
-                  // Dark veil so pills stay readable on any photo.
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.25),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.45),
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      ),
-                    ),
-                  ),
-                  // Tag pill (top-left)
-                  if (pkg.tag.isNotEmpty)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.clientPillAmber(context),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          pkg.tag,
-                          style: AppText.sans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.clientAmberText(context),
-                          ),
-                        ),
-                      ),
-                    ),
-                  // WhatsApp (top-right)
-                  if (shopPhone.isNotEmpty)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: _WhatsAppButton(
-                        onTap: () => _chatWhatsApp(context, shopPhone),
-                      ),
-                    ),
-                  // Kind badge (bottom-right)
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _kindLabel,
-                        style: AppText.sans(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: _accent,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Scope (bottom-left)
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _scopeLabel,
-                        style: AppText.sans(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Photo behind everything, like the create-basket card.
+            RemoteImage(url: pkg.displayImage, fallback: pkg.name),
+            // Black → transparent veil (left) + bottom shade for text.
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.72),
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.white.withValues(alpha: 0.06),
+                  ],
+                  stops: const [0.0, 0.55, 1.0],
+                ),
               ),
             ),
-          ),
-          // ── Info area ──────────────────────────────────────────────
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.45),
+                  ],
+                  stops: const [0.45, 1.0],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    pkg.name,
-                    style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    pkg.tagline,
-                    style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _kindLabel.toUpperCase(),
+                          style: AppText.sans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (pkg.tag.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            pkg.tag,
+                            style: AppText.sans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      if (shopPhone.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _WhatsAppButton(
+                          onTap: () => _chatWhatsApp(context, shopPhone),
+                        ),
+                      ],
+                    ],
                   ),
                   const Spacer(),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (savings != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.clientPillTeal(context),
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                'Save $savings%',
-                                style: AppText.sans(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
-                              ),
-                            ),
-                          if (savings != null) const SizedBox(height: 3),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                  Text(
+                    pkg.name,
+                    style: AppText.serif(fontSize: 21, color: Colors.white),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    _scopeLabel,
+                    style: AppText.sans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 10),
+                  // Bottom strip: price + select affordance.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.clientSurface(
+                        context,
+                      ).withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 _priceLabel(),
-                                style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
-                              ),
-                              if (!pkg.priceNegotiable) ...[
-                                const SizedBox(width: 2),
-                                Text(
-                                  pkg.priceUnit,
-                                  style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                                style: AppText.sans(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.clientText(context),
                                 ),
-                              ],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (savings != null)
+                                Text(
+                                  'Save $savings%',
+                                  style: AppText.sans(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.clientTealText(context),
+                                  ),
+                                )
+                              else if (pkg.tagline.isNotEmpty)
+                                Text(
+                                  pkg.tagline,
+                                  style: AppText.sans(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.clientSecondaryText(
+                                      context,
+                                    ),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                             ],
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: const BoxDecoration(
+                            color: AppColors.teal,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.chevron_right_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }

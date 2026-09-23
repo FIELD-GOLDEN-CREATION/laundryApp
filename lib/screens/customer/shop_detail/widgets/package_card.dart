@@ -39,190 +39,300 @@ class PackageCard extends StatelessWidget {
     final savings = package.savingsPercent;
     final inclusions = package.inclusions.take(kMaxPackageInclusions).toList();
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 13),
-      decoration: BoxDecoration(
-        color: AppColors.clientSurface(context),
-        border: Border.all(color: AppColors.clientBorder(context)),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final photoHeader = SizedBox(
+      height: 148,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 56,
-                height: 56,
-                child: RemoteImage(
-                  url: package.displayImage,
-                  fallback: package.name,
-                  borderRadius: 14,
-                ),
+          RemoteImage(url: package.displayImage, fallback: package.name),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.black.withValues(alpha: 0.72),
+                  Colors.black.withValues(alpha: 0.35),
+                  Colors.white.withValues(alpha: 0.06),
+                ],
+                stops: const [0.0, 0.55, 1.0],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.4),
+                ],
+                stops: const [0.4, 1.0],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      package.name,
-                      style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      package.tagline,
-                      style: AppText.sans(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                        color: AppColors.clientSecondaryText(context),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
                       ),
-                    ),
-                    if (_scopeLabel.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        _scopeLabel,
+                      decoration: BoxDecoration(
+                        color: AppColors.amber,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        package.kindLabel.toUpperCase(),
                         style: AppText.sans(
-                          fontSize: 11.5,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.clientTealText(context),
+                          color: Colors.white,
                         ),
                       ),
-                    ],
-                  ],
-                ),
-              ),
-              if (package.tag.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                _Pill(label: package.tag, bg: AppColors.clientPillAmber(context), fg: AppColors.clientAmberText(context)),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          // A Wrap, not a Row: price + unit + was-price + savings pill is
-          // more than a narrow phone fits on one line, and this section is
-          // worth a second line rather than an ellipsis through the price.
-          Wrap(
-            spacing: 8,
-            runSpacing: 5,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    package.priceNegotiable ? 'Negotiable' : formatMoney(package.priceTzs),
-                    style: AppText.serif(fontSize: 20, color: AppColors.clientTealText(context)),
-                  ),
-                  if (!package.priceNegotiable) ...[
-                    const SizedBox(width: 5),
-                    Text(
-                      package.priceUnit,
-                      style: AppText.sans(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.clientSecondaryText(context),
-                      ),
                     ),
-                  ],
-                ],
-              ),
-              if (savings != null) ...[
-                Text(
-                  formatMoney(package.compareAtTzs!),
-                  style: AppText.sans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.clientSecondaryText(context),
-                  ).copyWith(decoration: TextDecoration.lineThrough),
-                ),
-                _Pill(label: 'Save $savings%', bg: AppColors.clientPillTeal(context), fg: AppColors.clientTealText(context)),
-              ],
-            ],
-          ),
-          const SizedBox(height: 11),
-          for (final line in inclusions) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: AppIcon(AppIcons.checkCircle, size: 13, color: AppColors.clientTealText(context)),
-                  ),                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      line,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                        color: AppColors.clientSecondaryText(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (package.note.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              package.note.toUpperCase(),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.eyebrow(color: AppColors.clientSecondaryText(context)),
-            ),
-          ],
-          const SizedBox(height: 13),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Material(
-                    color: inBasket ? AppColors.clientPillTeal(context) : AppColors.teal,
-                    borderRadius: BorderRadius.circular(14),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: onSelect,
-                      child: Center(
-                        child: Text(
-                          inBasket ? 'In basket · view' : 'Select package',
-                          style: AppText.sans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: inBasket ? AppColors.clientTealText(context) : AppColors.cream,
+                    const Spacer(),
+                    if (shopPhone.isNotEmpty)
+                      Material(
+                        color: const Color(0xFF25D366),
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () => _chatWhatsApp(context),
+                          child: const SizedBox(
+                            width: 34,
+                            height: 34,
+                            child: Icon(
+                              Icons.chat_rounded,
+                              size: 17,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  package.name,
+                  style: AppText.serif(fontSize: 21, color: Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (_scopeLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    _scopeLabel,
+                    style: AppText.sans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final priceRow = Wrap(
+      spacing: 8,
+      runSpacing: 5,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              package.priceNegotiable
+                  ? 'Negotiable'
+                  : formatMoney(package.priceTzs),
+              style: AppText.serif(
+                fontSize: 20,
+                color: AppColors.clientTealText(context),
+              ),
+            ),
+            if (!package.priceNegotiable) ...[
+              const SizedBox(width: 5),
+              Text(
+                package.priceUnit,
+                style: AppText.sans(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.clientSecondaryText(context),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (savings != null) ...[
+          Text(
+            formatMoney(package.compareAtTzs!),
+            style: AppText.sans(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.clientSecondaryText(context),
+            ).copyWith(decoration: TextDecoration.lineThrough),
+          ),
+          _Pill(
+            label: 'Save $savings%',
+            bg: AppColors.clientPillTeal(context),
+            fg: AppColors.clientTealText(context),
+          ),
+        ],
+      ],
+    );
+
+    final ctaRow = SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: Row(
+        children: [
+          Expanded(
+            child: Material(
+              color: inBasket
+                  ? AppColors.clientPillTeal(context)
+                  : AppColors.teal,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onSelect,
+                child: Center(
+                  child: Text(
+                    inBasket ? 'In basket · view' : 'Select package',
+                    style: AppText.sans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: inBasket
+                          ? AppColors.clientTealText(context)
+                          : AppColors.cream,
                     ),
                   ),
                 ),
-                if (shopPhone.isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  Material(
-                    color: const Color(0xFF25D366),
-                    borderRadius: BorderRadius.circular(14),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => _chatWhatsApp(context),
-                      child: const SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Icon(Icons.chat_rounded, size: 19, color: Colors.white),
-                      ),
+              ),
+            ),
+          ),
+          if (shopPhone.isNotEmpty) ...[
+            const SizedBox(width: 10),
+            Material(
+              color: const Color(0xFF25D366),
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _chatWhatsApp(context),
+                child: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    Icons.chat_rounded,
+                    size: 19,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.clientBorder(context)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          photoHeader,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+            color: AppColors.clientSurface(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (package.tagline.isNotEmpty) ...[
+                  Text(
+                    package.tagline,
+                    style: AppText.sans(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      color: AppColors.clientSecondaryText(context),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                priceRow,
+                const SizedBox(height: 11),
+                for (final line in inclusions) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1),
+                          child: AppIcon(
+                            AppIcons.checkCircle,
+                            size: 13,
+                            color: AppColors.clientTealText(context),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            line,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.sans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                              color: AppColors.clientSecondaryText(context),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
+                if (package.note.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    package.note.toUpperCase(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.eyebrow(
+                      color: AppColors.clientSecondaryText(context),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 13),
+                ctaRow,
               ],
             ),
           ),
@@ -264,9 +374,9 @@ class PackageCard extends StatelessWidget {
       ),
     );
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open WhatsApp.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
     }
   }
 }
@@ -284,8 +394,18 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: fg)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppText.sans(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          color: fg,
+        ),
+      ),
     );
   }
 }
