@@ -198,6 +198,8 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                                       0,
                                   onSelect: () =>
                                       _selectPackage(context, package),
+                                  shopPhone: shop.phone,
+                                  shopName: shop.name,
                                 ),
                                 if (package != packages.last)
                                   const SizedBox(height: 10),

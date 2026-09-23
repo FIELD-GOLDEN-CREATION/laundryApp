@@ -45,10 +45,19 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
   final _price = TextEditingController();
   final _unit = TextEditingController(text: 'bag');
   final _note = TextEditingController();
+  final _weight = TextEditingController();
 
   PackageKind _kind = PackageKind.weight;
   List<String> _inclusions = [];
   final Map<String, int> _packageItemQty = {}; // itemId -> qty
+
+  /// Household scope: number of rooms + garden/yard maintenance.
+  int _rooms = 1;
+  bool _gardenYard = false;
+
+  /// When true the price is settled with the customer (WhatsApp) — the
+  /// checkout price may stay 0.
+  bool _negotiable = false;
 
   @override
   void initState() {
@@ -62,7 +71,7 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
 
   @override
   void dispose() {
-    for (final controller in [_name, _tagline, _price, _unit, _note]) {
+    for (final controller in [_name, _tagline, _price, _unit, _note, _weight]) {
       controller.dispose();
     }
     super.dispose();
@@ -82,22 +91,47 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
 
   double get _priceTzs => double.tryParse(_price.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
 
-  bool get _valid => _name.text.trim().isNotEmpty && _priceTzs > 0;
+  double get _weightKg => double.tryParse(_weight.text.trim()) ?? 0;
+
+  bool get _valid {
+    if (_name.text.trim().isEmpty) return false;
+    if (!_negotiable && _priceTzs <= 0) return false;
+    switch (_kind) {
+      case PackageKind.weight:
+        return _weightKg > 0;
+      case PackageKind.itemCount:
+        return _packageItemQty.values.any((q) => q > 0);
+      case PackageKind.household:
+        return _rooms >= 1;
+    }
+  }
+
+  void _pickKind(PackageKind kind) {
+    setState(() {
+      _kind = kind;
+      // Attached items only belong to item-count packages.
+      if (kind != PackageKind.itemCount) _packageItemQty.clear();
+      if (kind == PackageKind.weight) _negotiable = false;
+    });
+  }
 
   void _save() {
     final unit = _unit.text.trim();
-    // Build package items from selected items with quantities
+    // Build package items from selected items with quantities (item-count
+    // packages only — other kinds never attach items).
     final packageItems = <PackageItem>[];
-    for (final entry in _packageItemQty.entries) {
-      if (entry.value > 0) {
-        final item = _itemById(entry.key);
-        if (item != null) {
-          packageItems.add(PackageItem(
-            itemId: item.id,
-            itemName: item.name,
-            qty: entry.value,
-            unitPrice: item.priceTzs,
-          ));
+    if (_kind == PackageKind.itemCount) {
+      for (final entry in _packageItemQty.entries) {
+        if (entry.value > 0) {
+          final item = _itemById(entry.key);
+          if (item != null) {
+            packageItems.add(PackageItem(
+              itemId: item.id,
+              itemName: item.name,
+              qty: entry.value,
+              unitPrice: item.priceTzs,
+            ));
+          }
         }
       }
     }
@@ -108,10 +142,14 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
         tagline: _tagline.text.trim(),
         kind: _kind,
         priceTzs: _priceTzs,
-        priceUnit: unit.isEmpty ? '/ package' : '/ $unit',
+        priceUnit: _kind == PackageKind.weight ? '/ kg' : (unit.isEmpty ? '/ package' : '/ $unit'),
         inclusions: _inclusions,
         note: _note.text.trim(),
         packageItems: packageItems,
+        weightKg: _kind == PackageKind.weight ? _weightKg : null,
+        rooms: _kind == PackageKind.household ? _rooms : null,
+        gardenYard: _kind == PackageKind.household && _gardenYard,
+        priceNegotiable: _kind == PackageKind.household && _negotiable,
       ),
     );
   }
@@ -191,7 +229,7 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
                     SelectableChip(
                       label: _kindChipLabel(option),
                       selected: _kind == option,
-                      onTap: () => setState(() => _kind = option),
+                      onTap: () => _pickKind(option),
                       variant: ChipVariant.muted,
                       borderRadius: 12,
                       fontSize: 12,
@@ -209,16 +247,90 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
                 children: [
                   Expanded(
                     flex: 3,
-                    child: _Field(label: 'PRICE (TZS)', hint: '34000', controller: _price, digitsOnly: true, onChanged: _rebuild),
+                    child: _Field(label: 'PRICE (TZS)', hint: _negotiable ? '0' : '34000', controller: _price, digitsOnly: true, onChanged: _rebuild),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: _Field(label: 'PER', hint: 'bag', controller: _unit, onChanged: _rebuild),
-                  ),
+                  if (_kind != PackageKind.weight)
+                    Expanded(
+                      flex: 2,
+                      child: _Field(label: 'PER', hint: 'pack', controller: _unit, onChanged: _rebuild),
+                    ),
                 ],
               ),
-              const SizedBox(height: 12),
+              // Weight packages price per kilogram — no attached items.
+              if (_kind == PackageKind.weight) ...[
+                const SizedBox(height: 12),
+                _Field(label: 'WEIGHT (KG)', hint: 'e.g. 5', controller: _weight, decimal: true, onChanged: _rebuild),
+              ],
+              // Household packages: rooms in scope + garden/yard option.
+              // Every room covers the same fixed task list.
+              if (_kind == PackageKind.household) ...[
+                const SizedBox(height: 12),
+                Text('ROOMS TO CLEAN', style: AppText.eyebrow()),
+                const SizedBox(height: 7),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: AppColors.creamDark),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      _StepperButton(
+                        icon: Icons.remove_rounded,
+                        onTap: _rooms > 1 ? () => setState(() => _rooms--) : null,
+                      ),
+                      Expanded(
+                        child: Text(
+                          '$_rooms ${ _rooms == 1 ? 'room' : 'rooms'}',
+                          textAlign: TextAlign.center,
+                          style: AppText.sans(fontSize: 14, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      _StepperButton(
+                        icon: Icons.add_rounded,
+                        onTap: _rooms < 50 ? () => setState(() => _rooms++) : null,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.tealMuted,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Each room includes:', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.teal)),
+                      const SizedBox(height: 4),
+                      for (final task in kHouseholdRoomTasks)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text('• $task', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate)),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SwitchRow(
+                  title: 'Garden & yard maintenance',
+                  value: _gardenYard,
+                  onChanged: (v) => setState(() => _gardenYard = v),
+                ),
+                const SizedBox(height: 8),
+                _SwitchRow(
+                  title: 'Negotiable price (settle on WhatsApp)',
+                  value: _negotiable,
+                  onChanged: (v) => setState(() => _negotiable = v),
+                ),
+              ],
+              // Only item-count packages attach catalog items.
+              if (_kind == PackageKind.itemCount) ...[
+                const SizedBox(height: 12),
               Text('PACKAGE ITEMS', style: AppText.eyebrow()),
               const SizedBox(height: 7),
               Text(
@@ -283,6 +395,7 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
                         ),
                   ],
                 ),
+              ],
               ],
               const SizedBox(height: 12),
               Text('INCLUDES', style: AppText.eyebrow()),
@@ -383,11 +496,62 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
 }
 
 String _kindChipLabel(PackageKind kind) => switch (kind) {
-  PackageKind.weight => 'By weight',
-  PackageKind.itemCount => 'By item count',
-  PackageKind.household => 'Household',
-  PackageKind.subscription => 'Subscription',
+  PackageKind.weight => 'By weight (kg)',
+  PackageKind.itemCount => 'By items',
+  PackageKind.household => 'House cleaning',
 };
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: onTap == null ? AppColors.creamDark : AppColors.teal,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(icon, size: 18, color: onTap == null ? AppColors.muted : AppColors.cream),
+        ),
+      ),
+    );
+  }
+}
+
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({required this.title, required this.value, required this.onChanged});
+
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.creamDark),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(title, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700)),
+          ),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.teal),
+        ],
+      ),
+    );
+  }
+}
 
 class _Field extends StatelessWidget {
   const _Field({
@@ -396,6 +560,7 @@ class _Field extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     this.digitsOnly = false,
+    this.decimal = false,
   });
 
   final String label;
@@ -403,6 +568,7 @@ class _Field extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onChanged;
   final bool digitsOnly;
+  final bool decimal;
 
   @override
   Widget build(BuildContext context) {
@@ -423,8 +589,12 @@ class _Field extends StatelessWidget {
           child: TextField(
             controller: controller,
             onChanged: (_) => onChanged(),
-            keyboardType: digitsOnly ? TextInputType.number : TextInputType.text,
-            inputFormatters: digitsOnly ? [FilteringTextInputFormatter.digitsOnly] : null,
+            keyboardType: (digitsOnly || decimal) ? TextInputType.number : TextInputType.text,
+            inputFormatters: digitsOnly
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : decimal
+                    ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+                    : null,
             style: AppText.sans(fontSize: 13.5, fontWeight: FontWeight.w700),
             decoration: InputDecoration.collapsed(
               hintText: hint,

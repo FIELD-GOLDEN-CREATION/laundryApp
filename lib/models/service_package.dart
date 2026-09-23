@@ -1,21 +1,38 @@
 /// A pre-bundled offer a vendor sells alongside the per-piece price list —
 /// the customer picks one instead of counting garments item by item.
 ///
-/// Four shapes cover how vendors actually bundle, and [PackageKind] names
+/// Three shapes cover how vendors actually bundle, and [PackageKind] names
 /// them so the UI can pick the right icon/label without string matching.
 enum PackageKind {
-  /// Flat rate up to a weight limit — everyday wash & fold.
+  /// Flat rate up to a weight limit in kilograms — no attached items.
   weight,
 
-  /// A fixed number of garments, usually cleaned and ironed.
+  /// A fixed set of attached items with quantities.
   itemCount,
 
-  /// Bulky bedding/household items a home machine can't take.
+  /// House cleaning: a number of rooms (each deep-cleaned) plus optional
+  /// garden/yard maintenance. Price may be fixed or negotiable.
   household,
-
-  /// Recurring plan paid up front, priced per month.
-  subscription,
 }
+
+/// Default card photo per package kind (vendor photo overrides it).
+const kPackageKindImages = {
+  PackageKind.weight:
+      'https://i.pinimg.com/1200x/27/f9/49/27f949bcafb03509a46ecf8988936455.jpg',
+  PackageKind.itemCount:
+      'https://i.pinimg.com/1200x/82/4f/d3/824fd3efa8f652d832aca688e400344d.jpg',
+  PackageKind.household:
+      'https://i.pinimg.com/1200x/4e/d7/c7/4ed7c7aa3c3850972cd5d585b8d4604b.jpg',
+};
+
+/// What every household room includes.
+const kHouseholdRoomTasks = [
+  'Deep cleaning the whole house',
+  'Cleaning the windows',
+  'Mopping the floor',
+  'Cleaning the cupboards and tables',
+  'Sofas',
+];
 
 /// A single line item inside a vendor-created package, pairing a laundry
 /// item with its quantity. The customer sees these as "3× T-Shirt / Polo"
@@ -61,6 +78,11 @@ class ServicePackage {
     this.packageItems = const [],
     this.shopId = '',
     this.shopName = '',
+    this.weightKg,
+    this.rooms,
+    this.gardenYard = false,
+    this.priceNegotiable = false,
+    this.imageUrl = '',
   });
 
   /// Stable slug, unique within a vendor's package list.
@@ -116,9 +138,29 @@ class ServicePackage {
   final bool adminLocked;
 
   /// Specific items with quantities included in this package.
-  /// When non-empty, the package is item-based: the customer gets exactly
-  /// these items. Empty means the package is a generic bundle (weight/subscription).
+  /// Only itemCount packages carry these. Empty means the package is a
+  /// generic bundle (weight) or a scoped service (household).
   final List<PackageItem> packageItems;
+
+  /// Weight packages: flat rate for this many kilograms.
+  final double? weightKg;
+
+  /// Household packages: number of rooms in scope.
+  final int? rooms;
+
+  /// Household packages: garden/yard maintenance included.
+  final bool gardenYard;
+
+  /// When true the vendor settles the price with the customer (WhatsApp)
+  /// instead of fixed checkout pricing.
+  final bool priceNegotiable;
+
+  /// Card background photo. Empty falls back to the kind default.
+  final String imageUrl;
+
+  /// Photo to show behind the package card.
+  String get displayImage =>
+      imageUrl.isNotEmpty ? imageUrl : kPackageKindImages[kind] ?? '';
 
   /// Avatar letter for the cart row, matching `MenuItem.initial`.
   String get initial => name.isEmpty ? 'P' : name[0].toUpperCase();
@@ -127,8 +169,7 @@ class ServicePackage {
   String get kindLabel => switch (kind) {
     PackageKind.weight => 'Weight package',
     PackageKind.itemCount => 'Item package',
-    PackageKind.household => 'Household package',
-    PackageKind.subscription => 'Monthly plan',
+    PackageKind.household => 'House cleaning',
   };
 
   /// [priceUnit] phrased to sit after a label, e.g. '/ bag' -> 'per bag'.
@@ -179,6 +220,11 @@ class ServicePackage {
     bool? active,
     bool? adminLocked,
     List<PackageItem>? packageItems,
+    double? weightKg,
+    int? rooms,
+    bool? gardenYard,
+    bool? priceNegotiable,
+    String? imageUrl,
   }) => ServicePackage(
     id: id,
     shopId: shopId,
@@ -196,6 +242,11 @@ class ServicePackage {
     active: active ?? this.active,
     adminLocked: adminLocked ?? this.adminLocked,
     packageItems: packageItems ?? this.packageItems,
+    weightKg: weightKg ?? this.weightKg,
+    rooms: rooms ?? this.rooms,
+    gardenYard: gardenYard ?? this.gardenYard,
+    priceNegotiable: priceNegotiable ?? this.priceNegotiable,
+    imageUrl: imageUrl ?? this.imageUrl,
   );
 }
 

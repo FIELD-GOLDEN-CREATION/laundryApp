@@ -2,25 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../models/service_package.dart';
-import '../../../../models/shop.dart';
 import '../../../../models/user_role.dart';
 import '../../../../state/auth_state.dart';
 import '../../../../state/catalog_state.dart';
 import '../../../../state/vendor_basket.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
+import '../../../../utils/contact_launcher.dart';
+import '../../../../widgets/remote_image.dart';
 
-// Bundled Storyset illustrations — https://storyset.com/shopping
-const _kPackageIllustrations = {
-  'weight': 'assets/images/Laundry and dry cleaning.svg',
-  'itemCount': 'assets/images/delivery.svg',
-  'household': 'assets/images/Select-bro.svg',
-  'subscription': 'assets/images/Laundry and dry cleaning.svg',
-};
+// Package card photos come from the backend per kind (see
+// ServicePackage.displayImage) — no bundled illustrations needed.
 
 class PackagesCarousel extends ConsumerStatefulWidget {
   const PackagesCarousel({super.key});
@@ -104,36 +99,70 @@ class _PackageCard extends ConsumerWidget {
     PackageKind.weight => AppColors.teal,
     PackageKind.itemCount => AppColors.amber,
     PackageKind.household => const Color(0xFF1F5ECC),
-    PackageKind.subscription => AppColors.teal,
-  };
-
-  Color get _bgTint => switch (pkg.kind) {
-    PackageKind.weight => const Color(0xFFF0FAF8),
-    PackageKind.itemCount => const Color(0xFFFEF8EE),
-    PackageKind.household => const Color(0xFFEEF4FD),
-    PackageKind.subscription => const Color(0xFFF0FAF8),
   };
 
   String get _kindLabel => switch (pkg.kind) {
     PackageKind.weight => 'Weight',
     PackageKind.itemCount => 'Item',
-    PackageKind.household => 'Household',
-    PackageKind.subscription => 'Monthly',
+    PackageKind.household => 'Cleaning',
   };
 
-  Widget _fallback() => Container(
-    width: 60,
-    height: 60,
-    decoration: BoxDecoration(
-      color: _accent.withValues(alpha: 0.08),
-      shape: BoxShape.circle,
-    ),
-    child: Icon(
-      Icons.inventory_2_outlined,
-      size: 28,
-      color: _accent,
-    ),
-  );
+  /// One-line scope summary shown under the tagline.
+  String get _scopeLabel {
+    switch (pkg.kind) {
+      case PackageKind.weight:
+        final kg = pkg.weightKg;
+        return kg != null
+            ? 'Up to ${kg.toStringAsFixed(kg % 1 == 0 ? 0 : 1)} kg'
+            : 'By weight';
+      case PackageKind.itemCount:
+        if (pkg.packageItems.isEmpty) return 'By items';
+        final n = pkg.packageItems.fold(0, (a, e) => a + e.qty);
+        return '$n items included';
+      case PackageKind.household:
+        final parts = [
+          if (pkg.rooms != null)
+            '${pkg.rooms} room${pkg.rooms == 1 ? '' : 's'}',
+          if (pkg.gardenYard) 'Garden',
+        ];
+        return parts.isEmpty ? 'House cleaning' : parts.join(' · ');
+    }
+  }
+
+  String _priceLabel() {
+    if (pkg.priceNegotiable) return 'Negotiable';
+    return 'TZS ${pkg.priceTzs.round().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+  }
+
+  /// Vendor phone for the WhatsApp enquiry button (hidden without one).
+  String _shopPhone(WidgetRef ref) {
+    try {
+      final shops = ref.watch(shopsProvider).items;
+      for (final s in shops) {
+        if (s.slotId == pkg.shopId || s.listSlotId == pkg.shopId) {
+          return s.phone;
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  Future<void> _chatWhatsApp(BuildContext context, String phone) async {
+    final ok = await launchWhatsAppChat(
+      phone,
+      message: packageWhatsAppMessage(
+        shopName: pkg.shopName.isEmpty ? 'there' : pkg.shopName,
+        packageName: pkg.name,
+        priceLabel: '${_priceLabel()} ${pkg.priceNegotiable ? '' : pkg.priceUnit}'.trim(),
+        detail: _scopeLabel,
+      ),
+    );
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open WhatsApp.')),
+      );
+    }
+  }
 
   void _onTap(BuildContext context, WidgetRef ref) {
     final auth = ref.read(authProvider);
@@ -163,7 +192,7 @@ class _PackageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final savings = pkg.savingsPercent;
-    final illustrationUrl = _kPackageIllustrations[pkg.kind.name];
+    final shopPhone = _shopPhone(ref);
 
     return GestureDetector(
       onTap: () => _onTap(context, ref),
@@ -184,43 +213,34 @@ class _PackageCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Illustration area ──────────────────────────────────────
+          // ── Photo area (image behind, like the basket card) ─────────
           Expanded(
             flex: 5,
             child: Container(
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: _bgTint,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
+              clipBehavior: Clip.antiAlias,
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  // Decorative circle
-                  Positioned(
-                    right: -12,
-                    top: -12,
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _accent.withValues(alpha: 0.06),
+                  RemoteImage(url: pkg.displayImage, fallback: pkg.name),
+                  // Dark veil so pills stay readable on any photo.
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.25),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.45),
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
                       ),
                     ),
                   ),
-                  // Illustration
-                  if (illustrationUrl != null)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: SvgPicture.asset(
-                          illustrationUrl,
-                          fit: BoxFit.contain,
-                          placeholderBuilder: (_) => _fallback(),
-                          errorBuilder: (_, _, _) => _fallback(),
-                        ),
-                      ),
-                    ),
                   // Tag pill (top-left)
                   if (pkg.tag.isNotEmpty)
                     Positioned(
@@ -242,6 +262,15 @@ class _PackageCard extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  // WhatsApp (top-right)
+                  if (shopPhone.isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _WhatsAppButton(
+                        onTap: () => _chatWhatsApp(context, shopPhone),
+                      ),
+                    ),
                   // Kind badge (bottom-right)
                   Positioned(
                     bottom: 10,
@@ -249,9 +278,8 @@ class _PackageCard extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: _accent.withValues(alpha: 0.15)),
                       ),
                       child: Text(
                         _kindLabel,
@@ -259,6 +287,26 @@ class _PackageCard extends ConsumerWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: _accent,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Scope (bottom-left)
+                  Positioned(
+                    bottom: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _scopeLabel,
+                        style: AppText.sans(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -313,14 +361,16 @@ class _PackageCard extends ConsumerWidget {
                             textBaseline: TextBaseline.alphabetic,
                             children: [
                               Text(
-                                'TZS ${pkg.priceTzs.round().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
+                                _priceLabel(),
                                 style: AppText.sans(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.clientTealText(context)),
                               ),
-                              const SizedBox(width: 2),
-                              Text(
-                                pkg.priceUnit,
-                                style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-                              ),
+                              if (!pkg.priceNegotiable) ...[
+                                const SizedBox(width: 2),
+                                Text(
+                                  pkg.priceUnit,
+                                  style: AppText.sans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -334,6 +384,32 @@ class _PackageCard extends ConsumerWidget {
         ],
       ),
     ),
+    );
+  }
+}
+
+/// Round WhatsApp button overlaid on package photos.
+class _WhatsAppButton extends StatelessWidget {
+  const _WhatsAppButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF25D366),
+      shape: const CircleBorder(),
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const SizedBox(
+          width: 34,
+          height: 34,
+          child: Icon(Icons.chat_rounded, size: 17, color: Colors.white),
+        ),
+      ),
     );
   }
 }

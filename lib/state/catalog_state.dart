@@ -120,8 +120,9 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
   final kindStr = j['kind'] as String? ?? 'weight';
   final kind = switch (kindStr) {
     'item_count' => PackageKind.itemCount,
+    'itemCount' => PackageKind.itemCount,
     'household' => PackageKind.household,
-    'subscription' => PackageKind.subscription,
+    // Legacy 'subscription' kind was retired — old rows fall back to weight.
     _ => PackageKind.weight,
   };
 
@@ -150,6 +151,12 @@ ServicePackage packageFromJson(Map<String, dynamic> j) {
             .toList() ??
         [],
     active: j['is_active'] as bool? ?? true,
+    weightKg: parseDouble(j['weight_kg']),
+    rooms: parseInt(j['rooms']),
+    gardenYard: j['garden_yard'] == true || j['garden_yard'] == 1,
+    priceNegotiable:
+        j['price_negotiable'] == true || j['price_negotiable'] == 1,
+    imageUrl: j['image_url'] as String? ?? '',
     packageItems: (j['items'] as List?)
             ?.map((e) {
               if (e is! Map<String, dynamic>) return null;

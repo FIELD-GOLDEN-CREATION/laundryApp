@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/icons/app_icons.dart';
 import '../../../../utils/cart_math.dart';
+import '../../../../utils/contact_launcher.dart';
 import '../../../../models/service_package.dart';
 import '../../../../theme/colors.dart';
 import '../../../../theme/text_styles.dart';
+import '../../../../widgets/remote_image.dart';
 
 /// One bundled offer on the Shop Detail page. Shares the price-list row's
 /// shell (white fill, `creamDark` hairline, radius 18, 40x40 `tealMuted`
@@ -16,6 +18,8 @@ class PackageCard extends StatelessWidget {
     required this.package,
     required this.inBasket,
     required this.onSelect,
+    this.shopPhone = '',
+    this.shopName = '',
   });
 
   final ServicePackage package;
@@ -25,6 +29,10 @@ class PackageCard extends StatelessWidget {
   final bool inBasket;
 
   final VoidCallback onSelect;
+
+  /// Vendor phone for the WhatsApp enquiry button (hidden when empty).
+  final String shopPhone;
+  final String shopName;
 
   @override
   Widget build(BuildContext context) {
@@ -44,12 +52,14 @@ class PackageCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(13)),
-                alignment: Alignment.center,
-                child: AppIcon(_iconFor(package.kind), size: 21, color: AppColors.teal),
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: RemoteImage(
+                  url: package.displayImage,
+                  fallback: package.name,
+                  borderRadius: 14,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -70,12 +80,23 @@ class PackageCard extends StatelessWidget {
                         color: AppColors.clientSecondaryText(context),
                       ),
                     ),
+                    if (_scopeLabel.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        _scopeLabel,
+                        style: AppText.sans(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.clientTealText(context),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               if (package.tag.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                _Pill(label: package.tag, bg: AppColors.amberLight, fg: AppColors.amber),
+                _Pill(label: package.tag, bg: AppColors.clientPillAmber(context), fg: AppColors.clientAmberText(context)),
               ],
             ],
           ),
@@ -93,16 +114,21 @@ class PackageCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text(formatMoney(package.priceTzs), style: AppText.serif(fontSize: 20, color: AppColors.teal)),
-                  const SizedBox(width: 5),
                   Text(
-                    package.priceUnit,
-                    style: AppText.sans(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.clientSecondaryText(context),
-                    ),
+                    package.priceNegotiable ? 'Negotiable' : formatMoney(package.priceTzs),
+                    style: AppText.serif(fontSize: 20, color: AppColors.clientTealText(context)),
                   ),
+                  if (!package.priceNegotiable) ...[
+                    const SizedBox(width: 5),
+                    Text(
+                      package.priceUnit,
+                      style: AppText.sans(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.clientSecondaryText(context),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               if (savings != null) ...[
@@ -114,7 +140,7 @@ class PackageCard extends StatelessWidget {
                     color: AppColors.clientSecondaryText(context),
                   ).copyWith(decoration: TextDecoration.lineThrough),
                 ),
-                _Pill(label: 'Save $savings%', bg: AppColors.tealMuted, fg: AppColors.teal),
+                _Pill(label: 'Save $savings%', bg: AppColors.clientPillTeal(context), fg: AppColors.clientTealText(context)),
               ],
             ],
           ),
@@ -125,11 +151,10 @@ class PackageCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 1),
-                    child: AppIcon(AppIcons.checkCircle, size: 13, color: AppColors.teal),
-                  ),
-                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: AppIcon(AppIcons.checkCircle, size: 13, color: AppColors.clientTealText(context)),
+                  ),                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       line,
@@ -160,39 +185,91 @@ class PackageCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 44,
-            child: Material(
-              color: inBasket ? AppColors.tealMuted : AppColors.teal,
-              borderRadius: BorderRadius.circular(14),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onSelect,
-                child: Center(
-                  child: Text(
-                    inBasket ? 'In basket · view' : 'Select package',
-                    style: AppText.sans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: inBasket ? AppColors.teal : AppColors.cream,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: inBasket ? AppColors.clientPillTeal(context) : AppColors.teal,
+                    borderRadius: BorderRadius.circular(14),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: onSelect,
+                      child: Center(
+                        child: Text(
+                          inBasket ? 'In basket · view' : 'Select package',
+                          style: AppText.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: inBasket ? AppColors.clientTealText(context) : AppColors.cream,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                if (shopPhone.isNotEmpty) ...[
+                  const SizedBox(width: 10),
+                  Material(
+                    color: const Color(0xFF25D366),
+                    borderRadius: BorderRadius.circular(14),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => _chatWhatsApp(context),
+                      child: const SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Icon(Icons.chat_rounded, size: 19, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-/// Icons are a presentation choice, so the mapping lives here rather than
-/// on the model — `ServicePackage` stays free of Flutter imports.
-String _iconFor(PackageKind kind) => switch (kind) {
-  PackageKind.weight => AppIcons.serviceWashFold,
-  PackageKind.itemCount => AppIcons.serviceSuits,
-  PackageKind.household => AppIcons.serviceBedding,
-  PackageKind.subscription => AppIcons.clock,
-};
+  /// One-line scope summary: weight, room count/garden, or item count.
+  String get _scopeLabel {
+    switch (package.kind) {
+      case PackageKind.weight:
+        final kg = package.weightKg;
+        return kg != null
+            ? 'Up to ${kg.toStringAsFixed(kg % 1 == 0 ? 0 : 1)} kg'
+            : '';
+      case PackageKind.itemCount:
+        return '';
+      case PackageKind.household:
+        final parts = [
+          if (package.rooms != null)
+            '${package.rooms} room${package.rooms == 1 ? '' : 's'}',
+          if (package.gardenYard) 'Garden',
+        ];
+        return parts.join(' · ');
+    }
+  }
+
+  Future<void> _chatWhatsApp(BuildContext context) async {
+    final ok = await launchWhatsAppChat(
+      shopPhone,
+      message: packageWhatsAppMessage(
+        shopName: shopName.isEmpty ? 'there' : shopName,
+        packageName: package.name,
+        priceLabel: package.priceNegotiable
+            ? 'Negotiable'
+            : '${formatMoney(package.priceTzs)} ${package.priceUnit}',
+        detail: _scopeLabel.isEmpty ? package.tagline : _scopeLabel,
+      ),
+    );
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open WhatsApp.')),
+      );
+    }
+  }
+}
 
 /// Same rounded tag pill as the shop's feature badges, kept local so the
 /// card can be dropped anywhere without dragging the screen's privates.

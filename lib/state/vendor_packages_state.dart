@@ -83,10 +83,10 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
     // price_tzs, compare_at_tzs) — NOT the customer-facing shorthand this
     // used to send, which the backend's validator silently rejected.
     final kindStr = j['kind'] as String? ?? 'weight';
+    // Legacy 'subscription' kind was retired — old rows fall back to weight.
     final kind = switch (kindStr) {
       'itemCount' => PackageKind.itemCount,
       'household' => PackageKind.household,
-      'subscription' => PackageKind.subscription,
       _ => PackageKind.weight,
     };
     return ServicePackage(
@@ -113,6 +113,11 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
           [],
       active: j['is_active'] as bool? ?? true,
       adminLocked: j['admin_locked'] as bool? ?? false,
+      weightKg: parseDouble(j['weight_kg']),
+      rooms: parseInt(j['rooms']),
+      gardenYard: j['garden_yard'] == true || j['garden_yard'] == 1,
+      priceNegotiable: j['price_negotiable'] == true || j['price_negotiable'] == 1,
+      imageUrl: j['image_url'] as String? ?? '',
       packageItems: (j['items'] as List?)
               ?.map((e) {
                 if (e is! Map<String, dynamic>) return null;
@@ -137,6 +142,11 @@ class VendorPackagesNotifier extends Notifier<List<ServicePackage>> {
     // `integer`, which rejects a float-typed JSON value like 5000.0.
     'price_tzs': pkg.priceTzs.round(),
     'price_unit': pkg.priceUnit,
+    if (pkg.weightKg != null) 'weight_kg': pkg.weightKg,
+    if (pkg.rooms != null) 'rooms': pkg.rooms,
+    'garden_yard': pkg.gardenYard,
+    'price_negotiable': pkg.priceNegotiable,
+    if (pkg.imageUrl.isNotEmpty) 'image_url': pkg.imageUrl,
     'inclusions': pkg.inclusions,
     if (pkg.compareAtTzs != null) 'compare_at_tzs': pkg.compareAtTzs!.round(),
     'note': pkg.note,
