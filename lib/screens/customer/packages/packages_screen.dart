@@ -58,7 +58,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               SliverAppBar(
                 pinned: true,
                 toolbarHeight: 0,
-                collapsedHeight: 54 + topPad,
+                collapsedHeight: 54,
                 expandedHeight: 190 + topPad,
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
@@ -144,9 +144,11 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                   ),
                 ),
                 bottom: PreferredSize(
-                  preferredSize: Size.fromHeight(54 + topPad),
+                  preferredSize: const Size.fromHeight(54),
+                  // No top spacer here: when collapsed the search sticks
+                  // flush to the very top of the page.
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(22, topPad, 22, 8),
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
                     child: Container(
                       height: 46,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
