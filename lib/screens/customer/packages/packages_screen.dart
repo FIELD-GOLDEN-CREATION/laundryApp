@@ -53,6 +53,8 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             slivers: [
               SliverAppBar(
                 pinned: true,
+                floating: true,
+                snap: true,
                 toolbarHeight: 0,
                 collapsedHeight: 54,
                 expandedHeight: 190 + topPad,
