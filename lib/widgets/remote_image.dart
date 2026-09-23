@@ -30,7 +30,13 @@ class RemoteImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final placeholderWidget = placeholder ?? PlaceholderImage(label: fallback, borderRadius: borderRadius, circle: circle);
+    final placeholderWidget =
+        placeholder ??
+        PlaceholderImage(
+          label: fallback,
+          borderRadius: borderRadius,
+          circle: circle,
+        );
     if (url.isEmpty) return placeholderWidget;
 
     // Bundled photos (e.g. package kind defaults) render from assets so
@@ -45,10 +51,14 @@ class RemoteImage extends StatelessWidget {
             url,
             fit: fit,
             errorBuilder: (_, _, _) => placeholderWidget,
-            loadingBuilder: (context, child, progress) => progress == null ? child : placeholderWidget,
+            loadingBuilder: (context, child, progress) =>
+                progress == null ? child : placeholderWidget,
           );
 
     if (circle) return ClipOval(child: image);
-    return ClipRRect(borderRadius: BorderRadius.circular(borderRadius), child: image);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: image,
+    );
   }
 }

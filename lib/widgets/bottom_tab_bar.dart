@@ -133,9 +133,9 @@ class FloatingCustomerNavBar extends ConsumerWidget {
     }
 
     return Container(
-      // Solid cream in light mode; transparent in dark/sky so the video
-      // shows around the floating bar.
-      color: dark || sky ? Colors.transparent : AppColors.cream,
+      // Always transparent — the bar floats over the page, which shows
+      // behind and around it in every theme.
+      color: Colors.transparent,
       child: SizedBox(
         height: 108,
         child: Stack(

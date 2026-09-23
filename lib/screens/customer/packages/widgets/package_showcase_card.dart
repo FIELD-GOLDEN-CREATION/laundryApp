@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -152,8 +154,8 @@ class PackageShowcaseCard extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Photo behind everything, like the create-basket card.
-            RemoteImage(url: pkg.displayImage, fallback: pkg.name),
+            // Auto-sliding photos behind everything.
+            _PhotoSlideshow(pkg: pkg),
             // Black → transparent veil (left) + bottom shade for text.
             Container(
               decoration: BoxDecoration(
@@ -317,8 +319,7 @@ class PackageShowcaseCard extends ConsumerWidget {
                                   ),
                                 ),
                               if (savings == null &&
-                                  (pkg.tagline.isNotEmpty ||
-                                      pkg.isAskPrice))
+                                  (pkg.tagline.isNotEmpty || pkg.isAskPrice))
                                 Text(
                                   pkg.isAskPrice && pkg.tagline.isEmpty
                                       ? 'Tap to chat on WhatsApp'
@@ -367,6 +368,7 @@ class PackageShowcaseCard extends ConsumerWidget {
     );
   }
 }
+
 /// Round WhatsApp button overlaid on package photos.
 class _WhatsAppButton extends StatelessWidget {
   const _WhatsAppButton({required this.onTap});
@@ -393,3 +395,89 @@ class _WhatsAppButton extends StatelessWidget {
   }
 }
 
+/// Auto-sliding card photos with dot indicators. Falls back to a single
+/// still when the package has only one photo.
+class _PhotoSlideshow extends StatefulWidget {
+  const _PhotoSlideshow({required this.pkg});
+
+  final ServicePackage pkg;
+
+  @override
+  State<_PhotoSlideshow> createState() => _PhotoSlideshowState();
+}
+
+class _PhotoSlideshowState extends State<_PhotoSlideshow> {
+  late final PageController _controller;
+  Timer? _timer;
+  int _index = 0;
+
+  List<String> get _photos => widget.pkg.displayImages;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController();
+    if (_photos.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (!mounted) return;
+        final next = (_index + 1) % _photos.length;
+        _controller.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_photos.length < 2) {
+      return RemoteImage(
+        url: widget.pkg.displayImage,
+        fallback: widget.pkg.name,
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _controller,
+          itemCount: _photos.length,
+          onPageChanged: (i) => setState(() => _index = i),
+          itemBuilder: (_, i) =>
+              RemoteImage(url: _photos[i], fallback: widget.pkg.name),
+        ),
+        Positioned(
+          top: 8,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < _photos.length; i++)
+                Container(
+                  width: _index == i ? 16 : 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(
+                      alpha: _index == i ? 0.95 : 0.45,
+                    ),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

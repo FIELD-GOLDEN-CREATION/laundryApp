@@ -24,6 +24,28 @@ const kPackageKindImages = {
   PackageKind.household: 'assets/images/package-household.jpg',
 };
 
+/// Auto-sliding card photos per kind (first entry == the default above).
+const kPackageKindSlideshows = {
+  PackageKind.weight: [
+    'assets/images/package-weight.jpg',
+    'assets/images/pkg-weight-2.jpg',
+    'assets/images/pkg-weight-3.jpg',
+  ],
+  PackageKind.itemCount: [
+    'assets/images/package-itemcount.jpg',
+    'assets/images/pkg-items-2.jpg',
+    'assets/images/pkg-items-3.jpg',
+    'assets/images/pkg-items-4.jpg',
+    'assets/images/pkg-items-5.jpg',
+  ],
+  PackageKind.household: [
+    'assets/images/package-household.jpg',
+    'assets/images/pkg-household-2.jpg',
+    'assets/images/pkg-household-3.jpg',
+    'assets/images/pkg-household-4.jpg',
+  ],
+};
+
 /// What every household room includes.
 const kHouseholdRoomTasks = [
   'Deep cleaning the whole house',
@@ -178,6 +200,15 @@ class ServicePackage {
     return kPackageKindImages[kind] ?? '';
   }
 
+  /// Slideshow photos for the card: vendor photo first (when usable),
+  /// then the bundled kind photos.
+  List<String> get displayImages {
+    if (imageUrl.isNotEmpty && !imageUrl.contains('pinimg.com')) {
+      return [imageUrl, ...?kPackageKindSlideshows[kind]];
+    }
+    return kPackageKindSlideshows[kind] ?? [displayImage];
+  }
+
   /// True when [displayImage] is a bundled asset rather than a URL.
   bool get displayImageIsAsset =>
       imageUrl.isEmpty || imageUrl.contains('pinimg.com');
@@ -193,7 +224,8 @@ class ServicePackage {
   };
 
   /// [priceUnit] phrased to sit after a label, e.g. '/ bag' -> 'per bag'.
-  String get unitLabel => priceUnit.startsWith('/ ') ? 'per ${priceUnit.substring(2)}' : priceUnit;
+  String get unitLabel =>
+      priceUnit.startsWith('/ ') ? 'per ${priceUnit.substring(2)}' : priceUnit;
 
   /// The one-line subtitle a basket row shows under the package name.
   /// Deliberately short — `_CartRow` clips to a single line.

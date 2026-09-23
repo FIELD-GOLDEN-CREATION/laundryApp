@@ -26,15 +26,14 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref.read(allPackagesProvider.notifier).load(),
-    );
+    Future.microtask(() => ref.read(allPackagesProvider.notifier).load());
   }
 
   @override
   Widget build(BuildContext context) {
     final language = ref.watch(clientPreferencesProvider).language;
     final state = ref.watch(allPackagesProvider);
+    final topPad = MediaQuery.paddingOf(context).top;
     // Dark + sky themes extend the body behind the floating nav bar.
     final immersive =
         AppColors.isClientDark(context) ||
@@ -50,14 +49,17 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
 
     return Scaffold(
       body: ClientBackground(
+        // Top edge floats under the status bar so the pinned search can
+        // stick flush to the very top while scrolling.
         child: SafeArea(
+          top: false,
           child: CustomScrollView(
             slivers: [
               SliverAppBar(
                 pinned: true,
                 toolbarHeight: 0,
-                collapsedHeight: 62,
-                expandedHeight: 190,
+                collapsedHeight: 54 + topPad,
+                expandedHeight: 190 + topPad,
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
@@ -65,7 +67,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.parallax,
                   background: Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
+                    padding: EdgeInsets.fromLTRB(22, 12 + topPad, 22, 0),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(24),
                       child: Container(
@@ -142,9 +144,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                   ),
                 ),
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(54),
+                  preferredSize: Size.fromHeight(54 + topPad),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                    padding: EdgeInsets.fromLTRB(22, topPad, 22, 8),
                     child: Container(
                       height: 46,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -165,8 +167,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                           const SizedBox(width: 9),
                           Expanded(
                             child: TextField(
-                              onChanged: (v) =>
-                                  setState(() => _query = v),
+                              onChanged: (v) => setState(() => _query = v),
                               decoration: InputDecoration.collapsed(
                                 hintText: clientLabel(
                                   'Search packages or shops',
@@ -175,9 +176,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                                 ),
                                 hintStyle: AppText.sans(
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.clientSecondaryText(
-                                    context,
-                                  ),
+                                  color: AppColors.clientSecondaryText(context),
                                 ),
                               ),
                               style: AppText.sans(
@@ -203,8 +202,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 22),
                         itemCount: PackageKind.values.length + 1,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(width: 8),
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
                         itemBuilder: (_, i) {
                           if (i == 0) {
                             return _TypeChip(
@@ -259,21 +257,13 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                 )
               else
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    0,
-                    16,
-                    immersive ? 116 : 24,
-                  ),
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, immersive ? 116 : 24),
                   sliver: SliverList.separated(
                     itemCount: packages.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: 14),
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (_, i) => SizedBox(
                       height: 300,
-                      child: PackageShowcaseCard(
-                        pkg: packages[i],
-                      ),
+                      child: PackageShowcaseCard(pkg: packages[i]),
                     ),
                   ),
                 ),
