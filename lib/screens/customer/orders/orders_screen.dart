@@ -60,10 +60,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final orders = tab == 0 ? activeOrders : completed;
     final shops = ref.watch(shopsProvider).items;
     final language = ref.watch(clientPreferencesProvider).language;
-    // Dark + sky themes extend the body behind the floating nav bar.
-    final immersive =
-        AppColors.isClientDark(context) ||
-        ref.watch(clientPreferencesProvider.select((s) => s.sky));
 
     return Scaffold(
       body: ClientBackground(
@@ -71,7 +67,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           child: RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
-              padding: EdgeInsets.fromLTRB(22, 12, 22, immersive ? 112 : 20),
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 112),
               children: [
                 Text(
                   clientLabel('Your orders', 'Oda zako', language),

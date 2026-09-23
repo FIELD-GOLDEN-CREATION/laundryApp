@@ -47,8 +47,6 @@ import '../../state/vendor_earnings_state.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../state/vendor_promos_state.dart';
-import '../../state/client_preferences_state.dart';
-import '../../theme/colors.dart';
 import '../../widgets/bottom_tab_bar.dart';
 
 /// Root navigation graph.
@@ -311,13 +309,12 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
     });
 
     return Scaffold(
-      // Transparent + extended in dark/sky modes so the video background
-      // flows behind the floating nav capsule. Light mode is unaffected:
-      // screens paint their own backgrounds and the nav keeps its cream fill.
+      // Transparent + extended so the floating nav capsule overlays the
+      // page in every theme — scrolled content passes visibly behind it.
+      // Light screens paint their own backgrounds; the nav keeps its own
+      // capsule fill per theme.
       backgroundColor: Colors.transparent,
-      extendBody:
-          AppColors.isClientDark(context) ||
-          ref.watch(clientPreferencesProvider.select((s) => s.sky)),
+      extendBody: true,
       body: SafeArea(bottom: false, child: widget.shell),
       bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: widget.shell.currentIndex,

@@ -79,10 +79,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       notificationsProvider.select((s) => s.unreadCount),
     );
     final addressLine = addresses.isNotEmpty ? addresses.first.line : '';
-    // Dark + sky themes extend the body behind the floating nav bar.
-    final immersive =
-        AppColors.isClientDark(context) ||
-        ref.watch(clientPreferencesProvider.select((s) => s.sky));
 
     return Scaffold(
       body: ClientBackground(
@@ -92,12 +88,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Header(
-                  isGuest: isGuest,
-                  language: language,
-                  addressLine: addressLine,
-                  unreadCount: unread,
-                  transparent: immersive,
+              _Header(
+                isGuest: isGuest,
+                language: language,
+                addressLine: addressLine,
+                unreadCount: unread,
+                transparent:
+                    AppColors.isClientDark(context) ||
+                    ref.watch(
+                      clientPreferencesProvider.select((s) => s.sky),
+                    ),
                   onProfile: () {
                     if (gateGuest(
                       ref,
@@ -237,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                 ),
-                SizedBox(height: immersive ? 104 : 12),
+                const SizedBox(height: 104),
               ],
             ),
           ),
@@ -267,7 +267,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onSearch;
   final int unreadCount;
 
-  /// Transparent over the background video (dark/sky themes).
+  /// Transparent over the page background (video in dark/sky themes).
   final bool transparent;
 
   @override

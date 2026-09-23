@@ -34,10 +34,6 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
     final language = ref.watch(clientPreferencesProvider).language;
     final state = ref.watch(allPackagesProvider);
     final topPad = MediaQuery.paddingOf(context).top;
-    // Dark + sky themes extend the body behind the floating nav bar.
-    final immersive =
-        AppColors.isClientDark(context) ||
-        ref.watch(clientPreferencesProvider.select((s) => s.sky));
     final q = _query.trim().toLowerCase();
     final packages = state.items.where((p) {
       if (_type != null && p.kind != _type) return false;
@@ -259,7 +255,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                 )
               else
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, immersive ? 116 : 24),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 116),
                   sliver: SliverList.separated(
                     itemCount: packages.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 14),

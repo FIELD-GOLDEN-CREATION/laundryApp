@@ -159,16 +159,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final clientPrefs = ref.watch(clientPreferencesProvider);
     final language = clientPrefs.language;
     final authEmail = ref.watch(authProvider.select((s) => s.authEmail));
-    // Dark + sky themes extend the body behind the floating nav bar.
-    final immersive =
-        AppColors.isClientDark(context) ||
-        ref.watch(clientPreferencesProvider.select((s) => s.sky));
 
     return Scaffold(
       body: ClientBackground(
         child: SafeArea(
           child: ListView(
-            padding: EdgeInsets.only(bottom: immersive ? 116 : 24),
+            padding: const EdgeInsets.only(bottom: 116),
             children: [
               Container(
                 padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
