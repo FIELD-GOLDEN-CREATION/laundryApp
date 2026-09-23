@@ -178,7 +178,9 @@ class _PackageCard extends ConsumerWidget {
       );
       return;
     }
-    if (pkg.packageItems.isEmpty) {
+    // Only item-count packages need attached items — weight and
+    // household packages are scoped by kg/rooms instead.
+    if (pkg.kind == PackageKind.itemCount && pkg.packageItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('This package has no items configured yet.'),
