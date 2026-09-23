@@ -21,8 +21,10 @@ final ThemeData appTheme = ThemeData(
 final ThemeData clientDarkTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.dark,
-  scaffoldBackgroundColor: const Color(0xFF080D12),
-  canvasColor: const Color(0xFF080D12),
+  // Transparent: the shell-level background video shows through on every
+  // customer page; cards and sheets carry their own dark surfaces.
+  scaffoldBackgroundColor: Colors.transparent,
+  canvasColor: Colors.transparent,
   fontFamily: GoogleFonts.inter().fontFamily,
   colorScheme: const ColorScheme.dark(
     primary: Color(0xFF6CC9BC),
@@ -50,8 +52,10 @@ final ThemeData clientDarkTheme = ThemeData(
 final ThemeData clientSkyTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,
-  scaffoldBackgroundColor: const Color(0xFF0E4E8A),
-  canvasColor: const Color(0xFF0E4E8A),
+  // Transparent: the shell-level cloud video shows through on every
+  // customer page; cards carry their own white surfaces.
+  scaffoldBackgroundColor: Colors.transparent,
+  canvasColor: Colors.transparent,
   fontFamily: GoogleFonts.inter().fontFamily,
   colorScheme: ColorScheme.fromSeed(
     seedColor: const Color(0xFF1B6FAE),

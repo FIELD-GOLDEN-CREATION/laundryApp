@@ -47,7 +47,9 @@ import '../../state/vendor_earnings_state.dart';
 import '../../state/vendor_order_detail_state.dart';
 import '../../state/vendor_orders_state.dart';
 import '../../state/vendor_promos_state.dart';
+import '../../state/client_preferences_state.dart';
 import '../../widgets/bottom_tab_bar.dart';
+import '../../widgets/video_background.dart';
 
 /// Root navigation graph.
 ///
@@ -311,11 +313,13 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
     return Scaffold(
       // Transparent + extended so the floating nav capsule overlays the
       // page in every theme — scrolled content passes visibly behind it.
+      // The single shared background video lives here (dark/sky modes),
+      // so every customer page — tabs and pushed routes — plays it.
       // Light screens paint their own backgrounds; the nav keeps its own
       // capsule fill per theme.
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: SafeArea(bottom: false, child: widget.shell),
+      body: _CustomerVideoShell(shell: widget.shell),
       bottomNavigationBar: FloatingCustomerNavBar(
         currentIndex: widget.shell.currentIndex,
         onTap: (i) {
@@ -380,11 +384,32 @@ class _CustomerTabShellState extends ConsumerState<_CustomerTabShell> {
     RealtimeService.instance.disconnect();
     _connectedUserId = null;
   }
-
   @override
   void dispose() {
     _disconnectRealtime();
     super.dispose();
+  }
+}
+
+/// The single shared background video for the whole customer section —
+/// one player behind every tab and pushed route, so motion plays
+/// everywhere instead of only on the first-mounted page.
+class _CustomerVideoShell extends ConsumerWidget {
+  const _CustomerVideoShell({required this.shell});
+
+  final StatefulNavigationShell shell;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(clientPreferencesProvider);
+    final body = SafeArea(bottom: false, child: shell);
+    if (prefs.sky) {
+      return VideoBackground(variant: ClientBgVariant.sky, child: body);
+    }
+    if (prefs.dark) {
+      return VideoBackground(child: body);
+    }
+    return body;
   }
 }
 

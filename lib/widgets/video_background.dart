@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
-import '../state/client_preferences_state.dart';
 import '../theme/colors.dart';
 
 /// Ambient background video for customer pages (dark mode).
@@ -145,6 +144,11 @@ class _VideoBackgroundState extends ConsumerState<VideoBackground>
 
 /// Wraps a customer page body: themed video background for dark/sky modes,
 /// plain passthrough in light mode.
+///
+/// NOTE: the video itself lives once at the customer tab shell
+/// ([app_router.dart]) — one shared player for all pages. Screen-level
+/// uses of this widget are intentionally passthroughs (kept so call sites
+/// don't need to change); do not add another VideoBackground per screen.
 class ClientBackground extends ConsumerWidget {
   const ClientBackground({super.key, required this.child});
 
@@ -152,13 +156,6 @@ class ClientBackground extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(clientPreferencesProvider);
-    if (prefs.sky) {
-      return VideoBackground(variant: ClientBgVariant.sky, child: child);
-    }
-    if (prefs.dark) {
-      return VideoBackground(child: child);
-    }
     return child;
   }
 }
