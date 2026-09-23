@@ -55,6 +55,10 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
   int _rooms = 1;
   bool _gardenYard = false;
 
+  /// Checked household services — these become the package inclusions
+  /// shown in the basket. Core room tasks start checked.
+  final Set<String> _householdTasks = Set.of(kHouseholdRoomTasks);
+
   /// When true the price is settled with the customer (WhatsApp) — the
   /// checkout price may stay 0.
   bool _negotiable = false;
@@ -102,7 +106,7 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
       case PackageKind.itemCount:
         return _packageItemQty.values.any((q) => q > 0);
       case PackageKind.household:
-        return _rooms >= 1;
+        return _rooms >= 1 && _householdTasks.isNotEmpty;
     }
   }
 
@@ -143,7 +147,12 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
         kind: _kind,
         priceTzs: _priceTzs,
         priceUnit: _kind == PackageKind.weight ? '/ kg' : (unit.isEmpty ? '/ package' : '/ $unit'),
-        inclusions: _inclusions,
+        inclusions: _kind == PackageKind.household
+            ? [
+                ..._householdTasks,
+                if (_gardenYard) 'Garden & yard maintenance',
+              ]
+            : _inclusions,
         note: _note.text.trim(),
         packageItems: packageItems,
         weightKg: _kind == PackageKind.weight ? _weightKg : null,
@@ -296,21 +305,57 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                Text('SERVICES INCLUDED (TICK WHAT YOU OFFER)', style: AppText.eyebrow()),
+                const SizedBox(height: 7),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.tealMuted,
+                    color: Colors.white,
+                    border: Border.all(color: AppColors.creamDark),
                     borderRadius: BorderRadius.circular(14),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Each room includes:', style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.teal)),
-                      const SizedBox(height: 4),
-                      for (final task in kHouseholdRoomTasks)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text('• $task', style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate)),
+                      for (final task in [...kHouseholdRoomTasks, ...kHouseholdExtraTasks])
+                        InkWell(
+                          onTap: () => setState(() {
+                            if (!_householdTasks.remove(task)) _householdTasks.add(task);
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: _householdTasks.contains(task) ? AppColors.teal : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(7),
+                                    border: Border.all(
+                                      color: _householdTasks.contains(task) ? AppColors.teal : AppColors.creamDark,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: _householdTasks.contains(task)
+                                      ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    task,
+                                    style: AppText.sans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: _householdTasks.contains(task) ? AppColors.slate : AppColors.muted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -397,6 +442,8 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
                 ),
               ],
               ],
+              // Household inclusions come from the ticked services above.
+              if (_kind != PackageKind.household) ...[
               const SizedBox(height: 12),
               Text('INCLUDES', style: AppText.eyebrow()),
               const SizedBox(height: 7),
@@ -434,6 +481,7 @@ class _PackageFormState extends ConsumerState<_PackageForm> {
                   ),
                 ),
               ),
+              ],
               const SizedBox(height: 12),
               _Field(label: 'FINE PRINT (OPTIONAL)', hint: 'e.g. Fits up to King size', controller: _note, onChanged: _rebuild),
               const SizedBox(height: 20),

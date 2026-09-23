@@ -98,7 +98,7 @@ class PackageCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (package.priceNegotiable) ...[
+                    if (package.isAskPrice) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -177,16 +177,16 @@ class PackageCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(
-              package.priceNegotiable
-                  ? 'Negotiable'
-                  : formatMoney(package.priceTzs),
-              style: AppText.serif(
-                fontSize: 20,
-                color: AppColors.clientTealText(context),
-              ),
-            ),
-            if (!package.priceNegotiable) ...[
+                  Text(
+                    package.isAskPrice
+                        ? 'Ask for price'
+                        : formatMoney(package.priceTzs),
+                    style: AppText.serif(
+                      fontSize: 20,
+                      color: AppColors.clientTealText(context),
+                    ),
+                  ),
+                  if (!package.isAskPrice) ...[
               const SizedBox(width: 5),
               Text(
                 package.priceUnit,
@@ -226,21 +226,42 @@ class PackageCard extends StatelessWidget {
             child: Material(
               color: inBasket
                   ? AppColors.clientPillTeal(context)
-                  : AppColors.teal,
+                  : package.isAskPrice
+                      ? const Color(0xFF25D366)
+                      : AppColors.teal,
               borderRadius: BorderRadius.circular(14),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: onSelect,
+                onTap: package.isAskPrice && shopPhone.isNotEmpty
+                    ? () => _chatWhatsApp(context)
+                    : onSelect,
                 child: Center(
-                  child: Text(
-                    inBasket ? 'In basket · view' : 'Select package',
-                    style: AppText.sans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: inBasket
-                          ? AppColors.clientTealText(context)
-                          : AppColors.cream,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (package.isAskPrice) ...[
+                        const Icon(
+                          Icons.chat_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 7),
+                      ],
+                      Text(
+                        package.isAskPrice
+                            ? 'Ask for price'
+                            : inBasket
+                                ? 'In basket · view'
+                                : 'Select package',
+                        style: AppText.sans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: inBasket && !package.isAskPrice
+                              ? AppColors.clientTealText(context)
+                              : AppColors.cream,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -388,8 +409,8 @@ class PackageCard extends StatelessWidget {
       message: packageWhatsAppMessage(
         shopName: shopName.isEmpty ? 'there' : shopName,
         packageName: package.name,
-        priceLabel: package.priceNegotiable
-            ? 'Negotiable'
+        priceLabel: package.isAskPrice
+            ? 'Ask for price'
             : '${formatMoney(package.priceTzs)} ${package.priceUnit}',
         detail: _scopeLabel.isEmpty ? package.tagline : _scopeLabel,
       ),

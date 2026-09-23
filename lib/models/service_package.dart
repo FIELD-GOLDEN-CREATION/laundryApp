@@ -33,6 +33,12 @@ const kHouseholdRoomTasks = [
   'Sofas',
 ];
 
+/// Extra household services the vendor can offer (checkboxes in the form).
+const kHouseholdExtraTasks = [
+  'Sofa deep cleaning',
+  'Washing and folding clothes',
+];
+
 /// A single line item inside a vendor-created package, pairing a laundry
 /// item with its quantity. The customer sees these as "3× T-Shirt / Polo"
 /// inside the package details.
@@ -153,6 +159,11 @@ class ServicePackage {
   /// When true the vendor settles the price with the customer (WhatsApp)
   /// instead of fixed checkout pricing.
   final bool priceNegotiable;
+
+  /// True when no fixed price applies: flagged negotiable, or a zero
+  /// amount. Display "Ask for price" and route to WhatsApp instead of
+  /// showing TZS 0 anywhere.
+  bool get isAskPrice => priceNegotiable || priceTzs <= 0;
 
   /// Card background photo. Empty falls back to the kind default.
   final String imageUrl;

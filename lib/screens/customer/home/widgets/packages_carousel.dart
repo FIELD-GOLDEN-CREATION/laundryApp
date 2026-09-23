@@ -124,7 +124,7 @@ class _PackageCard extends ConsumerWidget {
   }
 
   String _priceLabel() {
-    if (pkg.priceNegotiable) return 'Negotiable';
+    if (pkg.isAskPrice) return 'Ask for price';
     return 'TZS ${pkg.priceTzs.round().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
   }
 
@@ -147,9 +147,9 @@ class _PackageCard extends ConsumerWidget {
       message: packageWhatsAppMessage(
         shopName: pkg.shopName.isEmpty ? 'there' : pkg.shopName,
         packageName: pkg.name,
-        priceLabel:
-            '${_priceLabel()} ${pkg.priceNegotiable ? '' : pkg.priceUnit}'
-                .trim(),
+        priceLabel: pkg.isAskPrice
+            ? 'Ask for price'
+            : '${_priceLabel()} ${pkg.priceUnit}'.trim(),
         detail: _scopeLabel,
       ),
     );
@@ -161,6 +161,14 @@ class _PackageCard extends ConsumerWidget {
   }
 
   void _onTap(BuildContext context, WidgetRef ref) {
+    // Ask-for-price packages go straight to WhatsApp instead of the basket.
+    if (pkg.isAskPrice) {
+      final phone = _shopPhone(ref);
+      if (phone.isNotEmpty) {
+        _chatWhatsApp(context, phone);
+        return;
+      }
+    }
     final auth = ref.read(authProvider);
     if (auth.role == UserRole.guest) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -272,7 +280,7 @@ class _PackageCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      if (pkg.priceNegotiable) ...[
+                      if (pkg.isAskPrice) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -380,10 +388,14 @@ class _PackageCard extends ConsumerWidget {
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.clientTealText(context),
                                   ),
-                                )
-                              else if (pkg.tagline.isNotEmpty)
+                                ),
+                              if (savings == null &&
+                                  (pkg.tagline.isNotEmpty ||
+                                      pkg.isAskPrice))
                                 Text(
-                                  pkg.tagline,
+                                  pkg.isAskPrice && pkg.tagline.isEmpty
+                                      ? 'Tap to chat on WhatsApp'
+                                      : pkg.tagline,
                                   style: AppText.sans(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w600,
@@ -401,13 +413,17 @@ class _PackageCard extends ConsumerWidget {
                         Container(
                           width: 30,
                           height: 30,
-                          decoration: const BoxDecoration(
-                            color: AppColors.teal,
+                          decoration: BoxDecoration(
+                            color: pkg.isAskPrice
+                                ? const Color(0xFF25D366)
+                                : AppColors.teal,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.chevron_right_rounded,
+                          child: Icon(
+                            pkg.isAskPrice
+                                ? Icons.chat_rounded
+                                : Icons.chevron_right_rounded,
                             size: 18,
                             color: Colors.white,
                           ),

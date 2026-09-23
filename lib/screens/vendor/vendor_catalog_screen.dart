@@ -654,12 +654,12 @@ class _PackageRowState extends State<_PackageRow> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          package.priceNegotiable
-                              ? 'Negotiable'
+                          package.isAskPrice
+                              ? 'Ask for price'
                               : formatTzs(package.priceTzs),
                           style: AppText.serif(fontSize: 19, color: on ? AppColors.teal : AppColors.muted),
                         ),
-                        if (!package.priceNegotiable) ...[
+                        if (!package.isAskPrice) ...[
                           const SizedBox(width: 5),
                           Text(
                             package.unitLabel,
@@ -668,7 +668,7 @@ class _PackageRowState extends State<_PackageRow> {
                         ],
                       ],
                     ),
-                    if (package.priceNegotiable)
+                    if (package.isAskPrice)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(999)),

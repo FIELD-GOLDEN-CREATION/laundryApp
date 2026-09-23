@@ -357,6 +357,22 @@ class _PackageBundleCard extends StatelessWidget {
                   ),
                   if (pi != pkg.packageItems.last) const SizedBox(height: 8),
                 ],
+                if (pkg.packageItems.isNotEmpty && pkg.inclusions.isNotEmpty)
+                  const SizedBox(height: 8),
+                for (final line in pkg.inclusions) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Icon(Icons.check_rounded, size: 13, color: AppColors.clientTealText(context)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.clientText(context)))),
+                    ],
+                  ),
+                  if (line != pkg.inclusions.last) const SizedBox(height: 8),
+                ],
               ],
             ),
           ),
@@ -382,7 +398,7 @@ class _PackageBundleCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(clientLabel('Package total', 'Jumla ya kifurushi', language), style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.clientTealText(context))),
-              Text(formatMoney(pkg.priceTzs * rate), style: AppText.serif(fontSize: 17, color: AppColors.clientTealText(context))),
+              Text(pkg.isAskPrice ? 'Ask for price' : formatMoney(pkg.priceTzs * rate), style: AppText.serif(fontSize: 17, color: AppColors.clientTealText(context))),
             ],
           ),
         ],
