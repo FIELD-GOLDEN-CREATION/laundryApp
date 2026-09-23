@@ -17,92 +17,214 @@ class ShopCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 208,
+      width: 216,
       child: Material(
-         color: AppColors.clientSurface(context),
+        color: AppColors.clientSurface(context),
         borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 104,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    RemoteImage(url: shop.imageUrl, fallback: 'Shop photo'),                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.clientBorder(context)),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 124,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      RemoteImage(
+                        url: shop.imageUrl,
+                        fallback: 'Shop photo',
+                      ),
+                      // Bottom veil so the overlaid pills read on any photo.
+                      Container(
                         decoration: BoxDecoration(
-                          color: AppColors.slate.withValues(alpha: 0.82),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const AppIcon(AppIcons.star, size: 11),
-                            const SizedBox(width: 4),
-                            Text(
-                              shop.rating,
-                              style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
-                            ),
-                          ],
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.45),
+                            ],
+                            stops: const [0.45, 1.0],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      shop.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                       style: AppText.sans(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.clientText(context)),
-                    ),
-                    const SizedBox(height: 3),
-                    ShopLocationLabel(
-                      shop: shop,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                       style: AppText.sans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.clientSecondaryText(context)),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            shop.price,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.sans(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.teal),
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.amberLight,
+                            color: Colors.black.withValues(alpha: 0.55),
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: Text(
-                            shop.badge,
-                            style: AppText.sans(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.amber),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const AppIcon(AppIcons.star, size: 11),
+                              const SizedBox(width: 4),
+                              Text(
+                                shop.rating,
+                                style: AppText.sans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: shop.isOpenNow
+                                      ? const Color(0xFF4ADE80)
+                                      : const Color(0xFFF87171),
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                shop.isOpenNow ? 'Open' : 'Closed',
+                                style: AppText.sans(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (shop.distanceKm >= 0)
+                        Positioned(
+                          bottom: 10,
+                          left: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const AppIcon(
+                                  AppIcons.locationPin,
+                                  size: 11,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  shop.distance,
+                                  style: AppText.sans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        shop.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.clientText(context),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      ShopLocationLabel(
+                        shop: shop,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.clientSecondaryText(context),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              shop.price,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.sans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.clientTealText(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.clientPillAmber(context),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              shop.badge,
+                              style: AppText.sans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.clientAmberText(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
