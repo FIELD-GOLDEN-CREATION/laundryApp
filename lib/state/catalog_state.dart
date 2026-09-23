@@ -334,6 +334,28 @@ class PopularPackagesNotifier extends Notifier<AsyncCatalogState<ServicePackage>
 final popularPackagesProvider =
     NotifierProvider<PopularPackagesNotifier, AsyncCatalogState<ServicePackage>>(PopularPackagesNotifier.new);
 
+/// Every active package across vendors — backs the Packages tab (no
+/// one-per-shop cap, unlike the home carousel).
+class AllPackagesNotifier extends Notifier<AsyncCatalogState<ServicePackage>> {
+  @override
+  AsyncCatalogState<ServicePackage> build() => const AsyncCatalogState();
+
+  Future<void> load() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final data = await api.getAllPackages();
+      state = AsyncCatalogState(
+        items: data.map(packageFromJson).toList(),
+      );
+    } on ApiException {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+}
+
+final allPackagesProvider =
+    NotifierProvider<AllPackagesNotifier, AsyncCatalogState<ServicePackage>>(AllPackagesNotifier.new);
+
 class ReviewsNotifier extends Notifier<AsyncCatalogState<ReviewItem>> {
   @override
   AsyncCatalogState<ReviewItem> build() => const AsyncCatalogState();

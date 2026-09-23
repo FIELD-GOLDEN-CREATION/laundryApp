@@ -17,9 +17,12 @@ class TabBarItem {
   final String? gateReason;
 }
 
+/// Customer tabs: Packages, Explore, Home (raised center), Orders, Profile.
+/// Branch order in the router must match these indices.
 const kCustomerTabs = [
-  TabBarItem(icon: AppIcons.tabHome, label: 'Home'),
+  TabBarItem(icon: AppIcons.tabCatalog, label: 'Packages'),
   TabBarItem(icon: AppIcons.tabSearch, label: 'Explore'),
+  TabBarItem(icon: AppIcons.tabHome, label: 'Home'),
   TabBarItem(
     icon: AppIcons.tabOrders,
     label: 'Orders',
@@ -32,8 +35,17 @@ const kCustomerTabs = [
   ),
 ];
 
-/// Customer navigation styled as a floating dark capsule with rounded ends.
-/// Chat intentionally is not a tab; customers enter it from an active order.
+const _kCustomerTabLabelsSw = [
+  'Vifurushi',
+  'Tafuta',
+  'Nyumbani',
+  'Oda',
+  'Wasifu',
+];
+
+/// Customer navigation: floating rounded bar with a raised center Home
+/// button. Light: white bar, black center. Dark: dark bar, teal center.
+/// Sky: cloud-blue bar, white center.
 class FloatingCustomerNavBar extends ConsumerWidget {
   const FloatingCustomerNavBar({
     super.key,
@@ -50,97 +62,116 @@ class FloatingCustomerNavBar extends ConsumerWidget {
     final prefs = ref.watch(clientPreferencesProvider);
     final dark = prefs.dark;
     final sky = prefs.sky;
-    return Container(
-      height: 92,
-      padding: const EdgeInsets.fromLTRB(22, 8, 22, 18),
-      // Transparent in dark/sky so the page video shows around the capsule.
-      color: dark || sky ? Colors.transparent : AppColors.cream,
-      child: Material(
-        // Opacified cloud blue in sky mode, like the reference design.
-        color: sky
-            ? AppColors.skyBlue.withValues(alpha: 0.82)
-            : AppColors.slate,
-        borderRadius: BorderRadius.circular(28),
-        elevation: 12,
-        shadowColor: Colors.black.withValues(alpha: 0.22),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          child: Row(
+
+    final barColor = sky
+        ? AppColors.skyBlue.withValues(alpha: 0.85)
+        : dark
+            ? const Color(0xFF141E28)
+            : Colors.white;
+    final centerColor = sky
+        ? Colors.white
+        : dark
+            ? AppColors.teal
+            : const Color(0xFF101418);
+    final centerIconColor = sky
+        ? AppColors.skyBlue
+        : dark
+            ? AppColors.cream
+            : Colors.white;
+    final activeColor = sky || dark ? Colors.white : const Color(0xFF101418);
+    final inactiveColor = sky
+        ? Colors.white.withValues(alpha: 0.65)
+        : dark
+            ? AppColors.tabInactive
+            : const Color(0xFF9AA3AD);
+
+    Widget slot(int i) {
+      if (i == 2) return const Expanded(child: SizedBox());
+      final item = kCustomerTabs[i];
+      final active = i == currentIndex;
+      final color = active ? activeColor : inactiveColor;
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => onTap(i),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (var i = 0; i < kCustomerTabs.length; i++)
-                Expanded(
-                  child: _FloatingTabButton(
-                    item: TabBarItem(
-                      icon: kCustomerTabs[i].icon,
-                      label: clientLabel(
-                        kCustomerTabs[i].label,
-                        ['Nyumbani', 'Tafuta', 'Oda', 'Wasifu'][i],
-                        language,
-                      ),
-                      gateReason: kCustomerTabs[i].gateReason,
-                    ),
-                    active: i == currentIndex,
-                    sky: sky,
-                    onTap: () => onTap(i),
-                  ),
+              AppIcon(item.icon, size: 21, color: color),
+              const SizedBox(height: 4),
+              Text(
+                clientLabel(item.label, _kCustomerTabLabelsSw[i], language),
+                style: AppText.sans(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  color: color,
                 ),
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
+      );
+    }
 
-class _FloatingTabButton extends StatelessWidget {
-  const _FloatingTabButton({
-    required this.item,
-    required this.active,
-    required this.onTap,
-    this.sky = false,
-  });
-
-  final TabBarItem item;
-  final bool active;
-  final bool sky;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final inactiveColor = sky
-        ? Colors.white.withValues(alpha: 0.65)
-        : AppColors.tabInactive;
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        decoration: BoxDecoration(
-          color: active
-              ? Colors.white.withValues(alpha: sky ? 0.24 : 0.16)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      // Solid cream in light mode; transparent in dark/sky so the video
+      // shows around the floating bar.
+      color: dark || sky ? Colors.transparent : AppColors.cream,
+      child: SizedBox(
+        height: 108,
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            AppIcon(
-              item.icon,
-              size: 19,
-              color: active ? AppColors.cream : inactiveColor,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              style: AppText.sans(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w800,
-                color: active ? AppColors.cream : inactiveColor,
+          Positioned(
+            left: 22,
+            right: 22,
+            bottom: 14,
+            child: Material(
+              color: barColor,
+              borderRadius: BorderRadius.circular(28),
+              elevation: 12,
+              shadowColor: Colors.black.withValues(alpha: 0.22),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [slot(0), slot(1), slot(2), slot(3), slot(4)],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Material(
+                color: centerColor,
+                shape: const CircleBorder(),
+                elevation: 10,
+                shadowColor: Colors.black.withValues(alpha: 0.3),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => onTap(2),
+                  child: SizedBox(
+                    width: 58,
+                    height: 58,
+                    child: Center(
+                      child: AppIcon(
+                        AppIcons.tabHome,
+                        size: 24,
+                        color: centerIconColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       ),
     );
   }

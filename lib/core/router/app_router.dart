@@ -10,6 +10,7 @@ import '../../models/laundry_category.dart';
 import '../../state/catalog_state.dart';
 import '../../screens/customer/checkout/order_confirmation_screen.dart';
 import '../../screens/customer/home/home_screen.dart';
+import '../../screens/customer/packages/packages_screen.dart';
 import '../../screens/login/login_screen.dart';
 import '../../screens/login/register_screen.dart';
 import '../../screens/customer/onboarding/onboarding_screen.dart';
@@ -81,12 +82,20 @@ final appRouter = GoRouter(
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+            GoRoute(
+              path: '/packages',
+              builder: (_, _) => const PackagesScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
           ],
         ),
         StatefulShellBranch(
