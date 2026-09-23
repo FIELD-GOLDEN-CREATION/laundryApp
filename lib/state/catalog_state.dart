@@ -343,7 +343,7 @@ class AllPackagesNotifier extends Notifier<AsyncCatalogState<ServicePackage>> {
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
     try {
-      final data = await api.getAllPackages();
+      final data = await api.getAllPackages(all: true);
       state = AsyncCatalogState(
         items: data.map(packageFromJson).toList(),
       );

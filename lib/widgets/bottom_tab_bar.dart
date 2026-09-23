@@ -90,24 +90,41 @@ class FloatingCustomerNavBar extends ConsumerWidget {
       final item = kCustomerTabs[i];
       final active = i == currentIndex;
       final color = active ? activeColor : inactiveColor;
+      final pill = active
+          ? sky
+              ? Colors.white.withValues(alpha: 0.24)
+              : dark
+                  ? const Color(0xFF6CC9BC).withValues(alpha: 0.2)
+                  : AppColors.teal.withValues(alpha: 0.12)
+          : Colors.transparent;
       return Expanded(
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () => onTap(i),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcon(item.icon, size: 21, color: color),
-              const SizedBox(height: 4),
-              Text(
-                clientLabel(item.label, _kCustomerTabLabelsSw[i], language),
-                style: AppText.sans(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w800,
-                  color: color,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            decoration: BoxDecoration(
+              color: pill,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppIcon(item.icon, size: 21, color: color),
+                const SizedBox(height: 4),
+                Text(
+                  clientLabel(item.label, _kCustomerTabLabelsSw[i], language),
+                  style: AppText.sans(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );

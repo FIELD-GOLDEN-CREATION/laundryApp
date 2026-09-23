@@ -52,74 +52,123 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-                child: Text(
-                  clientLabel('Packages', 'Vifurushi', language),
-                  style: AppText.serif(
-                    fontSize: 28,
-                    color: AppColors.clientText(context),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 4, 22, 0),
-                child: Text(
-                  packages.isEmpty
-                      ? clientLabel(
-                          'No packages found',
-                          'Hakuna vifurushi',
-                          language,
-                        )
-                      : clientLabel(
-                          '${packages.length} packages from top vendors',
-                          'Vifurushi ${packages.length} kutoka kwa wauzaji bora',
-                          language,
-                        ),
-                  style: AppText.sans(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.clientSecondaryText(context),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.clientSurface(context),
-                    border: Border.all(
-                      color: AppColors.clientBorder(context),
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      const AppIcon(AppIcons.search, size: 16),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: TextField(
-                          onChanged: (v) => setState(() => _query = v),
-                          decoration: InputDecoration.collapsed(
-                            hintText: clientLabel(
-                              'Search packages or shops',
-                              'Tafuta vifurushi au maduka',
-                              language,
-                            ),
-                            hintStyle: AppText.sans(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.clientSecondaryText(context),
-                            ),
-                          ),
-                          style: AppText.sans(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.clientText(context),
-                          ),
-                        ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.teal,
+                          Color(0xFF2A7D78),
+                          Color(0xFF134E4A),
+                        ],
                       ),
-                    ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          right: -30,
+                          top: -40,
+                          child: Container(
+                            width: 130,
+                            height: 130,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                width: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              clientLabel(
+                                'Packages',
+                                'Vifurushi',
+                                language,
+                              ),
+                              style: AppText.serif(
+                                fontSize: 26,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              packages.isEmpty
+                                  ? clientLabel(
+                                      'No packages found',
+                                      'Hakuna vifurushi',
+                                      language,
+                                    )
+                                  : clientLabel(
+                                      '${packages.length} packages from top vendors',
+                                      'Vifurushi ${packages.length} kutoka kwa wauzaji bora',
+                                      language,
+                                    ),
+                              style: AppText.sans(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              height: 46,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.clientSurface(context),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  AppIcon(
+                                    AppIcons.search,
+                                    size: 16,
+                                    color: AppColors.clientMutedIcon(context),
+                                  ),
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: TextField(
+                                      onChanged: (v) =>
+                                          setState(() => _query = v),
+                                      decoration: InputDecoration.collapsed(
+                                        hintText: clientLabel(
+                                          'Search packages or shops',
+                                          'Tafuta vifurushi au maduka',
+                                          language,
+                                        ),
+                                        hintStyle: AppText.sans(
+                                          fontWeight: FontWeight.w600,
+                                          color:
+                                              AppColors.clientSecondaryText(
+                                            context,
+                                          ),
+                                        ),
+                                      ),
+                                      style: AppText.sans(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            AppColors.clientText(context),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

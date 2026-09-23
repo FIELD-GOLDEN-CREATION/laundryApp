@@ -277,9 +277,11 @@ class ApiService {
   // PACKAGES
   // =========================================================================
 
-  /// All active packages across vendors (home carousel).
-  Future<List<Map<String, dynamic>>> getAllPackages() async {
-    final data = await get('/packages');
+  /// Active packages across vendors. Pass [all] for the full directory of
+  /// everything vendors created (Packages page); default is the admin
+  /// home-page curation (home carousel).
+  Future<List<Map<String, dynamic>>> getAllPackages({bool all = false}) async {
+    final data = await get('/packages', query: {if (all) 'scope': 'all'});
     return (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   }
 
