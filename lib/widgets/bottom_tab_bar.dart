@@ -66,36 +66,38 @@ class FloatingCustomerNavBar extends ConsumerWidget {
     final barColor = sky
         ? AppColors.skyBlue.withValues(alpha: 0.85)
         : dark
-            ? const Color(0xFF141E28)
-            : Colors.white;
+        ? const Color(0xFF141E28)
+        : Colors.white;
     final centerColor = sky
         ? Colors.white
         : dark
-            ? AppColors.teal
-            : const Color(0xFF101418);
+        ? AppColors.teal
+        : const Color(0xFF101418);
     final centerIconColor = sky
         ? AppColors.skyBlue
         : dark
-            ? AppColors.cream
-            : Colors.white;
+        ? AppColors.cream
+        : Colors.white;
     final activeColor = sky || dark ? Colors.white : const Color(0xFF101418);
     final inactiveColor = sky
         ? Colors.white.withValues(alpha: 0.65)
         : dark
-            ? AppColors.tabInactive
-            : const Color(0xFF9AA3AD);
+        ? AppColors.tabInactive
+        : const Color(0xFF9AA3AD);
 
     Widget slot(int i) {
-      if (i == 2) return const Expanded(child: SizedBox());
+      // Center Home slot is a fixed narrow gap so the raised circle
+      // overlaps the bar with no dead sideways space.
+      if (i == 2) return const SizedBox(width: 64);
       final item = kCustomerTabs[i];
       final active = i == currentIndex;
       final color = active ? activeColor : inactiveColor;
       final pill = active
           ? sky
-              ? Colors.white.withValues(alpha: 0.24)
-              : dark
-                  ? const Color(0xFF6CC9BC).withValues(alpha: 0.2)
-                  : AppColors.teal.withValues(alpha: 0.12)
+                ? Colors.white.withValues(alpha: 0.24)
+                : dark
+                ? const Color(0xFF6CC9BC).withValues(alpha: 0.2)
+                : AppColors.teal.withValues(alpha: 0.12)
           : Colors.transparent;
       return Expanded(
         child: InkWell(
@@ -103,7 +105,7 @@ class FloatingCustomerNavBar extends ConsumerWidget {
           onTap: () => onTap(i),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
-            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            margin: const EdgeInsets.symmetric(vertical: 2),
             padding: const EdgeInsets.symmetric(vertical: 7),
             decoration: BoxDecoration(
               color: pill,
@@ -139,56 +141,56 @@ class FloatingCustomerNavBar extends ConsumerWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-          Positioned(
-            left: 22,
-            right: 22,
-            bottom: 14,
-            child: Material(
-              color: barColor,
-              borderRadius: BorderRadius.circular(28),
-              elevation: 12,
-              shadowColor: Colors.black.withValues(alpha: 0.22),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 10,
-                ),
-                child: Row(
-                  children: [slot(0), slot(1), slot(2), slot(3), slot(4)],
+            Positioned(
+              left: 22,
+              right: 22,
+              bottom: 14,
+              child: Material(
+                color: barColor,
+                borderRadius: BorderRadius.circular(28),
+                elevation: 12,
+                shadowColor: Colors.black.withValues(alpha: 0.22),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [slot(0), slot(1), slot(2), slot(3), slot(4)],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Material(
-                color: centerColor,
-                shape: const CircleBorder(),
-                elevation: 10,
-                shadowColor: Colors.black.withValues(alpha: 0.3),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => onTap(2),
-                  child: SizedBox(
-                    width: 58,
-                    height: 58,
-                    child: Center(
-                      child: AppIcon(
-                        AppIcons.tabHome,
-                        size: 24,
-                        color: centerIconColor,
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Material(
+                  color: centerColor,
+                  shape: const CircleBorder(),
+                  elevation: 10,
+                  shadowColor: Colors.black.withValues(alpha: 0.3),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => onTap(2),
+                    child: SizedBox(
+                      width: 58,
+                      height: 58,
+                      child: Center(
+                        child: AppIcon(
+                          AppIcons.tabHome,
+                          size: 24,
+                          color: centerIconColor,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
