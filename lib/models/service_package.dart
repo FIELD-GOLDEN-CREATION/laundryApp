@@ -15,14 +15,13 @@ enum PackageKind {
   household,
 }
 
-/// Default card photo per package kind (vendor photo overrides it).
+/// Bundled card photo per package kind. Pinterest hotlinks carry no CORS
+/// headers, so web builds can't fetch them — the photos ship in the app
+/// bundle instead and always render, online or off.
 const kPackageKindImages = {
-  PackageKind.weight:
-      'https://i.pinimg.com/1200x/27/f9/49/27f949bcafb03509a46ecf8988936455.jpg',
-  PackageKind.itemCount:
-      'https://i.pinimg.com/1200x/82/4f/d3/824fd3efa8f652d832aca688e400344d.jpg',
-  PackageKind.household:
-      'https://i.pinimg.com/1200x/4e/d7/c7/4ed7c7aa3c3850972cd5d585b8d4604b.jpg',
+  PackageKind.weight: 'assets/images/package-weight.jpg',
+  PackageKind.itemCount: 'assets/images/package-itemcount.jpg',
+  PackageKind.household: 'assets/images/package-household.jpg',
 };
 
 /// What every household room includes.
@@ -158,9 +157,19 @@ class ServicePackage {
   /// Card background photo. Empty falls back to the kind default.
   final String imageUrl;
 
-  /// Photo to show behind the package card.
-  String get displayImage =>
-      imageUrl.isNotEmpty ? imageUrl : kPackageKindImages[kind] ?? '';
+  /// Photo to show behind the package card: the vendor photo when usable,
+  /// otherwise the bundled kind photo (pinimg hotlinks are skipped — they
+  /// carry no CORS headers so web builds can't fetch them).
+  String get displayImage {
+    if (imageUrl.isNotEmpty && !imageUrl.contains('pinimg.com')) {
+      return imageUrl;
+    }
+    return kPackageKindImages[kind] ?? '';
+  }
+
+  /// True when [displayImage] is a bundled asset rather than a URL.
+  bool get displayImageIsAsset =>
+      imageUrl.isEmpty || imageUrl.contains('pinimg.com');
 
   /// Avatar letter for the cart row, matching `MenuItem.initial`.
   String get initial => name.isEmpty ? 'P' : name[0].toUpperCase();

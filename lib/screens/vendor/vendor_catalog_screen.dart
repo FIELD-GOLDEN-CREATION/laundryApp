@@ -654,16 +654,29 @@ class _PackageRowState extends State<_PackageRow> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          formatTzs(package.priceTzs),
+                          package.priceNegotiable
+                              ? 'Negotiable'
+                              : formatTzs(package.priceTzs),
                           style: AppText.serif(fontSize: 19, color: on ? AppColors.teal : AppColors.muted),
                         ),
-                        const SizedBox(width: 5),
-                        Text(
-                          package.unitLabel,
-                          style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted),
-                        ),
+                        if (!package.priceNegotiable) ...[
+                          const SizedBox(width: 5),
+                          Text(
+                            package.unitLabel,
+                            style: AppText.sans(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted),
+                          ),
+                        ],
                       ],
                     ),
+                    if (package.priceNegotiable)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: AppColors.tealMuted, borderRadius: BorderRadius.circular(999)),
+                        child: Text(
+                          'WhatsApp price',
+                          style: AppText.sans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.teal),
+                        ),
+                      ),
                     if (savings != null)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

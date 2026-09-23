@@ -98,6 +98,27 @@ class PackageCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (package.priceNegotiable) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF25D366),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'NEGOTIABLE',
+                          style: AppText.sans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     if (shopPhone.isNotEmpty)
                       Material(

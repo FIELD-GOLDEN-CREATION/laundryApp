@@ -33,12 +33,20 @@ class RemoteImage extends StatelessWidget {
     final placeholderWidget = placeholder ?? PlaceholderImage(label: fallback, borderRadius: borderRadius, circle: circle);
     if (url.isEmpty) return placeholderWidget;
 
-    final image = Image.network(
-      url,
-      fit: fit,
-      errorBuilder: (_, _, _) => placeholderWidget,
-      loadingBuilder: (context, child, progress) => progress == null ? child : placeholderWidget,
-    );
+    // Bundled photos (e.g. package kind defaults) render from assets so
+    // they work offline and where hotlinks lack CORS headers (web).
+    final image = url.startsWith('assets/')
+        ? Image.asset(
+            url,
+            fit: fit,
+            errorBuilder: (_, _, _) => placeholderWidget,
+          )
+        : Image.network(
+            url,
+            fit: fit,
+            errorBuilder: (_, _, _) => placeholderWidget,
+            loadingBuilder: (context, child, progress) => progress == null ? child : placeholderWidget,
+          );
 
     if (circle) return ClipOval(child: image);
     return ClipRRect(borderRadius: BorderRadius.circular(borderRadius), child: image);
