@@ -55,6 +55,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                 pinned: true,
                 floating: true,
                 snap: true,
+                // No automatic status-bar reserve: the hero carries its own
+                // top padding, and the search must dock flush to y=0.
+                primary: false,
                 toolbarHeight: 0,
                 collapsedHeight: 54,
                 expandedHeight: 190 + topPad,
