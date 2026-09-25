@@ -11,6 +11,7 @@ import '../../../state/search_state.dart'
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../widgets/browse_location_sheet.dart';
+import '../../../widgets/sliver_clip_under_header.dart';
 import '../../../widgets/video_background.dart';
 import '../home/widgets/shop_card.dart';
 import '../../../widgets/round_back_button.dart';
@@ -48,8 +49,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       body: ClientBackground(
+        // The customer shell already insets the status bar, so only the
+        // bottom matters here: like Home, leave it off so the list runs
+        // behind the floating nav instead of stopping above it.
         child: SafeArea(
-          top: false,
+          bottom: false,
           child: CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -57,7 +61,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 floating: true,
                 snap: true,
                 toolbarHeight: 0,
-                collapsedHeight: 62,
+                // No collapsedHeight: with pinned + floating + bottom, the
+                // SDK *adds* it to the bottom's height, which left a
+                // transparent band above the search row.
                 expandedHeight: 168,
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
@@ -82,8 +88,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             label: browseLocation.hasLocation
                                 ? browseLocation.label
                                 : 'Set your location',
-                            onTap: () =>
-                                showBrowseLocationSheet(context, ref),
+                            onTap: () => showBrowseLocationSheet(context, ref),
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -91,9 +96,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           height: 40,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 22,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
                             itemCount: kFilterOptions.length,
                             separatorBuilder: (_, _) =>
                                 const SizedBox(width: 8),
@@ -106,17 +109,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 onTap: () => notifier.setFilter(label),
                               );
                             },
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(22, 20, 22, 12),
-                          child: Text(
-                            '${shops.length} shops near you',
-                            style: AppText.sans(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.clientSecondaryText(context),
-                            ),
                           ),
                         ),
                       ],
@@ -134,9 +126,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Expanded(
                           child: Container(
                             height: 46,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             decoration: BoxDecoration(
                               color: AppColors.clientSurface(context),
                               border: Border.all(
@@ -155,8 +145,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                       hintText: "Try 'dry clean suit'",
                                       hintStyle: AppText.sans(
                                         fontWeight: FontWeight.w600,
-                                        color:
-                                            AppColors.clientSecondaryText(
+                                        color: AppColors.clientSecondaryText(
                                           context,
                                         ),
                                       ),
@@ -177,55 +166,79 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                 ),
               ),
-              if (_loading)
-                const SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 300,
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                )
-              else if (shops.isEmpty)
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 300,
-                    child: Center(
-                      child: Text(
-                        'No shops match these filters',
-                        style: AppText.sans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.clientSecondaryText(context),
+              // Everything below the header is clipped as one group so
+              // scrolled content stops at the search row's bottom edge
+              // instead of showing through around it. The result count lives
+              // here (not in the header's flexible space, where the search
+              // row covered it).
+              SliverClipUnderHeader(
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 8, 22, 12),
+                        child: Text(
+                          '${shops.length} shops near you',
+                          style: AppText.sans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.clientSecondaryText(context),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 112),
-                  sliver: SliverList.separated(
-                    itemCount: shops.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (_, i) => ShopListTile(
-                      shop: shops[i],
-                      onTap: () {
-                        if (gateGuest(
-                          ref,
-                          context,
-                          'Log in as a customer to view ${shops[i].name}.',
-                          redirectPath: '/detail',
-                          redirectExtra: shops[i],
-                        )) {
-                          return;
-                        }
-                        context.push('/detail', extra: shops[i]);
-                      },
-                    ),
-                  ),
+                    if (_loading)
+                      const SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    else if (shops.isEmpty)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: Text(
+                              'No shops match these filters',
+                              style: AppText.sans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.clientSecondaryText(context),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 112),
+                        sliver: SliverList.separated(
+                          itemCount: shops.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (_, i) => ShopListTile(
+                            shop: shops[i],
+                            onTap: () {
+                              if (gateGuest(
+                                ref,
+                                context,
+                                'Log in as a customer to view ${shops[i].name}.',
+                                redirectPath: '/detail',
+                                redirectExtra: shops[i],
+                              )) {
+                                return;
+                              }
+                              context.push('/detail', extra: shops[i]);
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
@@ -233,7 +246,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 }
-
 
 class _FilterChip extends StatelessWidget {
   const _FilterChip({

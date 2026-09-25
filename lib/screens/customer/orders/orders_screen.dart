@@ -63,7 +63,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     return Scaffold(
       body: ClientBackground(
+        // The shell already insets the status bar; leaving the bottom off
+        // lets the list run behind the floating nav (like Home) instead of
+        // stopping above it. The 112px list padding clears it at the end.
         child: SafeArea(
+          bottom: false,
           child: RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(

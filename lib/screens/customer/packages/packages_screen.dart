@@ -7,6 +7,7 @@ import '../../../state/catalog_state.dart';
 import '../../../state/client_preferences_state.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../widgets/sliver_clip_under_header.dart';
 import '../../../widgets/video_background.dart';
 import 'widgets/package_showcase_card.dart';
 
@@ -45,10 +46,11 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
 
     return Scaffold(
       body: ClientBackground(
-        // Top edge floats under the status bar so the pinned search can
-        // stick flush to the very top while scrolling.
+        // The customer shell already insets the status bar, so only the
+        // bottom matters here: like Home, leave it off so the list runs
+        // behind the floating nav instead of stopping above it.
         child: SafeArea(
-          top: false,
+          bottom: false,
           child: CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -56,10 +58,11 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                 floating: true,
                 snap: true,
                 // No automatic status-bar reserve: the hero carries its own
-                // top padding, and the search must dock flush to y=0.
+                // top padding. No collapsedHeight either: with pinned +
+                // floating + bottom, the SDK *adds* it to the bottom's
+                // height, which left a transparent band above the search.
                 primary: false,
                 toolbarHeight: 0,
-                collapsedHeight: 54,
                 expandedHeight: 190 + topPad,
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
@@ -147,7 +150,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(54),
                   // No top spacer here: when collapsed the search sticks
-                  // flush to the very top of the page.
+                  // flush under the status bar.
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
                     child: Container(
@@ -195,81 +198,94 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 40,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 22),
-                        itemCount: PackageKind.values.length + 1,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) {
-                          if (i == 0) {
-                            return _TypeChip(
-                              label: clientLabel('All', 'Zote', language),
-                              active: _type == null,
-                              onTap: () => setState(() => _type = null),
-                            );
-                          }
-                          final kind = PackageKind.values[i - 1];
-                          return _TypeChip(
-                            label: _typeLabel(kind, language),
-                            active: _type == kind,
-                            onTap: () => setState(
-                              () => _type = _type == kind ? null : kind,
+              // Everything below the header is clipped as one group so
+              // scrolled content stops at the search bar's bottom edge
+              // instead of showing through around it.
+              SliverClipUnderHeader(
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 40,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 22,
+                              ),
+                              itemCount: PackageKind.values.length + 1,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, i) {
+                                if (i == 0) {
+                                  return _TypeChip(
+                                    label: clientLabel('All', 'Zote', language),
+                                    active: _type == null,
+                                    onTap: () => setState(() => _type = null),
+                                  );
+                                }
+                                final kind = PackageKind.values[i - 1];
+                                return _TypeChip(
+                                  label: _typeLabel(kind, language),
+                                  active: _type == kind,
+                                  onTap: () => setState(
+                                    () => _type = _type == kind ? null : kind,
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    if (state.isLoading && state.items.isEmpty)
+                      const SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    else if (packages.isEmpty)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: Text(
+                              clientLabel(
+                                'Try another search or filter',
+                                'Jaribu utafutaji mwingine',
+                                language,
+                              ),
+                              style: AppText.sans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.clientSecondaryText(context),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 116),
+                        sliver: SliverList.separated(
+                          itemCount: packages.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 14),
+                          itemBuilder: (_, i) => SizedBox(
+                            height: 300,
+                            child: PackageShowcaseCard(pkg: packages[i]),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-              if (state.isLoading && state.items.isEmpty)
-                const SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 300,
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                )
-              else if (packages.isEmpty)
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 300,
-                    child: Center(
-                      child: Text(
-                        clientLabel(
-                          'Try another search or filter',
-                          'Jaribu utafutaji mwingine',
-                          language,
-                        ),
-                        style: AppText.sans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.clientSecondaryText(context),
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 116),
-                  sliver: SliverList.separated(
-                    itemCount: packages.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 14),
-                    itemBuilder: (_, i) => SizedBox(
-                      height: 300,
-                      child: PackageShowcaseCard(pkg: packages[i]),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
